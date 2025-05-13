@@ -1,0 +1,153 @@
+services:
+# This is the main service for the web application
+  web-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: apidoxy-web-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app           # Binds your host directory to /app in container
+      - /app/node_modules
+    command: ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; npm run dev"]
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URL=mongodb://mongodb:27017/mydb
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # PostgreSQL
+  postgres:
+    image: postgres:17.4-alpine
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: apidoxyDb
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    # healthcheck:
+    #   test: ["CMD", "pg_isready", "-U", "admin"]
+      # test: ["CMD-SHELL", "pg_isready -U admin -d apidoxyDb"]
+      # interval: 10s
+      # timeout: 5s
+      # retries: 5
+
+  # pgAdmin
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    # environment:
+    #   PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+    #   PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+  
+  # MongoDB
+  mongodb:
+    image: mongo:8.0.8
+    container_name: mongo-db
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      # Only TCP check
+      # test: ["CMD", "nc", "-z", "localhost", "27017"]
+
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping').ok", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Mongo Express
+  mongo-express:
+    image: mongo-express:1.0.2-20-alpine3.19
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    env_file:
+      - .env
+    # environment:
+      # ME_CONFIG_MONGODB_SERVER: mongodb
+      # ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME}
+      # ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD}
+    depends_on:
+      - mongodb
+
+  # Redis
+  redis:
+    image: redis:7.4.3-alpine
+    container_name: redis-db
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # RedisInsight
+  redis-insight:
+    image: redislabs/redisinsight:2.68.0
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+    volumes:
+      - redis-insight-data:/db
+
+
+    mailhog:
+      image: mailhog/mailhog
+      container_name: mailhog
+      ports:
+        - "1025:1025" # SMTP port
+        - "8025:8025" # Web UI (HTTP) port
+      volumes:
+        - mailhog_data:/var/lib/mailhog
+
+volumes:
+  pg-data:
+  pgadmin-data:
+  mongo-data:
+  mailhog_data:
+  redis-data:
+  redis-insight-data:

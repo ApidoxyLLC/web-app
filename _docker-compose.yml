@@ -1,0 +1,98 @@
+services:
+# This is the main service for the web application
+  web-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: apidoxy-web-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+      - REDIS_URL=${REDIS_URL}
+      # - POSTGRES_HOST=${POSTGRES_HOST}
+      # - POSTGRES_PORT=${POSTGRES_PORT}
+      # - POSTGRES_USER=${POSTGRES_USER}
+      # - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      # - POSTGRES_DB=${POSTGRES_DB}
+      - MONGO_URL=${MONGO_URL}
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+  
+  # PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: postgres-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: devdb
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  # MongoDB
+  mongodb:
+    image: mongo:6
+    container_name: mongo-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+  
+  # Redis
+  redis:
+    image: redis:7
+    container_name: redis-db
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  # pgAdmin
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports:
+      - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+  # Mongo Express
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    depends_on:
+      - mongodb
+
+  # RedisInsight
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+
+  volumes:
+    pg-data:
+    mongo-data:
+    redis-data:
+    pgadmin-data:
+
+
