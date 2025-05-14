@@ -65,7 +65,7 @@ const baseAppSchema = new mongoose.Schema({
 
 }, { timestamps: true, discriminatorKey: 'platform' });
 
-const androidAppSchema = new mongoose.Schema({
+const androidAppSchema = new mongoose.Schema({ 
   ...baseAppSchema.obj,
   packageName: { type: String, required: true }
 });
