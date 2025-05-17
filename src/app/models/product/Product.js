@@ -4,47 +4,38 @@ import { reviewSchema } from './Review';
 
 const priceSchema = new mongoose.Schema({
   currency: { type: String, enum: ['BDT', 'USD', 'EUR', 'GBP'], default: 'BDT' },
-  basePrice: { type: Number, required: true, min: 0 },
-  salePrice: { type: Number, min: 0 },
+  price: { type: Number, required: true, min: 0 },
+  compareAtPrice: { type: Number, required: true, min: 0 },
+  minPrice: { type: Number, required: true, min: 0 },
+  maxPrice: { type: Number, required: true, min: 0 },
+
+//   salePrice: { type: Number, min: 0 },
   costPrice: { type: Number, min: 0 },
   discount: {   enable: { type:Boolean, default:false },
                 value: {type: Number, default: 0 },                
                 type:{ type: String, enum: ['fixed', 'percentage', null]} },
-//   finalAmount: { type: Number, required: true, min: 0 },
   taxInfo: String
 }, { _id: false });
 
-// Add virtual for final price calculation
-// priceSchema.virtual('finalPrice').get(function() {
-//   let price = this.salePrice || this.basePrice;
-  
-//   if (this.discount?.type === 'percentage') {
-//     price = price * (1 - (this.discount.value / 100));
-//   } else if (this.discount?.type === 'fixed') {
-//     price = Math.max(0, price - this.discount.value);
-//   }
-  
-//   if (!this.tax.inclusive && this.tax.rate > 0) {
-//     price = price * (1 + (this.tax.rate / 100));
-//   }
-  
-//   return parseFloat(price.toFixed(2));
-// });
-
 const variantSchema = new mongoose.Schema({
-    variantType: {type: [String], enum: ['color','size', 'weight', 'material']},
-    name: { type: String, required: true },           // e.g., 'Color'
-    attributes: { 
-        color: String, 
-        size: String, 
-        weight: String,
-        material: String,
-    weightUnit:{ type: String, enum:['kg', 'lbs'], required:false, default: undefined },
-    dimensions: { length: Number, width: Number, height: Number }
-  },
+    title: {type: String, default:undefined},
+    options: {type: [String], enum: ['small','black', 'cotton']},
+
+    option1: {type: String, default: undefined },
+    opiton2: {type: String, default: undefined },
+    option3: {type: String, default: undefined },
+    price:  {type: Number, default: undefined},
+    weight: {type: Number, default: undefined},
+    compareAtPrice: { type: Number, required: true, min: 0 },
+    inventoryManagement: {type: String, default: undefined },
+    isAvailable:{type: Boolean, default: undefined },
+    sku: {type: String, default: undefined },
+    requireShipping: {type: Boolean, default: undefined },
+    taxable: {type: Boolean, default: undefined },
+    barcode: { type: String, unique: true, sparse: true },
   images: [{ imageGalleryId: String }],  
   variantPrice: { type: priceSchema }
-}, { _id: false });
+}, { _id: true });
 
 const imageGallery = new mongoose.Schema({
     id: { type: Number, default: 0 },
@@ -57,11 +48,22 @@ const productSchema = new mongoose.Schema({
     description: {type: String, default: undefined },
     tags: [String],
     keywords: [String],
+
+    // handle 
     slug: { type: String, required: true, unique: true, lowercase: true, index: true },
     gallery: [imageGallery],
     thumbnail: { type: String, default:''},
     medias: { type:[String], required: true },
     price: priceSchema,
+    details:{
+        material:{ type: String, default: undefined },
+        fit: { type: String, default: undefined },
+        febricWeight:{ type: String, default: undefined },
+        neckLine: { type: String, default: undefined },
+        careInstruction: { type: String, default: undefined },
+        madeIn: { type: String, default: undefined },
+    },
+
     categories: { type:[String], default:[] },    
     barcode: { type: String, unique: true, sparse: true },
     hasVariants: { type: Boolean, default: false },
@@ -112,6 +114,8 @@ const productSchema = new mongoose.Schema({
     isFeatured: { type: Boolean, default: false },
     isBestSeller: { type: Boolean, default: false },
     isNewArrival: { type: Boolean, default: false },
+
+    publishedAt: {type: Date, default: null},
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     variants: [variantSchema],
