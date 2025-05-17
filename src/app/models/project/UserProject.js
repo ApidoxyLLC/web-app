@@ -10,9 +10,6 @@ const socialLinksSchema = new mongoose.Schema({
   linkedin: { type: String },
   youtube: { type: String },
   tiktok: { type: String },
-  amazon: { type: String },
-  walmart: { type: String },
-  alibaba: { type: String },
 }, { _id: false });
 
 const appSettingsSchema = new mongoose.Schema({
@@ -43,31 +40,48 @@ const baseAppSchema = new mongoose.Schema({
   version: { type: String, default: undefined },
   status: { type: String, default: 'pending',
                           enum: ['active', 'inactive', 'pending', 'on-build', 'prepared'] },
-  language: { type: String, enum: ['en'], default: 'en' },
+  language: { type: String, enum: ['en_US', 'bn_BD' ], default: 'en' },
   appUrl: { type: String, required: false, default: undefined },  
-  aboutUs: { type: String, default: undefined },
-  termsAndConditions: { type: String, default: undefined },
-  privacyPolicy: { type: String, default: undefined },
-  refundPolicy: { type: String, default: undefined },
+
+
   contactUs: { type: String, default: undefined },
   settings: appSettingsSchema,
   socialLinks: socialLinksSchema,
   extraPolicies: [extraPolicySchema], 
   siteMap: { type: String, default: undefined },
   facebookDataFeed: { type: String, default: undefined },
+
+  // recommend to remove
+  // aboutUs: { type: String, default: undefined },
+  // termsAndConditions: { type: String, default: undefined },
+  // privacyPolicy: { type: String, default: undefined },
+  // refundPolicy: { type: String, default: undefined },
   
 
 // Delivery include here 
+
+
 
 // Payment Settings apply here
 
 
 
-}, { timestamps: true, discriminatorKey: 'platform' });
+}, { timestamps: true });
+const buildInfoSchema = new mongoose.Schema({ 
+  buildNo:{ type:String, default:0 },
+  versionName: { type: String },
+  buildTime: { type: String },
+  buildDuration: { type: String },
+  gitBranch: { type: String },
+  buildStatus:{ type:String, enum:['success', 'pending', 'queued', 'failed']}
+});
 
 const androidAppSchema = new mongoose.Schema({ 
   ...baseAppSchema.obj,
-  packageName: { type: String, required: true }
+  packageName: { type: String, required: true },
+  buildInfo: [buildInfoSchema],
+  firebaseJSONData: String
+  // buildHistory:[{ si_no:{type:String, required:true}, version:}]
 });
 const webAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
@@ -76,10 +90,12 @@ const webAppSchema = new mongoose.Schema({
 
 const iosAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
-  bundleId: { type: String, required: true }
+  firebaseJSONData: String,
+  bundleId: { type: String, required: true },
+  
 });
 
-const projectSchema = new mongoose.Schema({
+const userProjectSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: [true, 'Owner ID is required'], index: true },
   country: { type: String, required: true},
   industry: { type: String, required: true },
@@ -89,11 +105,41 @@ const projectSchema = new mongoose.Schema({
   activeApps: {  type: [String], required: false, default: undefined, enum: ['web', 'android', 'ios'] },
   web: {  type: webAppSchema, default: undefined},
   android: { type: androidAppSchema, default: undefined },
-  ios: { type: iosAppSchema }
-}, { timestamps: true, collection: 'projects' });
+  ios: { type: iosAppSchema },
+  dbInfo: {
+    storageType: {
+      type: [String],
+      enum: ['individual-cluster', 'individual-database', 'shared-cluster', 'shared-database', 'self-hosted', 'other']
+    },
+    clusterName: String,
+    databaseName: String,
+    connectionString: String,
+    host: String,
+    port: Number,
+    provider: { 
+      type: String, 
+      enum: ['aws', 'gcp', 'azure', 'atlas', 'self-hosted', 'other']
+    },
+    region: String,
+    auth: {
+      username: String,
+      password: String,
+      mechanism: String,
+    },
+    sslEnabled: Boolean,
+    replicaSet: String,
+    backupPolicy: {
+      enabled: Boolean,
+      frequency: String,
+      retentionDays: Number,
+    },
+    version: String,
+    tags: [String],                    
+  }
+}, { timestamps: true, collection: 'user_rojects' });
 
-export const Project = mongoose.models.Project || mongoose.model("Project", projectSchema, 'projects');
-export default Project;
+export const UserProject = mongoose.models.UserProject || mongoose.model("UserProject", userProjectSchema, 'user_rojects');
+export default UserProject;
 
 
 // const projectSchema = new mongoose.Schema({

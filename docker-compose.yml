@@ -1,5 +1,5 @@
 services:
-# This is the main service for the web application
+  # This is the main service for the web application
   web-app:
     build: 
       context: .
@@ -134,15 +134,30 @@ services:
     volumes:
       - redis-insight-data:/db
 
+# Mailhog, temporary mail testing client
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI (HTTP) port
+    volumes:
+      - mailhog_data:/var/lib/mailhog
 
-    mailhog:
-      image: mailhog/mailhog
-      container_name: mailhog
-      ports:
-        - "1025:1025" # SMTP port
-        - "8025:8025" # Web UI (HTTP) port
-      volumes:
-        - mailhog_data:/var/lib/mailhog
+  keycloak:
+    image: bitnami/keycloak:latest
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: postgres
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_PASSWORD: your_desired_password
+      KEYCLOAK_ADMIN_USER: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - 8081: 8080
+    depends_on:
+      - postgres
 
 volumes:
   pg-data:

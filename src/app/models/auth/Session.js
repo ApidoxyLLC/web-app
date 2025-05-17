@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { encrypt } from '../utils/encryption';
+import { encrypt } from '../../utils/encryption';
 
 const sessionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true, index: true },
