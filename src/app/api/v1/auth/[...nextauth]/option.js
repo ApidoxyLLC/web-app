@@ -1,4 +1,9 @@
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { emailLoginSchema } from './loginDTOSchema';
+import authDbConnect from '@/app/lib/mongodbConnections/authDbConnect';
+import mongoose from 'mongoose';
+import User from '@/app/models/auth/User';
+import bcrypt from "bcryptjs";
 // import GoogleProvider from 'next-auth/providers/google';
 // import AppleProvider from 'next-auth/providers/apple';
 // import FacebookProvider from "next-auth/providers/facebook";
@@ -7,15 +12,50 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 export const authOptions = {
     providers: [
         CredentialsProvider({
-            name: 'Login',
-            id: 'login',
+            name: 'EmailPasswordLogin',
+            id: 'email-password-login',
             credentials: {
                 email: { label: 'Email', type: 'text', placeholder: 'email' },
                 password: { label: 'Password', type: 'password', placeholder: 'password' }
             },
             async authorize(credentials, req) {
                 console.log('credentials', credentials);
-                const { email, password } = credentials;
+                // const { email, password } = credentials;
+
+                // if (!credentials?.email || !credentials?.password) {
+                //         throw new Error("Email and password are required");
+                //     }
+                const parsed = emailLoginSchema.safeParse(credentials);
+                  if (!parsed.success) {
+                    throw new Error("Data not valid");
+                    // return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+                  }
+
+                const email = parsed.data.email?.trim();
+                const password = parsed.data.password;
+
+                if (!email && !password) {
+                    throw new Error("Email and password are required");
+                  } 
+                authDbConnect()
+
+                const user = await UserModel.findOne({ email: credentials.email })
+
+                console.log(user)
+            
+                if (!user || !(await bcrypt.compare(credentials.password, user.password))) {
+                        throw new Error("Invalid credentials");
+                    }
+                    
+                if (!user.isVerified) {
+                    throw new Error("Please verify your email first");
+                }
+
+
+
+
+
+
 
                 // Apply emil + password logic here
                 // 
@@ -45,12 +85,12 @@ export const authOptions = {
 
                 // Simulate a user database lookup
 
-                const user = {
+
+                return {
                     id: 1,
                     name: 'John Doe',
                     email: ''
                 };
-                return user
             },
         }),
         CredentialsProvider({

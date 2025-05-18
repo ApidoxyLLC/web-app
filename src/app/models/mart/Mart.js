@@ -95,7 +95,7 @@ const iosAppSchema = new mongoose.Schema({
   
 });
 
-const userProjectSchema = new mongoose.Schema({
+const martSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: [true, 'Owner ID is required'], index: true },
   country: { type: String, required: true},
   industry: { type: String, required: true },
@@ -136,10 +136,10 @@ const userProjectSchema = new mongoose.Schema({
     version: String,
     tags: [String],                    
   }
-}, { timestamps: true, collection: 'user_rojects' });
+}, { timestamps: true, collection: 'marts' });
 
-export const UserProject = mongoose.models.UserProject || mongoose.model("UserProject", userProjectSchema, 'user_rojects');
-export default UserProject;
+export const Mart = mongoose.models.Mart || mongoose.model("Mart", martSchema, 'marts');
+export default Mart;
 
 
 // const projectSchema = new mongoose.Schema({

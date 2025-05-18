@@ -75,7 +75,7 @@ services:
     # environment:
     #   PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
     #   PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-  
+
   # MongoDB
   mongodb:
     image: mongo:8.0.8

@@ -12,8 +12,8 @@ const VerificationSchema = new mongoose.Schema({
   emailVerificationToken: { type: String, default: undefined },
   emailVerificationTokenExpires: { type: Date, default: undefined },
   isPhoneVerified: { type: Boolean, default: undefined },
-  phoneVerificationOTP: { type: String, default: undefined },
-  phoneVerificationOTPExpires: { type: Date, default: undefined }
+  phoneVerificationToken: { type: String, default: undefined },
+  phoneVerificationTokenExpires: { type: Date, default: undefined }
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
@@ -43,14 +43,14 @@ const TwoFactorSchema = new mongoose.Schema({
   attempts: { type: Number, default: undefined },
 }, { _id: false });
 
-const userSchema = new mongoose.Schema({
-  vendorId: { type: String, unique: true,
-              default: () => cuid() },
+const martUserSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserProjects' },
   name: { type: String, maxlength: 255, required: true },
   avatar: { type: String, default: undefined},
-  activeSessions:[{ type: mongoose.Schema.Types.ObjectId, ref: 'sessions' }],
+  activeSessions:[{ type: mongoose.Schema.Types.ObjectId, ref: 'Sessions' }],
   email: { type: String, trim: true, unique: true, index: true  },
   phone: { type: String, trim: true, unique: true },
+
   verification:  { type: VerificationSchema, default: () => ({}) },
   security: { type: SecuritySchema, default: () => ({}) },
   consent: { type: ConsentSchema, default: () => ({}) },
@@ -61,8 +61,7 @@ const userSchema = new mongoose.Schema({
   // Profile Delete information
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: undefined },
-  plan: { type: String, default: 'basic', enum: ['basic', 'standard', 'premium', 'enterprise'] },
-  role: {type: [String], enum: ['user', 'operator'], default: ['user']},
+  role: {type: [String], enum: ['end_user', 'project_operator'], default: ['end_user']},
   theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
   language: { type: String, default: 'english',
             enum: ['english', 'bangla'] },
@@ -70,12 +69,12 @@ const userSchema = new mongoose.Schema({
   currency: { type: String, default: undefined },
 }, {
   timestamps: true,
-  collection: 'users'
+  collection: 'mart_users'
 });
 
 
-export const User = mongoose.models.User ||  mongoose.model("User", userSchema, "users")
-export default User
+export const MartUser = mongoose.models.MartUser ||  mongoose.model("MartUser", martUserSchema, "mart_users")
+export default MartUser
 
 
 

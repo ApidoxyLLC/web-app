@@ -1,15 +1,15 @@
 import mongoose from 'mongoose';
-import { inventorySchema } from './Inventory';
-import { reviewSchema } from './Review';
+import { inventorySchema } from '../inventory/Inventory';
+import { reviewSchema } from '../review/Review';
 
 const priceSchema = new mongoose.Schema({
   currency: { type: String, enum: ['BDT', 'USD', 'EUR', 'GBP'], default: 'BDT' },
   price: { type: Number, required: true, min: 0 },
-  compareAtPrice: { type: Number, required: true, min: 0 },
-  minPrice: { type: Number, required: true, min: 0 },
-  maxPrice: { type: Number, required: true, min: 0 },
+  compareAtPrice: { type: Number, min: 0 },
+  minPrice: { type: Number, min: 0 },
+  maxPrice: { type: Number, min: 0 },
 
-//   salePrice: { type: Number, min: 0 },
+  //   salePrice: { type: Number, min: 0 },
   costPrice: { type: Number, min: 0 },
   discount: {   enable: { type:Boolean, default:false },
                 value: {type: Number, default: 0 },                
@@ -20,7 +20,6 @@ const priceSchema = new mongoose.Schema({
 const variantSchema = new mongoose.Schema({
     title: {type: String, default:undefined},
     options: {type: [String], enum: ['small','black', 'cotton']},
-
     option1: {type: String, default: undefined },
     opiton2: {type: String, default: undefined },
     option3: {type: String, default: undefined },
@@ -33,14 +32,14 @@ const variantSchema = new mongoose.Schema({
     requireShipping: {type: Boolean, default: undefined },
     taxable: {type: Boolean, default: undefined },
     barcode: { type: String, unique: true, sparse: true },
-  images: [{ imageGalleryId: String }],  
-  variantPrice: { type: priceSchema }
+    images: [{ imageId: String }],  
+//   variantPrice: { type: priceSchema }
 }, { _id: true });
 
-const imageGallery = new mongoose.Schema({
+const image = new mongoose.Schema({
     id: { type: Number, default: 0 },
     url: { type: String, required: true },
-    altText: String,
+    alt: String,
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({
@@ -51,7 +50,7 @@ const productSchema = new mongoose.Schema({
 
     // handle 
     slug: { type: String, required: true, unique: true, lowercase: true, index: true },
-    gallery: [imageGallery],
+    gallery: [image],
     thumbnail: { type: String, default:''},
     medias: { type:[String], required: true },
     price: priceSchema,
@@ -71,7 +70,7 @@ const productSchema = new mongoose.Schema({
                 terms: String },
     sku: { type: String, unique: true, index: true },
     status: { type: String, default: 'draft', 
-        enum: ['active', 'inactive', 'draft', 'unpubilshed', 'archived', 'discontinued'] },
+        enum: ['active', 'inactive', 'draft', 'unpublished', 'archived', 'discontinued'] },
     approvalStatus: { type: String, default: 'pending',
         enum: ['pending', 'approved', 'rejected', 'flagged'],},        
     productType:{ type: String, enum: ['physical', 'digital']},
