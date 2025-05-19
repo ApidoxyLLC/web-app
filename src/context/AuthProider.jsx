@@ -1,12 +1,18 @@
 "use client";
 import { SessionProvider } from "next-auth/react";
 
+const NEXTAUTH_URL_INTERNAL = process.env.NEXTAUTH_URL_INTERNAL || "http://localhost:3000/api/v1/auth"
+
 export default function AuthProider(props) {
-    console.log(props)
     const { children, pageProps } = props
+    
+
     return (
-        <SessionProvider  basePath={`/api/${process.env.NEXT_PUBLIC_API_VERSION}/auth`}>
+      <>
+        <SessionProvider  basePath={NEXTAUTH_URL_INTERNAL}>
           {children}
         </SessionProvider>
+      </>
+        
       )
 }

@@ -9,6 +9,8 @@ import bcrypt from "bcryptjs";
 // import FacebookProvider from "next-auth/providers/facebook";
 // import GitHubProvider from "next-auth/providers/github";
 
+authDbConnect()
+
 export const authOptions = {
     providers: [
         CredentialsProvider({
@@ -37,7 +39,7 @@ export const authOptions = {
                 if (!email && !password) {
                     throw new Error("Email and password are required");
                   } 
-                authDbConnect()
+                
 
                 const user = await UserModel.findOne({ email: credentials.email })
 
@@ -51,41 +53,6 @@ export const authOptions = {
                     throw new Error("Please verify your email first");
                 }
 
-
-
-
-
-
-
-                // Apply emil + password logic here
-                // 
-                // Database user authentication example 
-                // await dbConnect();
-                // try {
-                //     const user = await UserModel.findOne({
-                //         $or: [
-                //             { email:credentials.identifier},
-                //             { username: credentials.identifier }
-                //         ]
-                //     })
-                //     if (!user) {
-                //         throw new Error('Authentication failed');
-                //     }
-                //     if(!user.isVerified){
-                //         throw new Error('pls Verify your email');
-                //     }
-                //     const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password)
-                //     if(!isPasswordCorrect) {
-                //         throw new Error('Authentication failed');
-                //     }
-                // } catch (error) {
-                //     throw new Error('Error connecting to the database');
-                // }
-
-
-                // Simulate a user database lookup
-
-
                 return {
                     id: 1,
                     name: 'John Doe',
@@ -93,95 +60,102 @@ export const authOptions = {
                 };
             },
         }),
-        CredentialsProvider({
-            name: 'Phone Login',
-            id: 'phone-login',
-            credentials: {
-                phone: { label: 'Phone', type: 'text', placeholder: 'phone' },
-                otp: { label: 'otp', type: 'text', placeholder: 'otp' }
-            },
-            async authorize(credentials, req) {
-                console.log('credentials', credentials);
-                const { phone, otp } = credentials;
+        // CredentialsProvider({
+        //     name: 'Phone Login',
+        //     id: 'phone-login',
+        //     credentials: {
+        //         phone: { label: 'Phone', type: 'text', placeholder: 'phone' },
+        //         otp: { label: 'otp', type: 'text', placeholder: 'otp' }
+        //     },
+        //     async authorize(credentials, req) {
+        //         console.log('credentials', credentials);
+        //         const { phone, otp } = credentials;
                 
-                // Apply phone + otp logic here
-                // 
-                // await dbConnect();
-                // try {
-                //     const user = await UserModel.findOne({
-                //         $or: [
-                //             { email:credentials.identifier},
-                //             { username: credentials.identifier }
-                //         ]
-                //     })
-                //     if (!user) {
-                //         throw new Error('Authentication failed');
-                //     }
-                //     if(!user.isVerified){
-                //         throw new Error('pls Verify your email');
-                //     }
-                //     const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password)
-                //     if(!isPasswordCorrect) {
-                //         throw new Error('Authentication failed');
-                //     }
+        //         // Apply phone + otp logic here
+        //         // 
+        //         // await dbConnect();
+        //         // try {
+        //         //     const user = await UserModel.findOne({
+        //         //         $or: [
+        //         //             { email:credentials.identifier},
+        //         //             { username: credentials.identifier }
+        //         //         ]
+        //         //     })
+        //         //     if (!user) {
+        //         //         throw new Error('Authentication failed');
+        //         //     }
+        //         //     if(!user.isVerified){
+        //         //         throw new Error('pls Verify your email');
+        //         //     }
+        //         //     const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password)
+        //         //     if(!isPasswordCorrect) {
+        //         //         throw new Error('Authentication failed');
+        //         //     }
 
-                // } catch (error) {
-                //     throw new Error('Error connecting to the database');
-                // }
+        //         // } catch (error) {
+        //         //     throw new Error('Error connecting to the database');
+        //         // }
 
-                // Simulate a user database lookup                            
+        //         // Simulate a user database lookup                            
                 
-                const user = {
-                    id: 1,
-                    name: 'John Doe',
-                    email: ''
-                };
-                return user
-            },
-        }),
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET
-          }),
-        AppleProvider({
-            clientId: process.env.APPLE_ID,
-            clientSecret: process.env.APPLE_SECRET
-          }),
-        FacebookProvider({
-            clientId: process.env.FACEBOOK_CLIENT_ID,
-            clientSecret: process.env.FACEBOOK_CLIENT_SECRET
-          }),
-        GitHubProvider({
-            clientId: process.env.GITHUB_ID,
-            clientSecret: process.env.GITHUB_SECRET
-          })
+        //         const user = {
+        //             id: 1,
+        //             name: 'John Doe',
+        //             email: ''
+        //         };
+        //         return user
+        //     },
+        // }),
+        // GoogleProvider({
+        //     clientId: process.env.GOOGLE_CLIENT_ID,
+        //     clientSecret: process.env.GOOGLE_CLIENT_SECRET
+        //   }),
+        // AppleProvider({
+        //     clientId: process.env.APPLE_ID,
+        //     clientSecret: process.env.APPLE_SECRET
+        //   }),
+        // FacebookProvider({
+        //     clientId: process.env.FACEBOOK_CLIENT_ID,
+        //     clientSecret: process.env.FACEBOOK_CLIENT_SECRET
+        //   }),
+        // GitHubProvider({
+        //     clientId: process.env.GITHUB_ID,
+        //     clientSecret: process.env.GITHUB_SECRET
+        //   })
     ],
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token._id = user.id;
-                token.email = user.email;
-                token.isVerified  = user.isVerified;
+                token.id = user.id;
+                token.isVerified = user.isVerified;
             }
             return token;
         },
-        async session({session, token}) {
-            if(token){
-                session.user._id = token._id;
-                session.user.email = token.email;
-                session.user.isVerified = token.isVerified;
-            }
+        async session({ session, token }) {
+            console.log(session)
             session.user.id = token.id;
+            session.user.isVerified = token.isVerified;
             return session;
         }
     },
     pages: {
         signIn: '/login',
-        
-        // error: '/auth/error' // Error code passed in query string as ?error=
+        error: '/auth/error'
     },
+    headers: [
+        { key: "Access-Control-Allow-Origin", value: "*" },
+        { key: "Access-Control-Allow-Credentials", value: "true" }
+    ],
+    logger:{
+        error(code, metadata){
+            console.log(code, metadata)
+        }
+    },
+    
     session: {
         strategy: 'jwt',
     },
-    secret: process.env.NEXTAUTH_SECRET
+    basePath: "/api/v1/auth",
+    secret: process.env.NEXTAUTH_SECRET,
+    debug: process.env.NODE_ENV !== 'production'
 };
