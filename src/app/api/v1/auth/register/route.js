@@ -1,6 +1,7 @@
 import authDbConnect from "@/app/lib/mongodbConnections/authDbConnect";
 import bcrypt from "bcryptjs";
 import User from "@/app/models/auth/User";
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import registerSchema from "./registerDTOSchema";
 import rateLimiter from "./rateLimiter";
@@ -96,7 +97,7 @@ export async function POST(request) {
                                             phoneVerificationOTPExpires: new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000))
                                           })
                                       },
-                      ...(email && { email, }),
+                      ...(email && { email }),
                       ...(phone && {  phone })
                     };
 
