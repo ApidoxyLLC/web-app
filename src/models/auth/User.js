@@ -48,7 +48,17 @@ const userSchema = new mongoose.Schema({
               default: () => cuid() },
   name: { type: String, maxlength: 255, required: true },
   avatar: { type: String, default: null},
-  activeSessions:[{ type: mongoose.Schema.Types.ObjectId, ref: 'sessions', select: false  }],
+  activeSessions:[{ type: mongoose.Schema.Types.ObjectId, 
+                      ref: 'sessions', 
+                      select: false,
+                      validate: {
+                                validator: function (arr) {
+                                  const ids = arr.map(String); // Convert ObjectIds to strings
+                                  return ids.length === new Set(ids).size;
+                                },
+                                message: 'activeSessions must contain unique session IDs'
+                              }                    
+                    }],
   email: { type: String, trim: true, unique: true, index: true, sparse: true  },
   phone: { type: String, trim: true, unique: true, sparse: true },
   verification:  { type: VerificationSchema, default: () => ({}) },
@@ -77,6 +87,13 @@ const userSchema = new mongoose.Schema({
 //   transform(_, ret) { delete ret.__v; delete ret._id; return ret; }
 // });
 // userSchema.index({ email: 1 }, { unique: true, sparse: true });
+// 
+// userSchema.pre('save', function (next) {
+//   if (this.activeSessions) {
+//     this.activeSessions = [...new Set(this.activeSessions.map(id => id.toString()))];
+//   }
+//   next();
+// });
 
 export const User = mongoose.models.User ||  mongoose.model("User", userSchema, "users")
 export default User

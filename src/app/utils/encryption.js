@@ -1,44 +1,76 @@
-import sodium from 'libsodium-wrappers';
-import dotenv from 'dotenv';
+import crypto from 'crypto';
 
-dotenv.config(); // Load .env
+const ALGORITHM = 'aes-256-gcm';
+const SALT_LENGTH = 16;
+const IV_LENGTH = 12;
+const AUTH_TAG_LENGTH = 16;
+const HEADER_LENGTH = SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH;
 
-await sodium.ready;
+export async function encrypt({data, options }) {
+    const { secret, algorithm=ALGORITHM } = options
 
-const getKey = () => {
-  const base64Key = process.env.ENCRYPTION_KEY;
-  if (!base64Key) throw new Error('ENCRYPTION_KEY is not defined in .env');
-  const key = sodium.from_base64(base64Key);
-  if (key.length !== sodium.crypto_secretbox_KEYBYTES) {
-    throw new Error('ENCRYPTION_KEY must be 32 bytes (Base64 encoded)');
-  }
-  return key;
-};
+    if (!secret) throw new Error('Secret is required');
+    if (algorithm !== ALGORITHM) throw new Error('Unsupported algorithm');
 
-/**
- * Encrypt text using the key from environment
- */
-export async function encrypt(plainText) {
-  const key = getKey();
-  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const messageBytes = sodium.from_string(plainText);
-  const ciphertext = sodium.crypto_secretbox_easy(messageBytes, nonce, key);
+    const salt = crypto.randomBytes(SALT_LENGTH);
+    const iv = crypto.randomBytes(IV_LENGTH); 
 
-  return {
-    ciphertext: sodium.to_base64(ciphertext),
-    nonce: sodium.to_base64(nonce),
-  };
+    const key = await new Promise((resolve, reject) => {
+        crypto.scrypt(secret, salt, 32, (err, derivedKey) => {
+            if (err) reject(err);
+            else resolve(derivedKey);
+        });
+    });
+
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+    const encrypted = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return Buffer.concat([salt, iv, authTag, encrypted]).toString('base64');
 }
 
-/**
- * Decrypt text using the key from environment
- */
-export async function decrypt(ciphertextBase64, nonceBase64) {
-  const key = getKey();
-  const ciphertext = sodium.from_base64(ciphertextBase64);
-  const nonce = sodium.from_base64(nonceBase64);
+export async function decrypt({cipherText, options}) {
+    const { secret, algorithm = ALGORITHM } = options    
 
-  const decryptedBytes = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
-  if (!decryptedBytes) throw new Error('Decryption failed');
-  return sodium.to_string(decryptedBytes);
+    if (!secret) throw new Error('Secret is required');
+    if (algorithm !== ALGORITHM) throw new Error('Unsupported algorithm');
+
+let buffer;
+    try {
+        buffer = Buffer.from(cipherText, 'base64');
+    } catch (error) {
+        console.log(error)
+        throw new Error('Invalid base64 encoding');
+    }
+
+    if (buffer.length < HEADER_LENGTH) {
+        throw new Error('Invalid ciphertext length');
+    }
+
+    const salt = buffer.subarray(0, SALT_LENGTH);
+    const iv = buffer.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+    const authTag = buffer.subarray(SALT_LENGTH + IV_LENGTH, HEADER_LENGTH);
+    const encrypted = buffer.subarray(HEADER_LENGTH);
+
+    if (authTag.length !== AUTH_TAG_LENGTH) {
+        throw new Error('Invalid authentication tag length');
+    }
+
+    try {
+        const key = await new Promise((resolve, reject) => {
+            crypto.scrypt(secret, salt, 32, (err, derivedKey) => {
+                if (err) reject(err);
+                else resolve(derivedKey);
+            });
+        });
+
+        const decipher = crypto.createDecipheriv(algorithm, key, iv);
+        decipher.setAuthTag(authTag);
+
+        return Buffer.concat([
+            decipher.update(encrypted),
+            decipher.final()
+        ]).toString('utf8');
+    } catch (error) {
+        throw new Error(`Decryption failed: ${error.message}`);
+    }
 }

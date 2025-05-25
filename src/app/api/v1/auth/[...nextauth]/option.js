@@ -1,16 +1,12 @@
 import CredentialsProvider from 'next-auth/providers/credentials';
-// import { emailLoginSchema } from './loginDTOSchema';
 import loginSchema from './loginDTOSchema';
 import authDbConnect from '@/app/lib/mongodbConnections/authDbConnect';
 import mongoose from 'mongoose';
-import User from '@/app/models/auth/User';
-import Session from '@/app/models/auth/Session';
-import LoginHistory from '@/app/models/auth/LoginHistory';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken'
-import crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
-import { encrypt, decrypt } from '@/app/utils/encryptToken';
+import jwt from 'jsonwebtoken';
+import { encrypt, decrypt } from '@/app/utils/encryption';
+import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/auth/user.service';
+import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
+import { createLoginHistory } from '@/services/auth/history.service';
 
 // import GoogleProvider from 'next-auth/providers/google';
 // import AppleProvider from 'next-auth/providers/apple';
@@ -19,75 +15,13 @@ import { encrypt, decrypt } from '@/app/utils/encryptToken';
 
 authDbConnect()
 
-function calculateLockTime(failedAttempts) {
-  const MAX_LOGIN_ATTEMPT =  Number(process.env.MAX_LOGIN_ATTEMPT )|| 5;
-  if (failedAttempts < MAX_LOGIN_ATTEMPT) return null;
-  
-  const lockMinutes = Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT);
-  return new Date(Date.now() + lockMinutes * 60000);
-}
-
-async function incrementFailedLogin(user) {
-  const failedAttempts = (user.security?.failedAttempts || 0) + 1;
-  const lockUntil = calculateLockTime(failedAttempts);
-
-  await User.updateOne(
-    { _id: user._id },
-    {
-      $inc: { "security.failedAttempts": 1 },
-      $set: { "lock.lockUntil": lockUntil }
-    }
-  );
-}
-
-async function resetFailedLogin(user) {
-  await User.updateOne(
-    { _id: user._id },
-    {
-      $set: {
-        "security.failedAttempts": 0,
-        "lock.lockUntil": null,
-        "security.lastLogin": new Date()
-      }
-    }
-  );
-}
-
-const generateTokens = async (user) => {
-    // Access Token (JWT)
-    const accessToken = jwt.sign(
-        {
-            userId: user._id,
-            role: user.role,
-            sessionId: crypto.randomBytes(16).toString('hex')
-        },
-        process.env.USER_ACCESS_TOKEN_SECRET,
-        { 
-            expiresIn: '15m', 
-            algorithm: 'RS256' // Asymmetric encryption
-        }
-    );
-
-    // Refresh Token (Opaque)
-    const refreshToken = crypto.randomBytes(64).toString('hex');
-    
-    // Store refresh token in Redis with expiry
-    await redis.set(
-        `refresh_token:${user._id}:${refreshToken}`,
-        'valid',
-        'EX', 7 * 24 * 60 * 60 // 7 days
-    );
-
-    return { accessToken, refreshToken };
-};
-
 export const authOptions = {
     providers: [
         CredentialsProvider({
             name: 'identifier-password-login',
             id: 'identifier-password-login',
             credentials: {
-                identifier: { label: 'Username/Email', type: 'text', placeholder: 'Username/Email' },
+                identifier: { label: 'Username/Email/phone', type: 'text', placeholder: 'Username/Email/Phone' },
                 password: { label: 'Password', type: 'password', placeholder: 'password' }
             },
 
@@ -95,159 +29,83 @@ export const authOptions = {
                 try {
                     const parsed = loginSchema.safeParse(credentials);
                     if (!parsed.success) {
-                        throw new Error("Invalid input");           
+                        // const errorDetails = parsed.error.flatten().fieldErrors;                           
+                        // throw new Error(JSON.stringify(errorDetails));
+                        throw new Error("Invalid input");        
                     }
 
-                    const identifier = parsed.data.identifier?.trim();
-                    const password = parsed.data.password;
-                
-                    const user = await User.findOne({ $or: [{ username: identifier }, 
-                                                            {    email: identifier }, 
-                                                            {    phone: identifier }] })
-                                                            .select(
-                                                                    '+security.password ' +
-                                                                    '+security.failedAttempts ' +
-                                                                    '+lock.lockUntil ' +
-                                                                    '+verification'
-                                                                    )
-                                                            .lean()
+                    const { identifier, password, identifierName } = parsed.data;
+
+
+                    const user = await getUserByIdentifier({name: identifierName, value: identifier})
 
                     console.log(user)
 
                     if (!user || !user.security?.password) throw new Error("Invalid credentials");
 
-                    // check locked account 
-                    if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
-                            const retryAfter = Math.ceil( (user.lock.lockUntil - Date.now()) / 1000);
-                            throw new Error( `Account temporarily locked, try again in ${retryAfter}`, );
-                        }           
-
-                    const validPassword = await bcrypt.compare(password, user.security.password);
-
-                    if (!validPassword) {
-                        // Update failed attempts
-                        const newAttempts = (user.security?.failedAttempts || 0) + 1;
-                        await User.updateOne(
-                                            { _id: user._id },
-                                            {
-                                                $inc: { "security.failedAttempts": 1 },
-                                                $set: { "lock.lockUntil": calculateLockTime(newAttempts) }
-                                            }
-                                        );
-                                
-                        // throw new Error("Invalid credentials")
-                        return null
-                    }
-                    
-                    // Check Verification  
-                    const requiresVerification = (
-                                                ((identifier == user.email) 
-                                                    && !(user.verification.isEmailVerified)) ||
-
-                                                ((identifier == user.phone) 
-                                                    && !(user.verification.isPhoneVerified)) ||
-
-                                                (identifier == user.username)
-                                                    && !(user.verification.isPhoneVerified || user.verification.isEmailVerified)
-                                                )
-                    if (requiresVerification) throw new Error("Account verification required")
-
+                    checkLockout(user)
+                    const isPasswordVerified = await verifyPassword({user, password})
+                    if(!isPasswordVerified) return null
+                    checkVerification({user, identifier})
                     // Reset security counters on success
-                const loginTransactionSession = await mongoose.startSession();
 
-                loginTransactionSession.startTransaction()
-                try {                    
-                    await User.updateOne(
-                        { _id: user._id },
-                        { $set: {
-                                    "security.failedAttempts": 0,
-                                    "lock.lockUntil": null,
-                                    "security.lastLogin": new Date()
-                                } 
+                    const loginTransactionSession = await mongoose.startSession();
+                          loginTransactionSession.startTransaction()
+                try {
+                    const ip =  req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+                                req.headers['x-real-ip'] || 
+                                req.socket?.remoteAddress || '';
+                    const userAgent = req.headers['user-agent'] || '';  
+                    const sessionId = new mongoose.Types.ObjectId();
+                    const MAX_SESSIONS_ALLOWED = Math.abs(Number(process.env.MAX_SESSIONS_ALLOWED)) || 5;                    
+                    const  USER_ACCESS_TOKEN_EXPIRE_MINUTES = process.env.USER_ACCESS_TOKEN_EXPIRE_MINUTES || 15;
+                    const USER_REFRESH_TOKEN_EXPIRE_MINUTES = process.env.USER_REFRESH_TOKEN_EXPIRE_MINUTES  || 86400
+                    const               ACCESS_TOKEN_SECRET = process.env.USER_ACCESS_TOKEN_SECRET ;
+                    const       ACCESS_TOKEN_ENCRYPTION_KEY = process.env.ACCESS_TOKEN_ENCRYPTION_KEY || ''
+                    const      REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || ''
+
+                    const {token: accessToken, 
+                        expireAt: accessTokenExpAt  } = createAccessToken({ user, 
+                                                                            sessionId, 
+                                                                            secret: ACCESS_TOKEN_SECRET, 
+                                                                            expire: USER_ACCESS_TOKEN_EXPIRE_MINUTES });                    
+
+                    const { token: refreshToken,
+                            expireAt: refreshTokenExpAt  } = createRefreshToken({ expire: USER_REFRESH_TOKEN_EXPIRE_MINUTES  })
+
+                    const accessTokenCipherText = await encrypt({        data: accessToken,
+                                                                      options: { secret: ACCESS_TOKEN_ENCRYPTION_KEY }      });
+
+                    const refreshTokenCipherText = await encrypt({       data: refreshToken,
+                                                                      options: { secret: REFRESH_TOKEN_ENCRYPTION_KEY }     });
+
+                    console.log(accessTokenCipherText)                                                                      
+                    const savedLoginSession = await createLoginSession({          id: sessionId, 
+                                                                                 user, 
+                                                                             provider: 'local-'+identifierName,
+                                                                          accessToken: accessTokenCipherText,  
+                                                                 accessTokenExpiresAt: accessTokenExpAt,
+                                                                         refreshToken: refreshTokenCipherText,
+                                                                refreshTokenExpiresAt: refreshTokenExpAt,
+                                                                                   ip,
+                                                                            userAgent,
+                                                                   transactionSession: loginTransactionSession })
+
+                        await createLoginHistory({   userId: user._id, 
+                                                  sessionId: savedLoginSession._id, 
+                                                   provider: 'local-'+identifierName,
+                                                         ip, 
+                                                  userAgent,
+                                         transactionSession: loginTransactionSession })     
+
+                        if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
+                            await cleanInvalidSessions({ activeSessions: user.activeSessions, 
+                                                           userId: user._id, 
+                                                 currentSessionId: savedLoginSession._id.toString(), 
+                                                     sessionLimit: MAX_SESSIONS_ALLOWED, 
+                                               transactionSession: loginTransactionSession  })
                         }
-                    ).session(loginTransactionSession);
 
-                    const now = Math.floor(Date.now() / 1000);
-                    const ACCESS_TOKEN_SECRET = process.env.USER_ACCESS_TOKEN_SECRET;
-                    // const REFRESH_TOKEN_SECRET = process.env.USER_REFRESH_TOKEN_SECRET;
-                    const ACCESS_TOKEN_EXPIRE_SEC = 60 * Number(process.env.USER_ACCESS_TOKEN_EXPIRE_MINUTES || 15) 
-                    const REFRESH_TOKEN_EXPIRE_SEC = 60 * Number(process.env.USER_REFRESH_TOKEN_EXPIRE_MINUTES || 86400)
-
-                    const sessionId = uuidv4();
-                    const accessToken = jwt.sign(
-                            { 
-                                session: sessionId,
-                                userId: user._id, 
-                                ...(user.email && {  email: user.email }),
-                                ...(user.phone && {  phone: user.phone })
-                            },
-                                ACCESS_TOKEN_SECRET,
-                            { expiresIn: ACCESS_TOKEN_EXPIRE_SEC }
-                        );
-                        const refreshToken = crypto.randomBytes(64).toString('hex');
-                        const expiresAt    = new Date(Date.now() + 1000 * REFRESH_TOKEN_EXPIRE_SEC);
-                        const { ciphertext: accessTokenCipherText, nonce: accessTokenNonce } = await encrypt(accessToken, 'access_token');
-                        const { ciphertext: refreshTokenCipherText, nonce: refreshTokenNonce } = await encrypt(refreshToken, 'refresh_token');
-                        const ip =  req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-                                    req.headers['x-real-ip'] || 
-                                    req.socket?.remoteAddress || '';
-                        const userAgent = req.headers['user-agent'] || '';
-
-
-                        const accessTokenExpAt =  new Date((now + ACCESS_TOKEN_EXPIRE_SEC) * 1000)
-                        const refreshTokenExpAt = new Date((now + REFRESH_TOKEN_EXPIRE_SEC) * 1000) 
-                        
-                        const _identifier = user.email == identifier 
-                                                ? 'email' 
-                                                : user.phone == identifier
-                                                    ? 'phone'
-                                                    : 'username'
-
-                        
-                        const newLoginSession = new Session({
-                            _id: sessionId,
-                            userId: user._id,
-                            provider,
-                            accessToken: accessTokenCipherText,
-                            accessTokenNonce,
-                            accessTokenExpiresAt: accessTokenExpAt,                            
-                            refreshToken: refreshTokenCipherText,
-                            refreshTokenNonce,
-                            refreshTokenExpiresAt: refreshTokenExpAt,
-                            ip,
-                            userAgent
-                        });
-                        const savedLoginSession = await newLoginSession.save({ session: loginTransactionSession}
-                                                    );
-                        
-                        
-
-
-                        const newLoginHistory = new LoginHistory({
-                            userId: user._id,
-                            sessionId: savedLoginSession._id,
-                            provider: `${_identifier}-password`,
-                            ip,
-                            userAgent
-                        })
-                        const savedLoginHistory = await newLoginHistory.save(
-                                                        // { session }
-                                                        { session: loginTransactionSession}
-                                                    );
-                        
-                        await User.updateOne(
-                            { _id: user._id },
-                            {
-                                $push: { 
-                                activeSessions: {
-                                    $each: [savedLoginSession._id],
-                                    $slice: -5 // Keep only last 5 sessions
-                                    }
-                                }
-                            }
-                        ).session(loginTransactionSession);
-                      
-                        
                         await loginTransactionSession.commitTransaction();
                         loginTransactionSession.endSession();
 
@@ -255,17 +113,19 @@ export const authOptions = {
                                      email: user.email,
                                   username: user.username,
                                       name: user.name,
-                               accessToken: accessToken,
+                               accessToken: accessToken,                   
+                          accessTokenExpAt: accessTokenExpAt,
                               refreshToken: refreshToken,
+                                  provider: 'local-'+identifierName,
                                       role: user.role,
                                 isVerified: Boolean( user.verification?.isEmailVerified ||
                                                      user.verification?.isPhoneVerified  )
                             };
                 } catch (error) {
-                    loginTransactionSession.abortTransaction()
+                    await loginTransactionSession.abortTransaction()
                     loginTransactionSession.endSession()
-                    console.error("Login transaction failed:", error);
-                    throw new Error("Login failed")
+                    console.error("Login failed:", error);
+                    throw new Error("Authentication failed")
                 }
 
                 // Return user object                    
@@ -275,85 +135,86 @@ export const authOptions = {
             },
         }),
 
-        
-
-
-        // CredentialsProvider({
-        //     name: 'Phone Login',
-        //     id: 'phone-login',
-        //     credentials: {
-        //         phone: { label: 'Phone', type: 'text', placeholder: 'phone' },
-        //         otp: { label: 'otp', type: 'text', placeholder: 'otp' }
-        //     },
-        //     async authorize(credentials, req) {
-        //         console.log('credentials', credentials);
-        //         const { phone, otp } = credentials;
-                
-        //         // Apply phone + otp logic here
-        //         // 
-        //         // await dbConnect();
-        //         // try {
-        //         //     const user = await UserModel.findOne({
-        //         //         $or: [
-        //         //             { email:credentials.identifier},
-        //         //             { username: credentials.identifier }
-        //         //         ]
-        //         //     })
-        //         //     if (!user) {
-        //         //         throw new Error('Authentication failed');
-        //         //     }
-        //         //     if(!user.isVerified){
-        //         //         throw new Error('pls Verify your email');
-        //         //     }
-        //         //     const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password)
-        //         //     if(!isPasswordCorrect) {
-        //         //         throw new Error('Authentication failed');
-        //         //     }
-
-        //         // } catch (error) {
-        //         //     throw new Error('Error connecting to the database');
-        //         // }
-
-        //         // Simulate a user database lookup                            
-                
-        //         const user = {
-        //             id: 1,
-        //             name: 'John Doe',
-        //             email: ''
-        //         };
-        //         return user
-        //     },
-        // }),
-        // GoogleProvider({
-        //     clientId: process.env.GOOGLE_CLIENT_ID,
-        //     clientSecret: process.env.GOOGLE_CLIENT_SECRET
-        //   }),
-        // AppleProvider({
-        //     clientId: process.env.APPLE_ID,
-        //     clientSecret: process.env.APPLE_SECRET
-        //   }),
-        // FacebookProvider({
-        //     clientId: process.env.FACEBOOK_CLIENT_ID,
-        //     clientSecret: process.env.FACEBOOK_CLIENT_SECRET
-        //   }),
-        // GitHubProvider({
-        //     clientId: process.env.GITHUB_ID,
-        //     clientSecret: process.env.GITHUB_SECRET
-        //   })
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt(params) {
+            const { token, user, account } = params
             if (user) {
-                token.id = user.id;
-                token.isVerified = user.isVerified;
+                // token.id = user.id;
+                token.accessToken = user.accessToken;
+                token.accessTokenExpAt = user.accessTokenExpAt;
+                token.refreshToken = user.refreshToken;
+                token.username = user?.username || '';
+                token.email = user?.email || '';
+                token.phone = user?.phone || '';
+                token.role = user.role || '';
+                token.isVerified = user.isVerified || false;
+                token.provider = user.provider;
             }
-            return token;
+            // console.log(token.accessTokenExpAt)
+
+            const accessTokenExpire_ms  = new Date(token.accessTokenExpAt).getTime()
+
+            if(Date.now() < accessTokenExpire_ms){
+                return token;
+            }
+
+            const ACCESS_TOKEN_SECRET = process.env.USER_ACCESS_TOKEN_SECRET ;
+            const REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || ''
+            const USER_ACCESS_TOKEN_EXPIRE_MINUTES = Number(process.env.USER_ACCESS_TOKEN_EXPIRE_MINUTES  || 15);
+            const USER_REFRESH_TOKEN_EXPIRE_MINUTES = Number(process.env.USER_REFRESH_TOKEN_EXPIRE_MINUTES || 86400)  
+            
+            if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_ENCRYPTION_KEY) {
+                    console.error('Missing required environment variables');
+                    // return null;
+                }
+
+            try {
+              const newTokens  = await tokenRefresh({ token, 
+                                                              accessTokenSecret: ACCESS_TOKEN_SECRET, 
+                                                              refreshTokenKey: REFRESH_TOKEN_ENCRYPTION_KEY,
+                                                              accessTokenExpire: USER_ACCESS_TOKEN_EXPIRE_MINUTES,
+                                                              refreshTokenExpire: USER_REFRESH_TOKEN_EXPIRE_MINUTES
+                                                            })
+                if(!newTokens){
+                    return null
+                }
+                        
+              token.accessToken = newTokens.accessToken;
+              token.accessTokenExpAt =  newTokens.accessTokenExpAt;
+              token.refreshToken = newTokens.refreshToken;
+              return token 
+            } catch (error) {
+              return null
+            }
+            
+            
         },
-        async session({ session, token }) {
-            console.log(session)
-            session.user.id = token.id;
+        async session(params) {
+            console.log(params)
+            const { session, token } = params
+            // console.log(session)
+            // session.user.id = token.id;
             session.user.isVerified = token.isVerified;
+
+            if (token) {
+                session.user = {
+                      name: token.name,
+                     email: token.email,
+                  username: token.username,
+                     phone: token.phone,
+                      role: token.role,
+                isVerified: token.isVerified,
+                  provider: token.provider,
+                };
+                
+                // session.accessToken = token.accessToken;
+                // session.accessTokenExpAt = token.accessTokenExpAt;
+                // session.refreshToken = token.refreshToken;
+            }
             return session;
+
+            
         }
     },
     pages: {
@@ -377,3 +238,42 @@ export const authOptions = {
     secret: process.env.NEXTAUTH_SECRET,
     debug: process.env.NODE_ENV !== 'production'
 };
+
+
+async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTokenExpire, refreshTokenExpire}) {
+  if (!token) {
+      console.error("No refresh token available.");
+    //   throw new Error( 'Invalid token data...', );
+      return null;
+    }
+  try {
+    if (token.provider === "local-email" || token.provider === "local-phone") {
+            
+      const data = jwt.decode(token.accessToken, accessTokenSecret)
+      const { sessionId } = data
+      if ( !sessionId ) return null //  throw new Error( `Invalid session...`, );
+        const session = await getSessionTokenById(sessionId)
+      if(!session)  return null // throw new Error( `No login data...`, );
+      const oldRefreshToken = await decrypt({  cipherText: session.refreshToken, 
+                                                  options: { secret: refreshTokenKey } })                         
+      if( oldRefreshToken != token.refreshToken ) return null //  throw new Error( `No login data...`, );
+
+        const {    token: accessToken, 
+                expireAt: accessTokenExpAt  } = createAccessToken({user: { ...data}, sessionId, secret: accessTokenSecret, expire: accessTokenExpire })
+
+        const {    token: refreshToken,
+                expireAt: refreshTokenExpAt  } = createRefreshToken({ expire: refreshTokenExpire })
+
+        await updateSessionToken({sessionId, accessToken, refreshToken})
+
+        return {    accessToken, accessTokenExpAt,
+                   refreshToken, refreshTokenExpAt  }
+    } 
+
+    // return null;
+    throw new Error("Unsupported provider or missing refresh token");
+  } catch (error) {
+    console.error("Error refreshing access token:", error);
+    return null
+  }
+}

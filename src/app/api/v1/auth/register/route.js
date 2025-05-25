@@ -1,6 +1,6 @@
 import authDbConnect from "@/app/lib/mongodbConnections/authDbConnect";
 import bcrypt from "bcryptjs";
-import User from "@/app/models/auth/User";
+import User from "@/models/auth/User";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import registerSchema from "./registerDTOSchema";

@@ -1,15 +1,16 @@
 import mongoose from 'mongoose';
-import { encrypt } from '../../utils/encryption';
+import { encrypt } from '../../app/utils/encryption';
 
 const sessionSchema = new mongoose.Schema({
+    _id: { type: String },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true, index: true },
-    provider: { type: String, enum: ['local-phone', 'local-email', 'google', 'facebook', 'apple'], required: true},
+    provider: { type: String, enum: ['local-phone', 'local-email', 'local-username', 'google', 'facebook', 'apple'], required: true},
     accessToken: { type: String, select: false, required: true },
-    accessTokenNonce: { type: String, select: false, required: true },
-    accessTokenExpiresAt: { type: Date, required: true },
-    refreshTokenNonce: { type: String, select: false, required: true },
-    refreshTokenExpiresAt: { type: Date, required: true, index: { expires: '0s' } },
-    refreshToken: { type: String, select: false, required: true },
+    // accessTokenNonce: { type: String, select: false, required: true },
+    accessTokenExpiresAt: { type: Date, select: false, required: true },
+    // refreshTokenNonce: { type: String, select: false, required: true },
+    refreshToken: { type: String, select: false, required: true },    
+    refreshTokenExpiresAt: { type: Date, select: false, required: true },
     ip: { type: String, required: false },
     userAgent: { type: String, required: false },
     // device: { type: String, required: false },
