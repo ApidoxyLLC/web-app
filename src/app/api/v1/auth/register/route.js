@@ -1,19 +1,23 @@
-import authDbConnect from "@/app/lib/mongodbConnections/authDbConnect";
+import authDbConnect from "@/app/lib/mongodb/authDbConnect";
 import bcrypt from "bcryptjs";
-import User from "@/models/auth/User";
+// import User from "@/models/auth/User";
+import { userModel } from "@/models/auth/User";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import registerSchema from "./registerDTOSchema";
 import rateLimiter from "./rateLimiter";
 import { getClientIp } from "@/app/utils/ip";
 import crypto from 'crypto';
+import { createUser, getUserByIdentifier } from "@/services/primary/user.service";
+
+
 
 // Task Need to Review 
 // Enable Rate limiting
 // Check Error handeling
 // apply sending verififation Email 
 
-authDbConnect();
+
 
 export async function POST(request) {
   let body;
@@ -57,75 +61,66 @@ export async function POST(request) {
     }
   }
 
-  const session = await User.startSession();
+  const auth_db = await authDbConnect();
+  const session = await auth_db.startSession();
 
-  try {    
+  try {
     session.startTransaction();
-
     // Check for exiting User
-    const existingUser = await User.findOne({ $or: [{ email }, { phone }] })
-                           .session(session)
-                           .lean();
+    // const User = userModel(auth_db)
+    // const existingUser = await User.findOne({ $or: [{ email }, { phone }] })
+    //                        .session(session)
+    //                        .lean();
+    const existingUser = await getUserByIdentifier({db: auth_db, session, data: { phone, email } })
+
     // Error for Existing User 
     if(existingUser){
       return NextResponse.json({ error: "User already Exist" }, { status: 409 });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const token = crypto.randomBytes(32).toString('hex');
-    const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
+    // const salt = await bcrypt.genSalt(10);
+    // const hashedPassword = await bcrypt.hash(password, salt);
+    // const token = crypto.randomBytes(32).toString('hex');
+    // const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const EMAIL_VERIFICATION_EXPIRY = Number(process.env.EMAIL_VERIFICATION_EXPIRY || 15); // minutes
-    const PHONE_VERIFICATION_EXPIRY = Number(process.env.PHONE_VERIFICATION_EXPIRY || 5); // minutes
+    // const EMAIL_VERIFICATION_EXPIRY = Number(process.env.EMAIL_VERIFICATION_EXPIRY || 15); // minutes
+    // const PHONE_VERIFICATION_EXPIRY = Number(process.env.PHONE_VERIFICATION_EXPIRY || 5); // minutes
 
-    const userData = {  name,
-                        security: { ...(password 
-                                      && {  password: hashedPassword,
-                                            salt } ) },
-                        verification: { ...(email && {
-                                            isEmailVerified: false,
-                                            emailVerificationToken: verificationToken,
-                                            emailVerificationTokenExpires: Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60000) //15 minute validation 
-                                          }),
+    // const userData = {  name,
+    //                     security: { ...(password 
+    //                                   && {  password: hashedPassword,
+    //                                         salt } ) },
+    //                     verification: { ...(email && {
+    //                                         isEmailVerified: false,
+    //                                         emailVerificationToken: verificationToken,
+    //                                         emailVerificationTokenExpires: Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60000) //15 minute validation 
+    //                                       }),
 
-                                        ...(phone && { 
-                                            isPhoneVerified: false }),
+    //                                     ...(phone && { 
+    //                                         isPhoneVerified: false }),
 
-                                        ...((phone && !email) && { 
-                                            phoneVerificationOTP: Math.floor(100000 + Math.random() * 900000).toString(),
-                                            phoneVerificationOTPExpires: new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000))
-                                          })
-                                      },
-                      ...(email && { email }),
-                      ...(phone && {  phone })
-                    };
+    //                                     ...((phone && !email) && { 
+    //                                         phoneVerificationOTP: Math.floor(100000 + Math.random() * 900000).toString(),
+    //                                         phoneVerificationOTPExpires: new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000))
+    //                                       })
+    //                                   },
+    //                   ...(email && { email }),
+    //                   ...(phone && {  phone })
+    //                 };
 
-    const newUser = new User(userData);
-    const savedUser = await newUser.save({ session });
+    // const newUser = new User(userData);
+    // const savedUser = await newUser.save({ session });
     // const userResponse = savedUser.toObject();
-    const { 
-            // name,
-            // email,
-            // phone,
-            role,
-            theme,
-            language,
-            timezone,
-            currency,
-            plan,
-          } = savedUser.toObject();
-    const userResponse = {  name, 
-                            email, 
-                            phone, 
-                            role,  
-                            local: { 
-                                      theme, 
-                                      language, 
-                                      timezone, 
-                                      currency, 
-                                      plan 
-                                    } };
+
+    const savedUser = createUser({      db: auth_db, 
+                                   session, 
+                                      data: {  name, email, phone, password }
+                                  })
+    const { role, theme, language, timezone, currency, plan } = savedUser.toObject();
+    const userResponse = {  
+                            name, email, phone, role,  
+                            local: { theme, language, timezone, currency, plan } 
+                          };
 
     await session.commitTransaction();
     session.endSession();

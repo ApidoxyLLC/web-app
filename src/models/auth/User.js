@@ -10,10 +10,10 @@ const ConsentSchema = new mongoose.Schema({
 const VerificationSchema = new mongoose.Schema({
   isEmailVerified: { type: Boolean, default: null },
   emailVerificationToken: { type: String, default: null, select: false },
-  emailVerificationTokenExpires: { type: Date, default: null, select: false  },
+  emailVerificationTokenExpireAt: { type: Date, default: null, select: false  },
   isPhoneVerified: { type: Boolean, default: null },
   phoneVerificationOTP: { type: String, default: null, select: false  },
-  phoneVerificationOTPExpires: { type: Date, default: null, select: false  }
+  phoneVerificationOTPExpireAt: { type: Date, default: null, select: false  }
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
@@ -43,13 +43,21 @@ const TwoFactorSchema = new mongoose.Schema({
   attempts: { type: Number, default: null, select: false  },
 }, { _id: false });
 
+const shopSchema = new mongoose.Schema({
+  shopId: {  type: mongoose.Schema.Types.ObjectId },
+  dbCluster: { type: String },
+  dbUri: { type: String },
+  dbSecret: { type: String },
+  dbNamePrefix: { type: String, default: process.env.APP_DB_PREFIX || 'app_db_' }
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   vendorId: { type: String, unique: true,
               default: () => cuid() },
   name: { type: String, maxlength: 255, required: true },
   avatar: { type: String, default: null},
   activeSessions:[{ type: mongoose.Schema.Types.ObjectId, 
-                      ref: 'sessions', 
+                      ref: 'sessions',
                       select: false,
                       validate: {
                                 validator: function (arr) {
@@ -57,17 +65,19 @@ const userSchema = new mongoose.Schema({
                                   return ids.length === new Set(ids).size;
                                 },
                                 message: 'activeSessions must contain unique session IDs'
-                              }                    
+                              }
                     }],
+  shops: { type: [shopSchema], select: false, default: [] },
   email: { type: String, trim: true, unique: true, index: true, sparse: true  },
   phone: { type: String, trim: true, unique: true, sparse: true },
+  
   verification:  { type: VerificationSchema, default: () => ({}) },
   security: { type: SecuritySchema, default: () => ({}) },
   consent: { type: ConsentSchema, default: () => ({}) },
   status: { type: StatusSchema, default: () => ({}), select: false  },
   lock: { type: LockSchema, default: () => ({}) },
   twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
-  
+
   // Profile Delete information
   isDeleted: { type: Boolean, default: false, select: false  },
   deletedAt: { type: Date, default: null, select: false  },
@@ -95,10 +105,9 @@ const userSchema = new mongoose.Schema({
 //   next();
 // });
 
+export const userModel = (db) => db.models.User || db.model('User', userSchema);
 export const User = mongoose.models.User ||  mongoose.model("User", userSchema, "users")
 export default User
-
-
 
   // GDPR/Privacy
   // acceptedTermsAt: { type: Date, default: null},

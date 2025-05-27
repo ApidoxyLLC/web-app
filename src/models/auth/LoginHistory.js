@@ -26,5 +26,6 @@ const loginHistorySchema = new mongoose.Schema({
   collection: 'login_histories'
 });
 
+export const loginHistoryModel = (db) => db.models.LoginHistory || db.model('LoginHistory', loginHistorySchema);
 export const LoginHistory = mongoose.models.LoginHistory || mongoose.model("LoginHistory", loginHistorySchema, 'login_histories');
 export default LoginHistory;

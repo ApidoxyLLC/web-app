@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { encrypt } from '../../utils/encryption';
 
-const martSessionSchema = new mongoose.Schema({
+const shopSessionSchema = new mongoose.Schema({
     // projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserProjects' },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true, index: true },
     provider: { type: String, enum: ['local-phone', 'local-email', 'google', 'facebook', 'apple'], required: true},
@@ -19,11 +19,11 @@ const martSessionSchema = new mongoose.Schema({
     revoked: { type: Boolean, default: false }
 }, {
   timestamps: false,
-  collection: 'mart_sessions'
+  collection: 'shop_sessions'
 });
 
 // Encryption 
-martSessionSchema.pre('save', async function(next) {
+shopSessionSchema.pre('save', async function(next) {
     const accessExpiresInSec = parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN || '3600'); // 1 hour
     const refreshExpiresInSec = parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN || `${7 * 24 * 3600}`); // 7 day
 
@@ -47,5 +47,5 @@ martSessionSchema.pre('save', async function(next) {
     next();
 });
 
-export const MartSession = mongoose.models.MartSession || mongoose.model("MartSession", martSessionSchema, 'mart_sessions');
-export default MartSession;
+export const ShopSession = mongoose.models.ShopSession || mongoose.model("ShopSession", shopSessionSchema, 'shop_sessions');
+export default ShopSession;

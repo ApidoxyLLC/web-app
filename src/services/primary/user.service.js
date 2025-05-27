@@ -1,0 +1,197 @@
+import { userModel } from '@/models/auth/User';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto'; 
+
+
+// Funcionality with database 
+export   async function getUserByIdentifier({ db, session, data}) {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format');
+    }
+    if (!email && !phone) throw new Error('At least one identifier (email or phone) is required.');
+    const { phone, email } = data || {};
+    const User = userModel(db);
+    try {
+        const query = User.findOne({ $or: [{ email }, { phone }] })
+                          .lean();
+        if (session) query.session(session);
+        return await query;
+    } catch (error) {
+        throw new Error("something went wrong...")
+    }
+    
+}
+
+// export async function getUserSessionsIdById({ db, session, id}) {
+//     const User = userModel(db);
+//     const query = User.findById(id).lean();
+//     if (session) query.session(session);
+//     return await query;
+// }
+
+export            async function createUser({ db, session, data }) {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format');
+    }
+    const { name, email, phone, password } = data || {}
+    const User = userModel(db)
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const token = crypto.randomBytes(32).toString('hex');
+    const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const EMAIL_VERIFICATION_EXPIRY = Number(process.env.EMAIL_VERIFICATION_EXPIRY || 15); // minutes
+    const PHONE_VERIFICATION_EXPIRY = Number(process.env.PHONE_VERIFICATION_EXPIRY || 5); // minutes
+
+    const userData = {          name,
+                            security: { ...(password 
+                                      && {  password: hashedPassword,
+                                            salt } ) },
+                        verification: { ...(email && {
+                                            isEmailVerified: false,
+                                            emailVerificationToken: verificationToken,
+                                            emailVerificationTokenExpireAt: new Date( Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60 * 1000) ),
+                                            // emailVerificationTokenExpires: Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60000) //15 minute validation 
+                                          }),
+
+                                        ...(phone && { 
+                                            isPhoneVerified: false }),
+
+                                        ...((phone && !email) && { 
+                                            phoneVerificationOTP: Math.floor(100000 + Math.random() * 900000).toString(),
+                                            phoneVerificationOTPExpireAt: new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000))
+                                          })
+                                      },
+                      ...(email && { email }),
+                      ...(phone && {  phone })
+                    };
+
+    const newUser = new User(userData);
+    return await newUser.save(session ? { session } : {});
+}
+
+export       async function addLoginSession({ db, session, data }){
+    //  ************************************************************** //
+    //  input parameter "session" is the db transactions session       //
+    //  don't mix with user's login session with transactions session  //
+    //  "sessionId" inside data object is users login session's _id    //
+    //  ************************************************************** //
+
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format');
+    }
+    const { userId, sessionId } = data || {}
+    const MAX_SESSIONS_ALLOWED = Math.abs(Number(process.env.MAX_SESSIONS_ALLOWED)) || 3;
+    const User = userModel(db);
+    const query = User.updateOne(   { _id: userId },
+                                    {   $set: {
+                                                "security.failedAttempts": 0,
+                                                "lock.lockUntil": null,
+                                                "security.lastLogin": new Date()
+                                                },
+                                        $setOnInsert: {
+                                                security: {
+                                                        failedAttempts: 0,
+                                                        lastLogin: new Date(),
+                                                    },
+                                                lock: {
+                                                        lockUntil: null,
+                                                    },
+                                                },
+                                        $push: { 
+                                                activeSessions: {
+                                                    $each: [sessionId],
+                                                    $slice: -MAX_SESSIONS_ALLOWED // Keep last N elements
+                                                }
+                                            }
+                                    },
+                                    { upsert: true }
+                    )
+    if (session) query.session(session);
+    return await query;
+}
+
+export        async function verifyPassword({ db, session, data}) {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format');
+    }
+    const { user, password } = data || {};
+    if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
+        return { status: false, reason: 'locked', message: 'Account is temporarily locked. Try again later.' };
+    }
+
+    if (!user?.security?.password) {
+        return { status: false, reason: 'no_password', message: 'Password not set.' };
+    }
+    const validPassword = await bcrypt.compare(password, user.security.password);
+    if (!validPassword) {
+        const newAttempts = (user.security?.failedAttempts || 0) + 1;
+        const User = userModel(db); 
+        const updateQuery = User.updateOne( { _id: user._id },
+                                            {
+                                                $inc: { "security.failedAttempts": 1 },
+                                                $set: { "lock.lockUntil": calculateLockTime(newAttempts) }
+                                            });
+        if (session) updateQuery.session(session);
+        await updateQuery;
+        return { status: false, reason: 'invalid_password', message: 'Incorrect password.' };
+    }
+    return { status: true };
+}
+
+
+
+
+// Simple Tools 
+export function checkLockout(user) {
+    if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
+        const retryAfter = Math.ceil( (user.lock.lockUntil - Date.now()) / 1000);
+        throw new Error( `Account temporarily locked, try again in ${retryAfter}`, );
+    }
+}
+
+export function checkVerification({user, identifier}) {
+    const requiresVerification =
+        (identifier === user.email && !user.verification.isEmailVerified) ||
+        (identifier === user.phone && !user.verification.isPhoneVerified) ||
+        (identifier === user.username && !(user.verification.isEmailVerified || user.verification.isPhoneVerified));
+
+    if (requiresVerification) throw new Error("Account verification required");
+}
+
+export function createAccessToken({user, sessionId, secret, expire }){
+
+    if (!secret) throw new Error("Missing Token secret...!");
+    const expire_ms = Number(expire) * 60 * 1000;
+    const token =  jwt.sign(
+                    { 
+                        sessionId: sessionId,
+                        // userId: user._id.toString(),
+                        ...(user.email && {  email: user.email }),
+                        ...(user.phone && {  phone: user.phone })
+                    },
+                        secret,
+                    { expiresIn: expire_ms / 1000 }
+                );
+
+    const expireAt =  new Date( Date.now() + expire_ms );
+
+    return { token, expireAt };
+}
+
+export function createRefreshToken({ expire }){
+
+    const REFRESH_TOKEN_EXPIRE_MS = Number(expire) * 60 * 1000;
+    const token = crypto.randomBytes(64).toString('hex');
+    const expireAt = new Date( Date.now() + REFRESH_TOKEN_EXPIRE_MS );
+    return { token, expireAt };
+}
+
+function calculateLockTime(failedAttempts) {
+  const MAX_LOGIN_ATTEMPT =  Number(process.env.MAX_LOGIN_ATTEMPT )|| 5;
+  if (failedAttempts < MAX_LOGIN_ATTEMPT) return null;
+  
+//   const lockMinutes = Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT);
+  return new Date(Date.now() + (Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT) * 60 * 1000));
+}

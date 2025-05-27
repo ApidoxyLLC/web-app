@@ -23,8 +23,8 @@ const couponSchema = new mongoose.Schema({
 }, { _id: false });
 
 const cartSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'MartUser', required: [true, 'User reference is required'], index: true },
-    martId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mart', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopUser', required: [true, 'User reference is required'], index: true },
+    shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
     items:[cartItem],
     totals: {
         subtotal: {type: Number, default:0 },

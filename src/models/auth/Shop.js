@@ -95,12 +95,16 @@ const iosAppSchema = new mongoose.Schema({
   
 });
 
-const martSchema = new mongoose.Schema({
-  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: [true, 'Owner ID is required'], index: true },
+const shopSchema = new mongoose.Schema({
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  ownerLoginSession: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true},
+  
   country: { type: String, required: true},
   industry: { type: String, required: true },
-  name: {  type: String, required: true, trim: true},
+  businessName: {  type: String, required: true, trim: true},
   location: { type: String, required: true },
+
+
   slug: { type: String, default: undefined},
   activeApps: {  type: [String], required: false, default: undefined, enum: ['web', 'android', 'ios'] },
   web: {  type: webAppSchema, default: undefined},
@@ -136,10 +140,12 @@ const martSchema = new mongoose.Schema({
     version: String,
     tags: [String],                    
   }
-}, { timestamps: true, collection: 'marts' });
+}, { timestamps: true, collection: 'shops' });
 
-export const Mart = mongoose.models.Mart || mongoose.model("Mart", martSchema, 'marts');
-export default Mart;
+
+export const shopModel = (db) => db.models.Shop || db.model('Shop', shopSchema);
+export const Shop = mongoose.models.Shop || mongoose.model("Shop", shopSchema, 'shops');
+export default Shop;
 
 
 // const projectSchema = new mongoose.Schema({

@@ -1,19 +1,19 @@
 import CredentialsProvider from 'next-auth/providers/credentials';
 import loginSchema from './loginDTOSchema';
-import authDbConnect from '@/app/lib/mongodbConnections/authDbConnect';
+import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { encrypt, decrypt } from '@/app/utils/encryption';
-import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/auth/user.service';
-import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
-import { createLoginHistory } from '@/services/auth/history.service';
+import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/primary/user.service';
+import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/primary/session.service';
+import { createLoginHistory } from '@/services/primary/history.service';
 
 // import GoogleProvider from 'next-auth/providers/google';
 // import AppleProvider from 'next-auth/providers/apple';
 // import FacebookProvider from "next-auth/providers/facebook";
 // import GitHubProvider from "next-auth/providers/github";
 
-authDbConnect()
+
 
 export const authOptions = {
     providers: [
@@ -36,21 +36,25 @@ export const authOptions = {
 
                     const { identifier, password, identifierName } = parsed.data;
 
-
-                    const user = await getUserByIdentifier({name: identifierName, value: identifier})
+                    const auth_db = await authDbConnect();                     
+                    const user = await getUserByIdentifier({db: auth_db, name: identifierName, value: identifier})
 
                     console.log(user)
 
                     if (!user || !user.security?.password) throw new Error("Invalid credentials");
 
                     checkLockout(user)
-                    const isPasswordVerified = await verifyPassword({user, password})
-                    if(!isPasswordVerified) return null
+                    const passwordVerification = await verifyPassword({db: auth_db, data:{ user, password } })
+                    if(!passwordVerification?.status) return null
                     checkVerification({user, identifier})
                     // Reset security counters on success
-
-                    const loginTransactionSession = await mongoose.startSession();
-                          loginTransactionSession.startTransaction()
+                    const sessionOptions = {
+                            readPreference: 'primary',
+                            readConcern: { level: 'local' },
+                            writeConcern: { w: 'majority' }
+                            };
+                    const atuh_db_session = await auth_db.startSession(sessionOptions);
+                          atuh_db_session.startTransaction()
                 try {
                     const ip =  req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
                                 req.headers['x-real-ip'] || 
@@ -79,7 +83,6 @@ export const authOptions = {
                     const refreshTokenCipherText = await encrypt({       data: refreshToken,
                                                                       options: { secret: REFRESH_TOKEN_ENCRYPTION_KEY }     });
 
-                    console.log(accessTokenCipherText)                                                                      
                     const savedLoginSession = await createLoginSession({          id: sessionId, 
                                                                                  user, 
                                                                              provider: 'local-'+identifierName,
@@ -89,25 +92,28 @@ export const authOptions = {
                                                                 refreshTokenExpiresAt: refreshTokenExpAt,
                                                                                    ip,
                                                                             userAgent,
-                                                                   transactionSession: loginTransactionSession })
+                                                                                   db: auth_db,
+                                                                           db_session: atuh_db_session })
 
                         await createLoginHistory({   userId: user._id, 
                                                   sessionId: savedLoginSession._id, 
                                                    provider: 'local-'+identifierName,
                                                          ip, 
                                                   userAgent,
-                                         transactionSession: loginTransactionSession })     
+                                                         db: auth_db,
+                                                 db_session: atuh_db_session })     
 
                         if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
                             await cleanInvalidSessions({ activeSessions: user.activeSessions, 
                                                            userId: user._id, 
                                                  currentSessionId: savedLoginSession._id.toString(), 
                                                      sessionLimit: MAX_SESSIONS_ALLOWED, 
-                                               transactionSession: loginTransactionSession  })
+                                                               db: auth_db,
+                                                       db_session: atuh_db_session  })
                         }
 
-                        await loginTransactionSession.commitTransaction();
-                        loginTransactionSession.endSession();
+                        await atuh_db_session.commitTransaction();
+                        atuh_db_session.endSession();
 
                         return {
                                      email: user.email,
@@ -122,8 +128,8 @@ export const authOptions = {
                                                      user.verification?.isPhoneVerified  )
                             };
                 } catch (error) {
-                    await loginTransactionSession.abortTransaction()
-                    loginTransactionSession.endSession()
+                    await atuh_db_session.abortTransaction()
+                    atuh_db_session.endSession()
                     console.error("Login failed:", error);
                     throw new Error("Authentication failed")
                 }
@@ -133,6 +139,8 @@ export const authOptions = {
                     throw new Error("Authentication failed")
                 }                
             },
+            
+
         }),
 
     ],
@@ -170,7 +178,7 @@ export const authOptions = {
                 }
 
             try {
-              const newTokens  = await tokenRefresh({ token, 
+                const newTokens  = await tokenRefresh({ token, 
                                                               accessTokenSecret: ACCESS_TOKEN_SECRET, 
                                                               refreshTokenKey: REFRESH_TOKEN_ENCRYPTION_KEY,
                                                               accessTokenExpire: USER_ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -187,8 +195,6 @@ export const authOptions = {
             } catch (error) {
               return null
             }
-            
-            
         },
         async session(params) {
             console.log(params)
@@ -206,15 +212,12 @@ export const authOptions = {
                       role: token.role,
                 isVerified: token.isVerified,
                   provider: token.provider,
-                };
-                
+                };                
                 // session.accessToken = token.accessToken;
                 // session.accessTokenExpAt = token.accessTokenExpAt;
                 // session.refreshToken = token.refreshToken;
             }
-            return session;
-
-            
+            return session;            
         }
     },
     pages: {
@@ -229,8 +232,7 @@ export const authOptions = {
         error(code, metadata){
             console.log(code, metadata)
         }
-    },
-    
+    },    
     session: {
         strategy: 'jwt',
     },
@@ -252,7 +254,9 @@ async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTo
       const data = jwt.decode(token.accessToken, accessTokenSecret)
       const { sessionId } = data
       if ( !sessionId ) return null //  throw new Error( `Invalid session...`, );
-        const session = await getSessionTokenById(sessionId)
+
+      const auth_db = await authDbConnect();
+      const session = await getSessionTokenById({db: auth_db, sessionId})
       if(!session)  return null // throw new Error( `No login data...`, );
       const oldRefreshToken = await decrypt({  cipherText: session.refreshToken, 
                                                   options: { secret: refreshTokenKey } })                         
@@ -264,13 +268,12 @@ async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTo
         const {    token: refreshToken,
                 expireAt: refreshTokenExpAt  } = createRefreshToken({ expire: refreshTokenExpire })
 
-        await updateSessionToken({sessionId, accessToken, refreshToken})
+        await updateSessionToken({db: auth_db, sessionId, accessToken, refreshToken})
 
         return {    accessToken, accessTokenExpAt,
                    refreshToken, refreshTokenExpAt  }
     } 
 
-    // return null;
     throw new Error("Unsupported provider or missing refresh token");
   } catch (error) {
     console.error("Error refreshing access token:", error);

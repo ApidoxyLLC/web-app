@@ -1,12 +1,12 @@
 import CredentialsProvider from 'next-auth/providers/credentials';
 import loginSchema from './loginDTOSchema';
-import authDbConnect from '@/app/lib/mongodbConnections/authDbConnect';
+import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { encrypt, decrypt } from '@/app/utils/encryptToken';
-import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, getUserSessionsIdById, verifyPassword } from '@/services/auth/user.service';
-import { cleanInvalidSessions, createLoginSession } from '@/services/auth/session.service';
-import { createLoginHistory } from '@/services/auth/history.service';
+import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/primary/user.service';
+import { cleanInvalidSessions, createLoginSession } from '@/services/primary/session.service';
+import { createLoginHistory } from '@/services/primary/history.service';
 
 // import GoogleProvider from 'next-auth/providers/google';
 // import AppleProvider from 'next-auth/providers/apple';
@@ -111,7 +111,7 @@ export const authOptions = {
                     checkLockout(user)
                     const isPasswordVerified = await verifyPassword({user, password})
 
-                    if(!isPasswordVerified) return null
+                    if(!isPasswordVerified.status) return null
 
                     checkVerification({user, identifier})
                     // Reset security counters on success

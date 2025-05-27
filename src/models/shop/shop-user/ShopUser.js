@@ -43,7 +43,7 @@ const TwoFactorSchema = new mongoose.Schema({
   attempts: { type: Number, default: undefined },
 }, { _id: false });
 
-const martUserSchema = new mongoose.Schema({
+const shopUserSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserProjects' },
   name: { type: String, maxlength: 255, required: true },
   avatar: { type: String, default: undefined},
@@ -69,12 +69,12 @@ const martUserSchema = new mongoose.Schema({
   currency: { type: String, default: undefined },
 }, {
   timestamps: true,
-  collection: 'mart_users'
+  collection: 'shop_users'
 });
 
 
-export const MartUser = mongoose.models.MartUser ||  mongoose.model("MartUser", martUserSchema, "mart_users")
-export default MartUser
+export const ShopUser = mongoose.models.ShopUser ||  mongoose.model("ShopUser", shopUserSchema, "shop_users")
+export default ShopUser
 
 
 

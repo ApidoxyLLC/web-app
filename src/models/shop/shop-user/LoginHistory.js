@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const martLoginHistorySchema = new mongoose.Schema({
+const shopLoginHistorySchema = new mongoose.Schema({
     // projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserProjects' },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session'},
@@ -24,8 +24,8 @@ const martLoginHistorySchema = new mongoose.Schema({
     },
     createdAt: { type: Date, default: Date.now },
 }, {
-  collection: 'mart_login_histories'
+  collection: 'shop_login_histories'
 });
 
-export const MartLoginHistory = mongoose.models.MartLoginHistory || mongoose.model("MartLoginHistory", martLoginHistorySchema, 'mart_login_histories');
-export default MartLoginHistory;
+export const ShopLoginHistory = mongoose.models.ShopLoginHistory || mongoose.model("ShopLoginHistory", shopLoginHistorySchema, 'shop_login_histories');
+export default ShopLoginHistory;

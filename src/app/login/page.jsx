@@ -11,6 +11,7 @@ export default function page() {
                         identifier: email,
                         password: password
                     });
+
         console.log(result)
 
             // if (result?.error) {
@@ -20,12 +21,37 @@ export default function page() {
             // }
         }
 
+
+        async function requestToCreateProduct() {
+            try {
+                const response = await fetch('/api/v1/shops', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: 'Sample data'}),
+                });
+
+                if (!response.ok) {
+                throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                console.log('Got Data', data);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
     return (<Form action={createUser}>
                     <input name="email" placeholder="Email..."/><br/>
                     <input name="password" placeholder="Password..."/><br/>
                 
                 <button className="border" type="submit">Submit</button>
                 <button onClick={()=>signOut()}  className="border" >Logout</button>
+
+                <button onClick={()=>requestToCreateProduct()}  className="border" >Create Shop</button>
             </Form> )
 }
 
