@@ -7,7 +7,12 @@ const invoiceSchema = new mongoose.Schema({
     currency: { type: String, default: 'USD' },
     status: { type: String,  enum: ['paid', 'unpaid', 'failed', 'refunded'], default: 'unpaid' },
     reference: { type: String },
-    paymentRef:  { type: String }
+    paymentRef:  { type: String },
+    paymentMethodId: String,
+    periodStart: Date,
+    periodEnd: Date,
+    dueDate: Date,
+    tax: { type: Number, default: 0 },
 }, {
   timestamps: true,
   collection: 'invoices'

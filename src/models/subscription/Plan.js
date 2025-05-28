@@ -4,8 +4,8 @@ const limitSchema = new mongoose.Schema({
     shops: { type: Number, default: null },
     mobileApps: { type: Number, default: null },
     webApps: { type: Number, default: null },
-    duration: {type: Number, default: null },
-    storageMb: { type: String, default: null }, 
+    // duration: {type: Number, default: null },
+    storageMb: { type: Number, default: null }, 
     users: {type: Number, default: null },
     products: {type: Number, default: null },
     ordersMonthly: {type: Number, default: null },
@@ -21,6 +21,15 @@ const featuresSchema = new mongoose.Schema({
     socialLogin: { type: Boolean, default: false },
 }, { _id: false });
 
+const planHistorySchema = new mongoose.Schema({
+  planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true },
+  version: { type: Number, required: true },
+  changes: mongoose.Schema.Types.Mixed, // Track specific fields changed
+  effectiveFrom: Date,
+  effectiveUntil: Date,
+  archivedAt: Date
+}, { timestamps: true });
+
 const planSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String, required: true },
@@ -29,9 +38,12 @@ const planSchema = new mongoose.Schema({
     features: { type: featuresSchema, default: () => ({}) },
     price: { type: Number, default: null },
     currency: { type: String, default: 'USD', enum: ['USD', 'EUR', 'GBP'] },
-    billingCycle: { type: String, enum: ['monthly', 'yearly', null], default: null  },
+    billingCycle: { type: String, enum: ['monthly', 'yearly'], default: null  },
+    isActive: { type: Boolean, default: true },
     // type: { type: [String], default: ['monthly'], enum: ['monthly', 'yearly', 'request', 'storege', 'user', 'product', 'order'] },
     duration: { type: String, default: null },
+    version: { type: Number, default: 1 }, // Increment on changes
+    // parentPlan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan' }, // For forks
     metadata: mongoose.Schema.Types.Mixed,
     isDeleted: { type: Boolean, default: false }
 }, {
