@@ -8,32 +8,34 @@ const ConsentSchema = new mongoose.Schema({
 }, { _id: false });
 
 const VerificationSchema = new mongoose.Schema({
-  isEmailVerified: { type: Boolean, default: null },
-  emailVerificationToken: { type: String, default: null, select: false },
-  emailVerificationTokenExpireAt: { type: Date, default: null, select: false  },
-  isPhoneVerified: { type: Boolean, default: null },
-  phoneVerificationOTP: { type: String, default: null, select: false  },
-  phoneVerificationOTPExpireAt: { type: Date, default: null, select: false  }
+  isEmailVerified: { type: Boolean, default: undefined },
+  emailVerificationToken: { type: String, default: undefined, select: false },
+  emailVerificationTokenExpire: { type: Number, default: undefined, select: false  },
+  isPhoneVerified: { type: Boolean, default: undefined },
+  phoneVerificationOTP: { type: String, default: undefined, select: false  },
+  phoneVerificationOTPExpire: { type: Date, default: undefined, select: false  },
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
-  password: { type: String, select: false, default: null, select: false  },
-  salt: { type: String, select: false, default: null, select: false  },
-  failedAttempts: { type: Number, default: null, select: false  },
-  lastLogin: { type: Date, default: null }
+  password: { type: String, select: false, default: null },
+  salt: { type: String, select: false, default: null },
+  failedAttempts: { type: Number, default: null },
+  lastLogin: { type: Date, default: null },
+  forgotPasswordToken: { type: String, default: undefined },
+  forgotPasswordTokenExpire: { type: Number, default: undefined }
 }, { _id: false });
 
 const StatusSchema = new mongoose.Schema({
   currentStatus: { type: String, enum: ['pending', 'active', 'suspended', 'deleted', 'initiate'], default: 'initiate' },
   changeAt: { type: Date, default: null },
   changeReason: { type: String, default: null },
-  changeBy: { type: mongoose.Schema.Types.ObjectId, ref: 'users',default: null },
+  changeBy: { type: mongoose.Schema.Types.ObjectId, ref: 'users', default: null },
 }, { _id: false });
 
 const LockSchema = new mongoose.Schema({
   isLocked: { type: Boolean, default: null },
   lockReason: { type: String, default: null },
-  lockUntil: { type: Date, default: null, select: false  },
+  lockUntil: { type: Date, default: null  },
 }, { _id: false });
 
 const TwoFactorSchema = new mongoose.Schema({
@@ -51,37 +53,55 @@ const shopSchema = new mongoose.Schema({
   dbNamePrefix: { type: String, default: process.env.APP_DB_PREFIX || 'app_db_' }
 }, { _id: false });
 
+const usageSchema = new mongoose.Schema({
+         customDomains: { type: Number, default: 0 },
+            subDomains: { type: Number, default: 0 },
+                 shops: { type: Number, default: 0 },
+                  apps: {
+                      android: { type: Number, default: 0 },
+                          web: { type: Number, default: 0 },
+                          ios: { type: Number, default: 0 }
+                        },
+                builds: {
+                      android: { type: Number, default: 0 },
+                          web: { type: Number, default: 0 },
+                          ios: { type: Number, default: 0 }
+                      },
+   paymentIntegrations: { type: Number, default: 0 },
+  deliveryIntegrations: { type: Number, default: 0 },
+           smsGateways: { type: Number, default: 0 },
+  monthlyNotifications: { type: Number, default: 0 },
+             storageMB: { type: Number, default: 0 },
+      customerAccounts: { type: Number, default: 0 },
+            staffUsers: { type: Number, default: 0 },
+              products: { type: Number, default: 0 },
+         monthlyOrders: { type: Number, default: 0 },
+}, { _id: false });
+
+
 const userSchema = new mongoose.Schema({
-  vendorId: { type: String, unique: true,
-              default: () => cuid() },
   name: { type: String, maxlength: 255, required: true },
   avatar: { type: String, default: null},
   activeSessions:[{ type: mongoose.Schema.Types.ObjectId, 
-                      ref: 'sessions',
+                      ref: 'Session',
                       select: false,
-                      validate: {
-                                validator: function (arr) {
-                                  const ids = arr.map(String); // Convert ObjectIds to strings
-                                  return ids.length === new Set(ids).size;
-                                },
-                                message: 'activeSessions must contain unique session IDs'
-                              }
                     }],
   shops: { type: [shopSchema], select: false, default: [] },
   email: { type: String, trim: true, unique: true, index: true, sparse: true  },
   phone: { type: String, trim: true, unique: true, sparse: true },
   
-  verification:  { type: VerificationSchema, default: () => ({}) },
-  security: { type: SecuritySchema, default: () => ({}) },
+  verification:  { type: VerificationSchema, default: () => ({}), select: false },
+  security: { type: SecuritySchema, default: () => ({}), select: false },
   consent: { type: ConsentSchema, default: () => ({}) },
   status: { type: StatusSchema, default: () => ({}), select: false  },
-  lock: { type: LockSchema, default: () => ({}) },
+  lock: { type: LockSchema, default: () => ({}), select: false },
   twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
-
+  activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref:'Subscription',  default:[] },
+  usage: { type:usageSchema },
   // Profile Delete information
   isDeleted: { type: Boolean, default: false, select: false  },
   deletedAt: { type: Date, default: null, select: false  },
-  plan: { type: String, default: 'basic', enum: ['basic', 'standard', 'premium', 'enterprise'] },
+  // plan: { type: String, default: 'basic', enum: ['basic', 'standard', 'premium', 'enterprise'] },
   role: {type: [String], enum: ['user', 'operator'], default: ['user']},
   theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
   language: { type: String, default: 'english',

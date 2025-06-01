@@ -2,6 +2,7 @@ import { userModel } from '@/models/auth/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto'; 
+import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 
 
 // Funcionality with database 
@@ -9,11 +10,19 @@ export   async function getUserByIdentifier({ db, session, data}) {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid data format');
     }
-    if (!email && !phone) throw new Error('At least one identifier (email or phone) is required.');
     const { phone, email } = data || {};
+    if (!email && !phone) throw new Error('At least one identifier (email or phone) is required.');
+    
     const User = userModel(db);
     try {
         const query = User.findOne({ $or: [{ email }, { phone }] })
+                            .select('+security '            +
+                                    '+security.password '   +
+                                    '+security.salt '   +
+                                    '+lock '            +
+                                    '+verification '    )
+                                    // '+refreshTokenExpiresAt '   +
+                                    // '+revoked' )
                           .lean();
         if (session) query.session(session);
         return await query;
@@ -90,15 +99,6 @@ export       async function addLoginSession({ db, session, data }){
                                                 "lock.lockUntil": null,
                                                 "security.lastLogin": new Date()
                                                 },
-                                        $setOnInsert: {
-                                                security: {
-                                                        failedAttempts: 0,
-                                                        lastLogin: new Date(),
-                                                    },
-                                                lock: {
-                                                        lockUntil: null,
-                                                    },
-                                                },
                                         $push: { 
                                                 activeSessions: {
                                                     $each: [sessionId],
@@ -113,6 +113,8 @@ export       async function addLoginSession({ db, session, data }){
 }
 
 export        async function verifyPassword({ db, session, data}) {
+
+    console.log(data)
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid data format');
     }
@@ -138,6 +140,118 @@ export        async function verifyPassword({ db, session, data}) {
         return { status: false, reason: 'invalid_password', message: 'Incorrect password.' };
     }
     return { status: true };
+}
+
+export default async function verifyEmailToken({token}) {
+    try {
+        const db = await authDbConnect();
+        const User = userModel(db);
+        const user = await User.findOne({"verification.emailVerificationToken":token,  "verification.emailVerificationTokenExpire":{ $gt: Date.now() }})
+        if(user){
+            const updatedUser  = await User.findByIdAndUpdate(user._id, {
+                                $set: { "verification.isEmailVerified": true },
+                                $unset: {
+                                        "verification.emailVerificationToken": 1,
+                                        "verification.emailVerificationTokenExpireAt": 1
+                                    }
+                            });
+            if(updatedUser){
+                return { success: true, message: "Email successfully verified" };
+            }else{
+                return { success: false, message: "Something went wrong try again...!" };
+            }
+        }else{
+            return { success: false, message: "Verificaiton Failed...!" };
+        }    
+    } catch (error) {
+        throw new Error("Something went wrong...")
+    }
+}
+
+export async function handlePasswordReset({token, newPassword, userId}) {
+    if (!token || !newPassword || !userId)
+        return { success: false, message: "Missing required fields." };
+        
+    const   db = await authDbConnect();
+    const User = userModel(db);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    const updatedUser = await User.findOneAndUpdate({
+                                                                                   _id: userId,
+                                                        "security.forgotPasswordToken": token,
+                                                  "security.forgotPasswordTokenExpire": { $gt: Date.now() }
+                                                    },
+                                                    {   $set:   {              
+                                                                   "security.password": hashedPassword,
+                                                                       "security.salt": salt
+                                                            },
+                                                        $unset: {   
+                                                        "security.forgotPasswordToken": 1,
+                                                  "security.forgotPasswordTokenExpire": 1      
+                                                                }
+                                                    }, { new: true })
+    if (updatedUser) {
+        // TODO: Optionally invalidate sessions or log audit
+        return { success: true, message: "Password updated successfully." };
+    } else {
+        return { success: false, message: "Invalid or expired token." };
+    }                                                    
+
+    // try {
+    //     const   db = await authDbConnect();
+    //     const User = userModel(db);
+    //     const user = await User.findById(userId);
+
+    //     if (!user) {
+    //         return { success: false, message: "Invalid user" };
+    //     }
+
+    //     const tokenValid = user.security?.forgotPasswordToken &&
+    //                        user.security?.forgotPasswordTokenExpiry > Date.now();
+
+    //     if (!tokenValid) {
+    //         return { success: false, message: "Invalid or expired token" };
+    //     }
+
+    //     const isTokenMatch = await bcrypt.compare(token, user.security.forgotPasswordToken);
+    //     if (!isTokenMatch) {
+    //         return { success: false, message: "Invalid token" };
+    //     }
+
+    //     const hashedPassword = await bcrypt.hash(newPassword, 10);
+    //     const updatedUser = await User.findByIdAndUpdate(userId, {
+    //         $set: {
+    //             "security.password": hashedPassword
+    //         },
+    //         $unset: {
+    //             "security.forgotPasswordToken": 1,
+    //             "security.forgotPasswordTokenExpiry": 1
+    //         }
+    //     });
+
+    //     if(updatedUser) return { success: true, message: "Password updated successfully" };
+    //     else return { success: false, message: "Sorry password can't update...!" };
+
+
+    // } catch (error) {
+    //     return { success: false, message: "Password reset failed. Please try again later." };
+    // }
+
+
+
+
+    // const salt = await bcrypt.genSalt(10);
+    // const hashedPassword = await bcrypt.hash(newPassword, salt);
+    // const updatedUser = await User.findOneAndUpdate({  _id: userId, 
+    //                         "security.forgotPasswordToken": token,  
+    //                   "security.forgotPasswordTokenExpire": { $gt: Date.now() }}, 
+    //         {   $set:   {              "security.password": hashedPassword,
+    //                                        "security.salt": salt,  },
+    //             $unset: {   "security.forgotPasswordToken": 1,
+    //                   "security.forgotPasswordTokenExpire": 1      }        })
+    // if(updatedUser) return { success: true, message: "password updated successfully" };
+    // else return { success: false, message: "Sorry password can't update...!" };
 }
 
 

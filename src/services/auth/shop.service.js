@@ -1,5 +1,4 @@
-import { shopModel } from "@/models/shop/Shop";
-
+import { shopModel } from "@/models/auth/Shop";
 
 export async function createShop({ db, session, data }) {
   try {

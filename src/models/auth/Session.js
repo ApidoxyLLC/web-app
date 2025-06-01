@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
-import { encrypt } from '../../app/utils/encryption';
+import { encrypt } from '../../app/utils/cryptoEncryption';
 
 const sessionSchema = new mongoose.Schema({
     _id: { type: String },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     provider: { type: String, enum: ['local-phone', 'local-email', 'local-username', 'google', 'facebook', 'apple'], required: true},
     accessToken: { type: String, select: false, required: true },
     // accessTokenNonce: { type: String, select: false, required: true },

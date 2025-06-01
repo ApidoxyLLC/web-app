@@ -3,10 +3,10 @@ import loginSchema from './loginDTOSchema';
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import { encrypt, decrypt } from '@/app/utils/encryption';
-import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/primary/user.service';
-import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/primary/session.service';
-import { createLoginHistory } from '@/services/primary/history.service';
+import { encrypt, decrypt } from '@/app/utils/cryptoEncryption';
+import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/auth/user.service';
+import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
+import { createLoginHistory } from '@/services/auth/history.service';
 
 // import GoogleProvider from 'next-auth/providers/google';
 // import AppleProvider from 'next-auth/providers/apple';
@@ -26,6 +26,7 @@ export const authOptions = {
             },
 
             async authorize(credentials, req) {
+
                 try {
                     const parsed = loginSchema.safeParse(credentials);
                     if (!parsed.success) {
@@ -34,17 +35,21 @@ export const authOptions = {
                         throw new Error("Invalid input");        
                     }
 
+                    
+
                     const { identifier, password, identifierName } = parsed.data;
-
-                    const auth_db = await authDbConnect();                     
-                    const user = await getUserByIdentifier({db: auth_db, name: identifierName, value: identifier})
-
-                    console.log(user)
-
+                    
+                    const auth_db = await authDbConnect();
+                    const user = await getUserByIdentifier({db: auth_db, 
+                            // session, 
+                            data: { [identifierName]: identifier } })
                     if (!user || !user.security?.password) throw new Error("Invalid credentials");
 
                     checkLockout(user)
+                    
                     const passwordVerification = await verifyPassword({db: auth_db, data:{ user, password } })
+                    console.log(passwordVerification?.status)
+                
                     if(!passwordVerification?.status) return null
                     checkVerification({user, identifier})
                     // Reset security counters on success
@@ -62,20 +67,20 @@ export const authOptions = {
                     const userAgent = req.headers['user-agent'] || '';  
                     const sessionId = new mongoose.Types.ObjectId();
                     const MAX_SESSIONS_ALLOWED = Math.abs(Number(process.env.MAX_SESSIONS_ALLOWED)) || 5;                    
-                    const  USER_ACCESS_TOKEN_EXPIRE_MINUTES = process.env.USER_ACCESS_TOKEN_EXPIRE_MINUTES || 15;
-                    const USER_REFRESH_TOKEN_EXPIRE_MINUTES = process.env.USER_REFRESH_TOKEN_EXPIRE_MINUTES  || 86400
-                    const               ACCESS_TOKEN_SECRET = process.env.USER_ACCESS_TOKEN_SECRET ;
+                    const       ACCESS_TOKEN_EXPIRE_MINUTES = process.env.ACCESS_TOKEN_EXPIRE_MINUTES || 15;
+                    const      REFRESH_TOKEN_EXPIRE_MINUTES = process.env.REFRESH_TOKEN_EXPIRE_MINUTES  || 86400
+                    const               ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ;
                     const       ACCESS_TOKEN_ENCRYPTION_KEY = process.env.ACCESS_TOKEN_ENCRYPTION_KEY || ''
                     const      REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || ''
 
                     const {token: accessToken, 
-                        expireAt: accessTokenExpAt  } = createAccessToken({ user, 
+                        expireAt: accessTokenExpAt  } = createAccessToken({ user,
                                                                             sessionId, 
                                                                             secret: ACCESS_TOKEN_SECRET, 
-                                                                            expire: USER_ACCESS_TOKEN_EXPIRE_MINUTES });                    
+                                                                            expire: ACCESS_TOKEN_EXPIRE_MINUTES });                    
 
                     const { token: refreshToken,
-                            expireAt: refreshTokenExpAt  } = createRefreshToken({ expire: USER_REFRESH_TOKEN_EXPIRE_MINUTES  })
+                            expireAt: refreshTokenExpAt  } = createRefreshToken({ expire: REFRESH_TOKEN_EXPIRE_MINUTES  })
 
                     const accessTokenCipherText = await encrypt({        data: accessToken,
                                                                       options: { secret: ACCESS_TOKEN_ENCRYPTION_KEY }      });
@@ -117,9 +122,11 @@ export const authOptions = {
 
                         return {
                                      email: user.email,
+                                     phone: user.phone,
                                   username: user.username,
                                       name: user.name,
-                               accessToken: accessToken,                   
+                              loginSession: sessionId,
+                               accessToken: accessToken,
                           accessTokenExpAt: accessTokenExpAt,
                               refreshToken: refreshToken,
                                   provider: 'local-'+identifierName,
@@ -147,46 +154,46 @@ export const authOptions = {
     callbacks: {
         async jwt(params) {
             const { token, user, account } = params
+            console.log(token)
             if (user) {
-                // token.id = user.id;
                 token.accessToken = user.accessToken;
                 token.accessTokenExpAt = user.accessTokenExpAt;
                 token.refreshToken = user.refreshToken;
+                token.loginSession = user.loginSession;
                 token.username = user?.username || '';
+                token.name = user?.name || '';
                 token.email = user?.email || '';
                 token.phone = user?.phone || '';
                 token.role = user.role || '';
                 token.isVerified = user.isVerified || false;
                 token.provider = user.provider;
             }
-            // console.log(token.accessTokenExpAt)
 
             const accessTokenExpire_ms  = new Date(token.accessTokenExpAt).getTime()
+
 
             if(Date.now() < accessTokenExpire_ms){
                 return token;
             }
 
-            const ACCESS_TOKEN_SECRET = process.env.USER_ACCESS_TOKEN_SECRET ;
+            const          ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ;
             const REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || ''
-            const USER_ACCESS_TOKEN_EXPIRE_MINUTES = Number(process.env.USER_ACCESS_TOKEN_EXPIRE_MINUTES  || 15);
-            const USER_REFRESH_TOKEN_EXPIRE_MINUTES = Number(process.env.USER_REFRESH_TOKEN_EXPIRE_MINUTES || 86400)  
+            const  ACCESS_TOKEN_EXPIRE_MINUTES = Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || 15);
+            const REFRESH_TOKEN_EXPIRE_MINUTES = Number(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || 86400)  
             
             if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_ENCRYPTION_KEY) {
-                    console.error('Missing required environment variables');
-                    // return null;
+                    // console.error('Missing required environment variables');
+                    return null;
                 }
 
             try {
-                const newTokens  = await tokenRefresh({ token, 
-                                                              accessTokenSecret: ACCESS_TOKEN_SECRET, 
-                                                              refreshTokenKey: REFRESH_TOKEN_ENCRYPTION_KEY,
-                                                              accessTokenExpire: USER_ACCESS_TOKEN_EXPIRE_MINUTES,
-                                                              refreshTokenExpire: USER_REFRESH_TOKEN_EXPIRE_MINUTES
+                const newTokens  = await tokenRefresh({                    token, 
+                                                               accessTokenSecret: ACCESS_TOKEN_SECRET, 
+                                                                 refreshTokenKey: REFRESH_TOKEN_ENCRYPTION_KEY,
+                                                               accessTokenExpire: ACCESS_TOKEN_EXPIRE_MINUTES,
+                                                              refreshTokenExpire: REFRESH_TOKEN_EXPIRE_MINUTES
                                                             })
-                if(!newTokens){
-                    return null
-                }
+                if(!newTokens) return null
                         
               token.accessToken = newTokens.accessToken;
               token.accessTokenExpAt =  newTokens.accessTokenExpAt;
@@ -197,14 +204,13 @@ export const authOptions = {
             }
         },
         async session(params) {
-            console.log(params)
             const { session, token } = params
             // console.log(session)
             // session.user.id = token.id;
-            session.user.isVerified = token.isVerified;
+            // session.user.isVerified = token.isVerified;
 
             if (token) {
-                session.user = {
+                session.user = {        
                       name: token.name,
                      email: token.email,
                   username: token.username,
@@ -245,7 +251,6 @@ export const authOptions = {
 async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTokenExpire, refreshTokenExpire}) {
   if (!token) {
       console.error("No refresh token available.");
-    //   throw new Error( 'Invalid token data...', );
       return null;
     }
   try {
@@ -253,7 +258,7 @@ async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTo
             
       const data = jwt.decode(token.accessToken, accessTokenSecret)
       const { sessionId } = data
-      if ( !sessionId ) return null //  throw new Error( `Invalid session...`, );
+      if ( !sessionId ) return null 
 
       const auth_db = await authDbConnect();
       const session = await getSessionTokenById({db: auth_db, sessionId})

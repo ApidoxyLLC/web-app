@@ -1,16 +1,16 @@
 import { sessionModel } from "@/models/auth/Session";
 import { addLoginSession as addUserLoginSession } from "./user.service";
-import { encrypt } from "@/app/utils/encryption";
+import { encrypt } from "@/app/utils/cryptoEncryption";
 
 
 export async function getSessionTokenById({db, sessionId}) {
     const Session = sessionModel(db)  
     return await Session.findOne({ _id: String(sessionId) })
-                                         .select(   '+accessToken ' +
-                                                    '+accessTokenExpiresAt ' +
-                                                    '+refreshToken ' +
-                                                    '+refreshTokenExpiresAt ' +
-                                                    '+revoked' ).lean();
+                                    .select('+accessToken '             +
+                                            '+accessTokenExpiresAt '    +
+                                            '+refreshToken '            +
+                                            '+refreshTokenExpiresAt '   +
+                                            '+revoked' ).lean();
 }
 
 export async function createLoginSession({ id, user, provider, 
@@ -78,4 +78,53 @@ export async function updateSessionToken({db, sessionId, accessToken, refreshTok
                                         "refreshToken": refreshTokenCipherText        }
                             }
                         );
+}
+
+export async function getSessionUser({db, session, data}) {
+    const Session = sessionModel(db);
+    const { sessionId } = data || {};
+
+    const query = await Session.aggregate([
+                                            {
+                                                $match: { _id: sessionId }
+                                            },
+                                            {
+                                                $lookup: {
+                                                from: 'users',
+                                                localField: 'userId',
+                                                foreignField: '_id',
+                                                as: 'user'
+                                                }
+                                            },
+                                            {
+                                                $unwind: '$user'
+                                            },
+                                            {
+                                                $project: {
+                                                    _id: 1,
+                                                    provider: 1,
+                                                    accessTokenExpiresAt: 1,
+                                                    refreshTokenExpiresAt: 1,
+                                                    ip: 1,
+                                                    userAgent: 1,
+                                                    lastUsedAt: 1,
+                                                    createdAt: 1,
+                                                    revoked: 1,
+                                                    // include only selected user fields
+                                                    user: {
+                                                        _id: 1,
+                                                        name: 1,
+                                                        email: 1,
+                                                        phone: 1,
+                                                        avatar: 1,
+                                                        plan: 1,
+                                                        role: 1,
+                                                        theme: 1,
+                                                        language: 1
+                                                    }
+                                                }
+                                            }
+                                            ]);
+    if (session) query.session(session);
+    return await query;                                        
 }

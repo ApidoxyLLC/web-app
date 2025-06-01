@@ -3,10 +3,10 @@ import loginSchema from './loginDTOSchema';
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { encrypt, decrypt } from '@/app/utils/encryptToken';
-import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/primary/user.service';
-import { cleanInvalidSessions, createLoginSession } from '@/services/primary/session.service';
-import { createLoginHistory } from '@/services/primary/history.service';
+import { encrypt, decrypt } from '@/app/utils/cryptoEncryption';
+import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/auth/user.service';
+import { cleanInvalidSessions, createLoginSession } from '@/services/auth/session.service';
+import { createLoginHistory } from '@/services/auth/history.service';
 
 // import GoogleProvider from 'next-auth/providers/google';
 // import AppleProvider from 'next-auth/providers/apple';
@@ -57,7 +57,7 @@ import { createLoginHistory } from '@/services/primary/history.service';
 //             role: user.role,
 //             sessionId: crypto.randomBytes(16).toString('hex')
 //         },
-//         process.env.USER_ACCESS_TOKEN_SECRET,
+//         process.env.ACCESS_TOKEN_SECRET,
 //         { 
 //             expiresIn: '15m', 
 //             algorithm: 'RS256' // Asymmetric encryption
@@ -125,19 +125,19 @@ export const authOptions = {
                         const userAgent = req.headers['user-agent'] || '';  
                         const sessionId = uuidv4();  
 
-                        const               ACCESS_TOKEN_SECRET = process.env.USER_ACCESS_TOKEN_SECRET ;
-                        const  USER_ACCESS_TOKEN_EXPIRE_MINUTES = process.env.USER_ACCESS_TOKEN_EXPIRE_MINUTES || 15;
-                        const USER_REFRESH_TOKEN_EXPIRE_MINUTES = process.env.USER_REFRESH_TOKEN_EXPIRE_MINUTES  || 86400
+                        const               ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ;
+                        const  ACCESS_TOKEN_EXPIRE_MINUTES = process.env.ACCESS_TOKEN_EXPIRE_MINUTES || 15;
+                        const REFRESH_TOKEN_EXPIRE_MINUTES = process.env.REFRESH_TOKEN_EXPIRE_MINUTES  || 86400
                         
 
                         const {        token: accessToken, 
                                     expireAt: accessTokenExpAt   } = createAccessToken({  user, sessionId, 
                                                                                         secret: ACCESS_TOKEN_SECRET, 
-                                                                                        expire: USER_ACCESS_TOKEN_EXPIRE_MINUTES });
+                                                                                        expire: ACCESS_TOKEN_EXPIRE_MINUTES });
 
                         const {        token: refreshToken,
                                     expireAt: refreshTokenExpAt  } = createRefreshToken({ 
-                                                                    expire: USER_REFRESH_TOKEN_EXPIRE_MINUTES  })
+                                                                    expire: REFRESH_TOKEN_EXPIRE_MINUTES  })
                         const {   ciphertext: accessTokenCipherText, 
                                        nonce: accessTokenNonce  } = await encrypt(accessToken, 'access_token');
 

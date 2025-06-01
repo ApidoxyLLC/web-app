@@ -1,68 +1,47 @@
 import mongoose from "mongoose";
+import { planSnapshotSchema } from "./SubscriptionPlan";
 
-// const auditLogSchema = new mongoose.Schema({
-//     timestamp: { type: Date, default: Date.now } ,
-//     action: String,
-//     performedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-//     details: String,
-//     timestamp: { type: Date, default: Date.now }
-// }, { _id: false });
+
+const cancellationSchema = new mongoose.Schema({
+            canceledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+            canceledAt: Date,
+    cancellationReason: String,
+}, { _id: false});
+
+const trialSchema = new mongoose.Schema({
+  startAt: { type: Date },
+    endAt: { type: Date },
+}, { _id: false  });
+
+
 
 const subscriptionSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true },
-    planVersion: { type: mongoose.Schema.Types.ObjectId, ref: 'PlanHistory' },
-    planSnapshot: { name: String,
-                    price: Number,
-                    features: [String],
-                    billingCycle: String,
-                    version: { type: Number }
-                },
-    startDate: { type: Date, default: Date.now },
-    endDate: { type: Date },
-    trialStartAt: Date,
-    trialEndAt: Date,
-    status: { type: String, enum: ['active', 'trialing', 'past_due', 'canceled', 'paused', 'expired', 'unpaid'], default: 'trialing' },
+            userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+            planId: {  type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan', required: true },
+      planSnapshot: { type: planSnapshotSchema },
+         startDate: { type: Date, default: Date.now },
+           endDate: { type: Date, default: null },
+             trial: { type: trialSchema, default: null },
+            status: { type: String, enum: ['active', 'trial', 'past_due', 'canceled', 'paused', 'expired', 'unpaid', 'user-default'], default: 'user-default' },
+      billingCycle: { type: String, enum: ["monthly", "quarterly", "yearly", "custom"], default: 'monthly' },
+         autoRenew: { type: Boolean, default: false },
+       renewalDate: { type: Date, default: null },
+          currency: { type: String, default: 'BDT', enum: ['BDT', 'USD', 'EUR', 'GBP', 'INR', 'JPY' ] },
+            amount: { type: Number, default: 0, min: 0 },
+          invoices: { type: [mongoose.Schema.Types.ObjectId], ref: 'Invoice', default: [] },
+         discounts: { type: [mongoose.Schema.Types.ObjectId], ref: 'Discount', default: [] },
+   paymentMethodId: { type: String, default: null },
+    paymentHistory: { type: [mongoose.Schema.Types.ObjectId],  ref: 'Payment', default: []},
+      cancellation: { type: cancellationSchema, default: undefined },
 
-    
-    billingCycle: { type: String, enum: ['monthly', 'yearly', 'none'], default:'monthly', required: true },
-    
-    autoRenew: { type: Boolean, default: false },
-    renewalDate: { type: Date, default: null },
-    currency: { type: String, default: 'USD',  enum: ['USD', 'EUR', 'GBP', 'INR', 'JPY']},
-    amount: { type: Number },
-    invoices: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' }],
-    
-    discounts: [{ type: mongoose.Schema.Types.ObjectId, 
-                    ref: 'Discount'
-                }],
-    paymentMethodId: { type: String, required: function() { return this.status !== 'canceled'; }},
-    failedPaymentAttempts: { type: Number, default: 0 },
-    paymentHistory: [{ type: mongoose.Schema.Types.ObjectId, 
-                    // ref: 'Payment' 
-                }],
-    lastPaymentFailure: {   timestamp: Date, errorCode: String, message: String },                
-    
-    gracePeriodEnd: Date,
-    canceledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    canceledAt: { type: Date, default: null},
-    cancellationReason: { type: String, default: null},
-    // auditLog: { type: [auditLogSchema], required: false, default: []},
-
-    // soft delete
-    isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date, default: null },
-
-    
-    dataProcessingConsent: { accepted: Boolean, acceptedAt: Date },
-    ipAddress: { type: String },
-    userAgent: { type: String },
-    metadata: { type: mongoose.Schema.Types.Mixed, default: {} }
+         isDeleted: { type: Boolean, default: false },
+         deletedAt: { type: Date, default: undefined },
+        ipAddress: String,
+        userAgent: String,
+        // metadata: { type: mongoose.Schema.Types.Mixed, default: undefined }
 }, {
   timestamps: true,
-  collection: 'subscriptions'
+  collection: 'subscriptions',
 });
 
-export const SubscriptionModel = (db) => db.models.Subscription || db.model('Subscription', subscriptionSchema);
-export const Subscription = mongoose.models.Subscription ||  mongoose.model("Subscription", subscriptionSchema, "subscriptions")
-export default Subscription;
+export const subscriptionModel = (db) =>  db.models.Subscription || db.model('Subscription', subscriptionSchema);

@@ -8,8 +8,8 @@ import registerSchema from "./registerDTOSchema";
 import rateLimiter from "./rateLimiter";
 import { getClientIp } from "@/app/utils/ip";
 import crypto from 'crypto';
-import { createUser, getUserByIdentifier } from "@/services/primary/user.service";
-
+import { createUser, getUserByIdentifier } from "@/services/auth/user.service";
+import sendEmail from "@/services/mail/sendEmail";
 
 
 // Task Need to Review 
@@ -26,6 +26,7 @@ export async function POST(request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+  
 
   // Rate limiting
   // const userIP =  await getClientIp();
@@ -54,6 +55,7 @@ export async function POST(request) {
   }
 
   if(password){
+    // add more containing common password
     const commonPasswords = ['password', '12345678', 'qwerty123'];
     if (commonPasswords.includes(password.toLowerCase())) {
       // Validation Error
@@ -66,11 +68,6 @@ export async function POST(request) {
 
   try {
     session.startTransaction();
-    // Check for exiting User
-    // const User = userModel(auth_db)
-    // const existingUser = await User.findOne({ $or: [{ email }, { phone }] })
-    //                        .session(session)
-    //                        .lean();
     const existingUser = await getUserByIdentifier({db: auth_db, session, data: { phone, email } })
 
     // Error for Existing User 
@@ -116,6 +113,7 @@ export async function POST(request) {
                                    session, 
                                       data: {  name, email, phone, password }
                                   })
+                                     
     const { role, theme, language, timezone, currency, plan } = savedUser.toObject();
     const userResponse = {  
                             name, email, phone, role,  
@@ -124,6 +122,10 @@ export async function POST(request) {
 
     await session.commitTransaction();
     session.endSession();
+    
+    if(savedUser && email){
+      sendEmail({ email: userResponse.email, emailType: 'VERIFY' , userId })
+    } 
     return NextResponse.json({
           message: "User registered successfully",
           success: true,
