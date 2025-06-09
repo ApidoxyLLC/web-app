@@ -1,6 +1,6 @@
 import { sessionModel } from "@/models/auth/Session";
 import { addLoginSession as addUserLoginSession } from "./user.service";
-import { encrypt } from "@/app/utils/cryptoEncryption";
+import { encrypt } from "@/lib/encryption/cryptoEncryption";
 
 
 export async function getSessionTokenById({db, sessionId}) {
@@ -19,6 +19,7 @@ export async function createLoginSession({ id, user, provider,
                                                  refreshToken,
                                         refreshTokenExpiresAt,
                                                 ip, userAgent,
+                                                fingerprint,
                                             db, db_session }) {
 
     const Session = sessionModel(db)                              
@@ -26,6 +27,7 @@ export async function createLoginSession({ id, user, provider,
                                 _id: id.toString(),
                                 userId: user._id,
                                 provider,
+                                fingerprint,
                                 accessToken,
                                 accessTokenExpiresAt,
                                 refreshToken,

@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { authMiddleware } from 'next-auth/middleware';
+
 
 // Security headers helper
 function setSecurityHeaders(response) {
+
+
+
   const headers = {
     'X-Frame-Options': 'DENY',
-    'X-Content-Type-Options': 'nosniff',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'",
+    // 'Content-Security-Policy': `default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests`,
     'Cross-Origin-Embedder-Policy': 'require-corp',
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Resource-Policy': 'same-origin',
@@ -28,35 +30,37 @@ function setSecurityHeaders(response) {
 }
 
 export async function middleware(request) {
-  const url = new URL(request.url);
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const ip = forwardedFor?.split(',')[0]?.trim() || request.ip || 'unknown';
+  console.log('IP Address:', ip);
 
   // Auth Middleware
-  const authResult = await authMiddleware(request);
-  const response = authResult ?? NextResponse.next();
+
+  const response = NextResponse.next();
 
   // Add security headers
   setSecurityHeaders(response);
 
   // Auth-based redirects
-  const token = await getToken({ req: request });
+  // const token = await getToken({ req: request });
 
-  const publicPaths = ['/sign-in', '/sign-up', '/verify', '/'];
-  const isPublicPath = publicPaths.some((path) => url.pathname.startsWith(path));
+  // const publicPaths = ['/sign-in', '/sign-up', '/verify', '/'];
+  // const isPublicPath = publicPaths.some((path) => url.pathname.startsWith(path));
 
-  if (token && isPublicPath) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
+  // if (token && isPublicPath) {
+  //   return NextResponse.redirect(new URL('/dashboard', request.url));
+  // }
 
-  if (!token && url.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/home', request.url));
-  }
+  // if (!token && url.pathname.startsWith('/dashboard')) {
+  //   return NextResponse.redirect(new URL('/home', request.url));
+  // }
 
   return response;
 }
 
 export const config = {
   matcher: [
-    '/sign-in',
+    '/login',
     '/sign-up',
     '/verify',
     '/',

@@ -69,20 +69,19 @@ import { z } from "zod";
 //   metadata: z.record(z.any()).optional()
 // });
 
-
+// planId, billingCycle, autoRenew,  invoice, discount, metadata
 const subscriptionDTOSchema = z.object({
            planId: z.string().min(1),
-         duration: z.number().min(1),
      billingCycle: z.enum(["monthly", "quarterly", "yearly", "custom"]).optional(),
-        basePrice: z.number().nonnegative().default(0),
         autoRenew: z.boolean().default(false),
-         currency: z.enum(['BDT', 'USD', 'EUR', 'GBP', 'INR', 'JPY']).default('BDT'), // currency of payment method
   paymentMethodId: z.string().optional(),
-        ipAddress: z.string().regex('/^(?:\d{1,3}\.){3}\d{1,3}$|^\[?([a-fA-F0-9:]+)\]?$/', 'Invalid IP address').optional(),
+        ipAddress: z.string()
+                        // .regex('/^(?:\d{1,3}\.){3}\d{1,3}$|^\[?([a-fA-F0-9:]+)\]?$/', 'Invalid IP address')
+                        .optional(),
         userAgent: z.string().optional(),
           invoice: z.string().optional(),
          discount: z.string().optional(),
-        //  metadata: z.record(z.any()).optional()
+         metadata: z.record(z.any()).optional()
 });
 
 export default subscriptionDTOSchema

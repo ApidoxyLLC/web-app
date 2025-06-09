@@ -1,25 +1,26 @@
 import mongoose from 'mongoose';
+import cuid from '@bugsnag/cuid';
 
 // const dbInfoSchema = new mongoose.Schema({
-//     storageType: { type: [String], enum: ['individual-cluster', 'individual-database', 'shared-cluster', 'shared-database', 'self-hosted', 'other'], default: undefined },
-//     clusterName: { type: String, default: undefined },
-//     databaseName: { type: String, default: undefined },
-//     connectionString: { type: String, default: undefined },
-//     host: { type: String, default: undefined },
-//     port: { type: Number, default: undefined },
-//     provider: { type: String, enum: ['aws', 'gcp', 'azure', 'atlas', 'self-hosted', 'other'], default: undefined },
-//     region: { type: String, default: undefined},
-//     auth: {   username: { type: String, default: undefined },
-//               password: { type: String, default: undefined },
-//              mechanism: { type: String, default: undefined } },
-//     sslEnabled: { type: Boolean, default: undefined },
-//     replicaSet: { type: String, default: undefined },
-//     backupPolicy: { enabled: { type: Boolean, default: undefined },
-//                   frequency: { type: String, default: undefined },
-//               retentionDays: { type: Number, default: undefined},
+//     storageType: { type: [String], enum: ['individual-cluster', 'individual-database', 'shared-cluster', 'shared-database', 'self-hosted', 'other'], default: null },
+//     clusterName: { type: String, default: null },
+//     databaseName: { type: String, default: null },
+//     connectionString: { type: String, default: null },
+//     host: { type: String, default: null },
+//     port: { type: Number, default: null },
+//     provider: { type: String, enum: ['aws', 'gcp', 'azure', 'atlas', 'self-hosted', 'other'], default: null },
+//     region: { type: String, default: null},
+//     auth: {   username: { type: String, default: null },
+//               password: { type: String, default: null },
+//              mechanism: { type: String, default: null } },
+//     sslEnabled: { type: Boolean, default: null },
+//     replicaSet: { type: String, default: null },
+//     backupPolicy: { enabled: { type: Boolean, default: null },
+//                   frequency: { type: String, default: null },
+//               retentionDays: { type: Number, default: null},
 //                   },
-//     version: { type: String, default: undefined },
-//     tags: { type:[String], default: undefined }, 
+//     version: { type: String, default: null },
+//     tags: { type:[String], default: null }, 
 // }, { timestamps: false });
 
 
@@ -35,42 +36,40 @@ const appSettingsSchema = new mongoose.Schema({
 }, { _id: false });
 
 const extraPolicySchema = new mongoose.Schema({
-  type: { type: String },
-  title: { type: String },
+         type: { type: String },
+        title: { type: String },
   description: { type: String },
-  url: { type: String },
-  status: { type: String, enum: ['active', 'inactive', 'draft'], default: 'inactive' },
-  deletedAt: { type: Date, default: null },
-  isDeleted: { type: Boolean, default: false },
-  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  deletedReason: { type: String, default: null },
-}, { timestamps: true });
+          url: { type: String },
+       status: { type: String, enum: ['active', 'inactive', 'draft'], default: 'inactive' },
+    deletedAt: { type: Date, default: null },
+    isDeleted: { type: Boolean, default: false },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+deletedReason: { type: String, default: null },
+}, { timestamps: true, _id: false });
 
 const baseAppSchema = new mongoose.Schema({
-  appId: { type: String, required: true, index: true },
-  appSlug: { type: String, default: undefined},
-  appName: { type: String, required: true },
-  appIcon: { type: String, required: true },
-  email: { type: String, required: false, default: undefined },
-  phone: { type: String, required: false, default: undefined },
-  version: { type: String, default: undefined },
-  status: { type: String, default: 'pending',
-                          enum: ['active', 'inactive', 'pending', 'on-build', 'prepared'] },
-  language: { type: String, enum: ['en_US', 'bn_BD' ], default: 'en_US' },
-  appUrl: { type: String, required: false, default: undefined },  
-
-  contactUs: { type: String, default: undefined },
-  settings: appSettingsSchema,
-  // socialLinks: socialLinksSchema,
-  extraPolicies: [extraPolicySchema], 
-  siteMap: { type: String, default: undefined },
+        appId: { type: String, required: true, index: true },
+      appSlug: { type: String, default: null},
+      appName: { type: String, required: true },
+      appIcon: { type: String, required: true },
+        email: { type: String, required: false, default: null },
+        phone: { type: String, required: false, default: null },
+      version: { type: String, default: null },
+       status: { type: String, default: 'pending', enum: ['active', 'inactive', 'pending', 'on-build', 'prepared'] },
+     language: { type: String, enum: ['en_US', 'bn_BD' ], default: 'en_US' },
+       appUrl: { type: String, required: false, default: null },  
+    contactUs: { type: String, default: null },
+     settings: appSettingsSchema,
+  socialLinks: socialLinksSchema,
+extraPolicies: [extraPolicySchema], 
+  siteMap: { type: String, default: null },
   
 
   // recommend to remove
-  // aboutUs: { type: String, default: undefined },
-  // termsAndConditions: { type: String, default: undefined },
-  // privacyPolicy: { type: String, default: undefined },
-  // refundPolicy: { type: String, default: undefined },
+  // aboutUs: { type: String, default: null },
+  // termsAndConditions: { type: String, default: null },
+  // privacyPolicy: { type: String, default: null },
+  // refundPolicy: { type: String, default: null },
   
 // Delivery include here 
 
@@ -79,7 +78,7 @@ const baseAppSchema = new mongoose.Schema({
 
 
 const buildInfoSchema = new mongoose.Schema({ 
-  buildNo:{ type:String, default:0 },
+  buildNo:{ type:Number, default:0 },
   versionName: { type: String },
   buildTime: { type: String },
   buildDuration: { type: String },
@@ -92,7 +91,6 @@ const androidAppSchema = new mongoose.Schema({
   packageName: { type: String, required: true },
   buildInfo: [buildInfoSchema],
   firebaseJSONData: String,
-  // buildCount:{ type: Number, default: 0 }
   buildHistory: [{ 
                   si_no: { type: String, required: true }, 
                   version: { type: String, default: "" } 
@@ -113,42 +111,61 @@ const iosAppSchema = new mongoose.Schema({
 const dbSchema = new mongoose.Schema({
     provider: { type: String, default: 'mongodb' },
          uri: { type: String, default: '' },
-      dbName: { type: String, default: 'mongodb' }
+      prefix: { type: String, default: 'shop_' }
 }, { timestamps: false });
 
 const keySchema = new mongoose.Schema({
            ACCESS_TOKEN_SECRET: { type: String, required: true },
           REFRESH_TOKEN_SECRET: { type: String, required: true }, 
+     EMAIL_VERIFICATION_SECRET: { type: String, required: true },
+  //  ACCESS_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || 15 ) }, 
+  // REFRESH_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || 10080) }, 
 
-   ACCESS_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || 15 ) }, 
-  REFRESH_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || 10080) }, 
+  // ACCESS_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
+  // REFRESH_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
+   
+}, { timestamps: false, _id: false })
+const timeLimitationsSchema = new mongoose.Schema({
+     EMAIL_VERIFICATION_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRY || 10 ) }, 
+     PHONE_VERIFICATION_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRY || 3 ) }, 
+           ACCESS_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || 15 ) }, 
+          REFRESH_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || 10080) }, 
 
   // ACCESS_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
   // REFRESH_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
  
-}, { timestamps: false })
+}, { timestamps: false, _id: false })
+
+const hostSchema = new mongoose.Schema({
+             domain: {   type: String, required: true, trim: true,
+                       unique: true, match: /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/ },
+           hostType: {   type: [String], enum:['web', 'android', 'ios'], default: [] }, 
+         subdomains: {   type: [String],  default: [] },
+}, { timestamps: true });
 
 const shopSchema = new mongoose.Schema({
+                // _id: { type: mongoose.Schema.Types.ObjectId, required: true },
             ownerId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
-           vendorId: { type: mongoose.Schema.Types.ObjectId, required: true },
+           vendorId: { type: mongoose.Schema.Types.ObjectId, required: false, default: cuid() },
   ownerLoginSession: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Session' },
-
+              email: { type: String, trim: true, unique: true },
             country: { type: String, required: true },
            industry: { type: String, required: true },
        businessName: { type: String, required: true },
            location: { type: String, required: true },
 
+  maxSessionAllowed: { type: Number, default: Number(process.env.END_USER_DEFAULT_MAX_SESSIONS || 5), select: false },
              dbInfo: { type: dbSchema,  required: true, select: false },
                keys: { type: keySchema, required: true, select: false },
-
-               slug: { type: String, default: undefined },
-         activeApps: { type: [String], required: false, default: undefined, enum: ['web', 'android', 'ios'] },
-                web: { type: webAppSchema, default: undefined },
-            android: { type: androidAppSchema, default: undefined },
-                ios: { type: iosAppSchema, default: undefined },
-
+    timeLimitations: { type: timeLimitationsSchema, select: false },
+               slug: { type: String, default: null },
+         activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
+                web: { type: webAppSchema, default: null },
+            android: { type: androidAppSchema, default: null },
+                ios: { type: iosAppSchema, default: null },
+            domains: { type: [hostSchema], default: [] },
         socialLinks: { type: [socialLinksSchema], required: false, default: [] },
-   facebookDataFeed: { type: String, default: undefined },
+   facebookDataFeed: { type: String, default: null },
 
 }, { timestamps: true, collection: 'shops' });
 

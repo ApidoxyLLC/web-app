@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto'; 
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
+import { NextResponse } from 'next/server';
 
 
 // Funcionality with database 
@@ -18,7 +19,7 @@ export   async function getUserByIdentifier({ db, session, data}) {
         const query = User.findOne({ $or: [{ email }, { phone }] })
                             .select('+security '            +
                                     '+security.password '   +
-                                    '+security.salt '   +
+
                                     '+lock '            +
                                     '+verification '    )
                                     // '+refreshTokenExpiresAt '   +
@@ -45,7 +46,7 @@ export            async function createUser({ db, session, data }) {
     }
     const { name, email, phone, password } = data || {}
     const User = userModel(db)
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(14);
     const hashedPassword = await bcrypt.hash(password, salt);
     const token = crypto.randomBytes(32).toString('hex');
     const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
@@ -58,23 +59,19 @@ export            async function createUser({ db, session, data }) {
                                       && {  password: hashedPassword,
                                             salt } ) },
                         verification: { ...(email && {
-                                            isEmailVerified: false,
                                             emailVerificationToken: verificationToken,
-                                            emailVerificationTokenExpireAt: new Date( Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60 * 1000) ),
-                                            // emailVerificationTokenExpires: Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60000) //15 minute validation 
+                                            emailVerificationTokenExpiry: new Date( Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60 * 1000)).getTime(),
                                           }),
-
-                                        ...(phone && { 
-                                            isPhoneVerified: false }),
-
                                         ...((phone && !email) && { 
                                             phoneVerificationOTP: Math.floor(100000 + Math.random() * 900000).toString(),
-                                            phoneVerificationOTPExpireAt: new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000))
+                                            phoneVerificationOTPExpiry: new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000)).getTime()
                                           })
                                       },
                       ...(email && { email }),
                       ...(phone && {  phone })
                     };
+                    
+                    
 
     const newUser = new User(userData);
     return await newUser.save(session ? { session } : {});
@@ -119,9 +116,9 @@ export        async function verifyPassword({ db, session, data}) {
       throw new Error('Invalid data format');
     }
     const { user, password } = data || {};
-    if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
-        return { status: false, reason: 'locked', message: 'Account is temporarily locked. Try again later.' };
-    }
+    // if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
+    //     return { status: false, reason: 'locked', message: 'Account is temporarily locked. Try again later.' };
+    // }
 
     if (!user?.security?.password) {
         return { status: false, reason: 'no_password', message: 'Password not set.' };
@@ -149,10 +146,10 @@ export default async function verifyEmailToken({token}) {
         const user = await User.findOne({"verification.emailVerificationToken":token,  "verification.emailVerificationTokenExpire":{ $gt: Date.now() }})
         if(user){
             const updatedUser  = await User.findByIdAndUpdate(user._id, {
-                                $set: { "verification.isEmailVerified": true },
+                                $set: { isEmailVerified: true },
                                 $unset: {
                                         "verification.emailVerificationToken": 1,
-                                        "verification.emailVerificationTokenExpireAt": 1
+                                        "verification.emailVerificationTokenExpiry": 1
                                     }
                             });
             if(updatedUser){
@@ -267,9 +264,9 @@ export function checkLockout(user) {
 
 export function checkVerification({user, identifier}) {
     const requiresVerification =
-        (identifier === user.email && !user.verification.isEmailVerified) ||
-        (identifier === user.phone && !user.verification.isPhoneVerified) ||
-        (identifier === user.username && !(user.verification.isEmailVerified || user.verification.isPhoneVerified));
+        (identifier === user.email && !user.isEmailVerified) ||
+        (identifier === user.phone && !user.isPhoneVerified) ||
+        (identifier === user.username && !(user.isEmailVerified || user.isPhoneVerified));
 
     if (requiresVerification) throw new Error("Account verification required");
 }
@@ -295,7 +292,6 @@ export function createAccessToken({user, sessionId, secret, expire }){
 }
 
 export function createRefreshToken({ expire }){
-
     const REFRESH_TOKEN_EXPIRE_MS = Number(expire) * 60 * 1000;
     const token = crypto.randomBytes(64).toString('hex');
     const expireAt = new Date( Date.now() + REFRESH_TOKEN_EXPIRE_MS );
@@ -304,7 +300,7 @@ export function createRefreshToken({ expire }){
 
 function calculateLockTime(failedAttempts) {
   const MAX_LOGIN_ATTEMPT =  Number(process.env.MAX_LOGIN_ATTEMPT )|| 5;
-  if (failedAttempts < MAX_LOGIN_ATTEMPT) return null;
+  if (failedAttempts > MAX_LOGIN_ATTEMPT) return NextResponse.json({success: false, error: 'Too many attempts. Please try again later' }, { status: 429 });
   
 //   const lockMinutes = Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT);
   return new Date(Date.now() + (Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT) * 60 * 1000));

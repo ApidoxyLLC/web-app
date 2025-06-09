@@ -47,7 +47,7 @@ const pricingSchema = new mongoose.Schema({
                monthly: { type: Number, default: 0 },
                 yearly: { type: Number, default: 0 },
              quarterly: { type: Number, default: 0 },
-         billingCycles: { type: [String], enum: ["monthly", "quarterly", "yearly", "custom"], default: ['monthly', 'yearly'] },
+         billingCycles: { type: [String], enum: ["not-applicable","monthly", "quarterly", "yearly", "custom"], default: ['monthly', 'yearly'] },
               currency: { type: String, default: 'BDT', enum: ['BDT', 'USD', 'GBP', 'EUR'] }
 }, { _id: false });
 
@@ -56,7 +56,7 @@ const basePlanSchema = new mongoose.Schema({
                     name: { type: String, required: true, maxlength: 50 },
              description: { type: String, required: true, maxlength: 500 },
                     slug: { type: String, unique: true },
-                    tier: { type: String, enum: ['free', 'starter', 'growth', 'professional', 'enterprise'], default: 'starter', required: false },
+                    tier: { type: String, enum: ['free-trial', 'starter', 'growth', 'professional', 'enterprise'], default: 'starter', required: false },
                   prices: { type: pricingSchema, default:()=> {} },
                   limits: { type: maxLimitSchema, default: ()=> {} },
                 features: { type: featuresSchema, default: ()=> {} },

@@ -1,103 +1,95 @@
 import cuid from "@bugsnag/cuid";
 import mongoose from 'mongoose';
 
-const ConsentSchema = new mongoose.Schema({
-  acceptedTermsAt: { type: Date, default: undefined},
+const consentSchema = new mongoose.Schema({
+  acceptedTermsAt: { type: Date, default: null},
   marketingConsent: { type: Boolean, default: false },
   dataProcessingConsent: { type: Boolean, default: false }
 }, { _id: false });
 
-const VerificationSchema = new mongoose.Schema({
-  isEmailVerified: { type: Boolean, default: undefined },
-  emailVerificationToken: { type: String, default: undefined },
-  emailVerificationTokenExpires: { type: Date, default: undefined },
-  isPhoneVerified: { type: Boolean, default: undefined },
-  phoneVerificationToken: { type: String, default: undefined },
-  phoneVerificationTokenExpires: { type: Date, default: undefined }
+const verificationSchema = new mongoose.Schema({
+  emailVerificationToken: { type: String, default: undefined, select: false },
+  emailVerificationTokenExpiry: { type: Number, default: undefined, select: false  },
+  phoneVerificationOTP: { type: String, default: undefined, select: false  },
+  phoneVerificationOTPExpiry: { type: Date, default: undefined, select: false  }
 }, { _id: false });
 
-const SecuritySchema = new mongoose.Schema({
-  password: { type: String, select: false, default: undefined },
-  salt: { type: String, select: false, default: undefined },
-  failedAttempts: { type: Number, default: undefined },
-  lastLogin: { type: Date, default: undefined }
-}, { _id: false });
+const securitySchema = new mongoose.Schema({
+  password: { type: String, select: false, default: null },
+  failedAttempts: { type: Number, default: null },
+  lastLogin: { type: Date, default: null },
 
-const StatusSchema = new mongoose.Schema({
-  currentStatus: { type: String, enum: ['pending', 'active', 'suspended', 'deleted', 'initiate'], default: 'initiate' },
-  changeAt: { type: Date, default: undefined },
-  changeReason: { type: String, default: undefined },
-  changeBy: { type: mongoose.Schema.Types.ObjectId, ref: 'users',default: undefined },
-}, { _id: false });
+  forgotPasswordToken: { type: String, default: undefined },
+  forgotPasswordTokenExpiry: { type: Number, default: undefined },
 
-const LockSchema = new mongoose.Schema({
-  isLocked: { type: Boolean, default: undefined },
-  lockReason: { type: String, default: undefined },
-  lockUntil: { type: Date, default: undefined },
-}, { _id: false });
-
-const TwoFactorSchema = new mongoose.Schema({
-  enabled: { type: Boolean, default: false },
-  token: { type: String, select: false, default: undefined },
-  tokenExpires: { type: Date, default: undefined },
-  attempts: { type: Number, default: undefined },
-}, { _id: false });
-
-const shopUserSchema = new mongoose.Schema({
-  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserProjects' },
-  name: { type: String, maxlength: 255, required: true },
-  avatar: { type: String, default: undefined},
-  activeSessions:[{ type: mongoose.Schema.Types.ObjectId, ref: 'Sessions' }],
-  email: { type: String, trim: true, unique: true, index: true  },
-  phone: { type: String, trim: true, unique: true },
-
-  verification:  { type: VerificationSchema, default: () => ({}) },
-  security: { type: SecuritySchema, default: () => ({}) },
-  consent: { type: ConsentSchema, default: () => ({}) },
-  status: { type: StatusSchema, default: () => ({}) },
-  lock: { type: LockSchema, default: () => ({}) },
-  twoFactor: { type: TwoFactorSchema, default: () => ({}) },
+  resetPasswordToken: { type: String, default: undefined },
+  resetPasswordTokenExpiry: { type: Number, default: undefined },
   
-  // Profile Delete information
-  isDeleted: { type: Boolean, default: false },
-  deletedAt: { type: Date, default: undefined },
-  role: {type: [String], enum: ['end_user', 'project_operator'], default: ['end_user']},
+  passwordChangedAt: { type: Date, select: false, default: undefined },
+  isFlagged: { type: Boolean, default: false, select: false  },
+}, { _id: false });
+
+const statusSchema = new mongoose.Schema({
+  currentStatus: { type: String, enum: ['pending', 'active', 'suspended', 'deleted', 'initiate'], default: 'initiate' },
+  changeAt: { type: Date, default: null },
+  changeReason: { type: String, default: null },
+  changeBy: { type: mongoose.Schema.Types.ObjectId, ref: 'users', default: null },
+}, { _id: false });
+
+const lockSchema = new mongoose.Schema({
+  isLocked: { type: Boolean, default: null },
+  lockReason: { type: String, default: null },
+  lockUntil: { type: Date, default: null  },
+}, { _id: false });
+
+const twoFactorSchema = new mongoose.Schema({
+  enabled: { type: Boolean, default: false },
+  token: { type: String, select: false, default: null, select: false  },
+  tokenExpiry: { type: Date, default: null, select: false  },
+  attempts: { type: Number, default: null, select: false  },
+}, { _id: false });
+
+const shopSchema = new mongoose.Schema({
+  shopId: {  type: mongoose.Schema.Types.ObjectId },
+  dbCluster: { type: String },
+  dbUri: { type: String },
+  dbSecret: { type: String },
+  dbNamePrefix: { type: String, default: process.env.APP_DB_PREFIX || 'app_db_' }
+}, { _id: false });
+
+
+
+const userSchema = new mongoose.Schema({
+  name: { type: String, maxlength: 255, required: true },
+  avatar: { type: String, default: null},
+  activeSessions:[{ type: mongoose.Schema.Types.ObjectId,   
+                      ref: 'Session',
+                      select: false,
+                    }],
+  email: { type: String, trim: true, unique: true, index: true, sparse: true  },
+  phone: { type: String, trim: true, unique: true, sparse: true },
+  isEmailVerified: { type: Boolean, default: false },
+  isPhoneVerified: { type: Boolean, default: false },
+  verification:  { type: verificationSchema, default: () => ({}), select: false },
+  security: { type: securitySchema, default: () => ({}), select: false },
+  consent: { type: consentSchema, default: () => ({}) },
+  status: { type: statusSchema, default: () => ({}), select: false  },
+  lock: { type: lockSchema, default: () => ({}), select: false },
+  twoFactor: { type: twoFactorSchema, default: () => ({}), select: false },
+
+  isDeleted: { type: Boolean, default: false, select: false  },
+  deletedAt: { type: Date, default: null, select: false  },
+  role: {type: [String], default: ['end-user']},
   theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
   language: { type: String, default: 'english',
             enum: ['english', 'bangla'] },
-  timezone: { type: String, default: undefined },
-  currency: { type: String, default: undefined },
+  timezone: { type: String, default: null },
+  currency: { type: String, default: null },
 }, {
   timestamps: true,
-  collection: 'shop_users'
+  collection: 'users'
 });
 
-
-export const ShopUser = mongoose.models.ShopUser ||  mongoose.model("ShopUser", shopUserSchema, "shop_users")
-export default ShopUser
+export const userModel = (db) => db.models.User || db.model('User', userSchema);
 
 
-
-  // GDPR/Privacy
-  // acceptedTermsAt: { type: Date, default: undefined},
-  // marketingConsent: { type: Boolean, default: false },
-  // dataProcessingConsent: { type: Boolean, default: false },
-
-  // Email  
-  // email: { type: String, trim: true, default: undefined, sparse: true },
-  // isEmailVerified: { type: Boolean, default: undefined },
-  // emailVerificationToken: { type: String, default: undefined },
-  // emailVerificationTokenExpires: { type: Date, default: undefined },
-
-  // Phone 
-  // phone: { type: String, trim: true, default: undefined, sparse: true },
-  // isPhoneVerified: { type: Boolean, default: undefined },
-  // phoneVerificationToken: { type: String, default: undefined },
-  // phoneVerificationTokenExpires: { type: Date, default: undefined },
-
-  // Security
-  // password: { type: String, select: false , default: undefined },
-  // salt: { type: String, select: false, default: undefined},
-  // isTwoFactorEnable: { type: Boolean, default: false, },
-  // lastLogin: { type: Date, default: undefined },
-  // failedAttempts: {  type: Number,  default: 0 },

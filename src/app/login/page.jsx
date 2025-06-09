@@ -1,15 +1,22 @@
 "use client";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Form from 'next/form'
+import useFingerprint from "@/hooks/useFingerprint";
 
 export default function page() {
+    const fingerprint = useFingerprint()
+    console.log(fingerprint)
+
      async function createUser(formData) {
         const email = formData.get("email")?.toString() ?? "";
         const password = formData.get("password")?.toString() ?? "";
-        const result = await signIn('identifier-password-login', {
-                        redirect: false,
-                        identifier: email,
-                        password: password
+        const result = await signIn('login', {
+                            redirect: false,
+                          identifier: email,
+                            password: password,
+                         fingerprint: fingerprint?.fingerprintId || '',
+                           userAgent: fingerprint?.userAgent     || '',
+                            timezone: fingerprint?.timezone      || '',
                     });
 
         console.log(result)

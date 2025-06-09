@@ -8,17 +8,17 @@ const ConsentSchema = new mongoose.Schema({
 }, { _id: false });
 
 const VerificationSchema = new mongoose.Schema({
-  isEmailVerified: { type: Boolean, default: undefined },
+  // isEmailVerified: { type: Boolean, default: undefined },
   emailVerificationToken: { type: String, default: undefined, select: false },
   emailVerificationTokenExpire: { type: Number, default: undefined, select: false  },
-  isPhoneVerified: { type: Boolean, default: undefined },
+  // isPhoneVerified: { type: Boolean, default: undefined },
   phoneVerificationOTP: { type: String, default: undefined, select: false  },
   phoneVerificationOTPExpire: { type: Date, default: undefined, select: false  },
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
   password: { type: String, select: false, default: null },
-  salt: { type: String, select: false, default: null },
+  // salt: { type: String, select: false, default: null },
   failedAttempts: { type: Number, default: null },
   lastLogin: { type: Date, default: null },
   forgotPasswordToken: { type: String, default: undefined },
@@ -82,17 +82,15 @@ const usageSchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema({
   name: { type: String, maxlength: 255, required: true },
   avatar: { type: String, default: null},
-  activeSessions:[{ type: mongoose.Schema.Types.ObjectId, 
-                      ref: 'Session',
-                      select: false,
-                    }],
-  shops: { type: [shopSchema], select: false, default: [] },
+  activeSessions:[{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],
+  shops: { type: [mongoose.Schema.Types.ObjectId], select: false, default: [] },
   email: { type: String, trim: true, unique: true, index: true, sparse: true  },
   phone: { type: String, trim: true, unique: true, sparse: true },
-  
-  verification:  { type: VerificationSchema, default: () => ({}), select: false },
+  isEmailVerified: { type: Boolean, default: false, select: false  },
+  isPhoneVerified: { type: Boolean, default: false, select: false  },
+  verification: { type: VerificationSchema, default: () => ({}), select: false },
   security: { type: SecuritySchema, default: () => ({}), select: false },
-  consent: { type: ConsentSchema, default: () => ({}) },
+  consent: { type: ConsentSchema, default: () => ({}), select: false },
   status: { type: StatusSchema, default: () => ({}), select: false  },
   lock: { type: LockSchema, default: () => ({}), select: false },
   twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
@@ -101,7 +99,6 @@ const userSchema = new mongoose.Schema({
   // Profile Delete information
   isDeleted: { type: Boolean, default: false, select: false  },
   deletedAt: { type: Date, default: null, select: false  },
-  // plan: { type: String, default: 'basic', enum: ['basic', 'standard', 'premium', 'enterprise'] },
   role: {type: [String], enum: ['user', 'operator'], default: ['user']},
   theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
   language: { type: String, default: 'english',
@@ -113,21 +110,10 @@ const userSchema = new mongoose.Schema({
   collection: 'users'
 });
 
-// userSchema.set('toJSON', {
-//   transform(_, ret) { delete ret.__v; delete ret._id; return ret; }
-// });
-// userSchema.index({ email: 1 }, { unique: true, sparse: true });
-// 
-// userSchema.pre('save', function (next) {
-//   if (this.activeSessions) {
-//     this.activeSessions = [...new Set(this.activeSessions.map(id => id.toString()))];
-//   }
-//   next();
-// });
 
 export const userModel = (db) => db.models.User || db.model('User', userSchema);
-export const User = mongoose.models.User ||  mongoose.model("User", userSchema, "users")
-export default User
+// export const User = mongoose.models.User ||  mongoose.model("User", userSchema, "users")
+// export default User
 
   // GDPR/Privacy
   // acceptedTermsAt: { type: Date, default: null},

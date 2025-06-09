@@ -9,8 +9,11 @@ function resolveIdentifierType(identifier) {
   return "username";
 }
 
-
 export const loginSchema = z.object({
+ fingerprint: z.string().length(32, 'Invalid fingerprint ID length')
+                .regex(/^[a-f0-9]{32}$/, 'Invalid fingerprint ID format'),
+   userAgent: z.string().optional,
+    timezone: z.string().optional,
   identifier: z.string(),
     password: z.string()
                .min(6, "Password must be at least 6 characters")
@@ -28,9 +31,12 @@ export const loginSchema = z.object({
   }
 
   return {
-    identifier: trimmedIdentifier,
-    password: data.password,
-    identifierName: type 
+        identifier: trimmedIdentifier,
+          password: data.password,
+    identifierName: type,
+       fingerprint: data.fingerprint,
+         userAgent: data.userAgent,
+          timezone: data.timezone
   };
 })
 

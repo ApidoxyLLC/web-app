@@ -85,14 +85,9 @@ export async function POST(request) {
                                             salt } ) },
                                             
                         verification: { ...(email && {
-                                            isEmailVerified: false,
                                             emailVerificationToken: verificationToken,
                                             emailVerificationTokenExpires: Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60000) //15 minute validation 
                                           }),
-
-                                        ...(phone && { 
-                                            isPhoneVerified: false }),
-
                                         ...((phone && !email) && { 
                                             phoneVerificationOTP: Math.floor(100000 + Math.random() * 900000).toString(),
                                             phoneVerificationOTPExpires: new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000))

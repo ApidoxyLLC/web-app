@@ -3,7 +3,7 @@ import loginSchema from './loginDTOSchema';
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import { encrypt, decrypt } from '@/app/utils/cryptoEncryption';
+import { encrypt, decrypt } from '@/lib/encryption/cryptoEncryption';
 import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/auth/user.service';
 import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
 import { createLoginHistory } from '@/services/auth/history.service';
@@ -18,26 +18,24 @@ import { createLoginHistory } from '@/services/auth/history.service';
 export const authOptions = {
     providers: [
         CredentialsProvider({
-            name: 'identifier-password-login',
-            id: 'identifier-password-login',
+            name: 'login',
+            id: 'login',
             credentials: {
-                identifier: { label: 'Username/Email/phone', type: 'text', placeholder: 'Username/Email/Phone' },
-                password: { label: 'Password', type: 'password', placeholder: 'password' }
+                 identifier: { label: 'Username/Email/phone', type: 'text',     placeholder: 'Username/Email/Phone' },
+                   password: { label: 'Password',             type: 'password', placeholder: 'password' },
+                fingerprint: { label: 'fingureprint-id',      type: 'text',     placeholder: '' },
+                  userAgent: { label: 'user-agent',           type: 'text',     placeholder: 'Browser' },
+                   timezone: { label: 'timezone',             type: 'text',     placeholder: 'Timezone' },
             },
 
             async authorize(credentials, req) {
 
                 try {
                     const parsed = loginSchema.safeParse(credentials);
-                    if (!parsed.success) {
-                        // const errorDetails = parsed.error.flatten().fieldErrors;                           
-                        // throw new Error(JSON.stringify(errorDetails));
-                        throw new Error("Invalid input");        
-                    }
-
-                    
-
-                    const { identifier, password, identifierName } = parsed.data;
+                    if (!parsed.success) { throw new Error("Invalid input") }
+                
+                    const { identifier, password, 
+                        identifierName, fingerprint, userAgent, timezone } = parsed.data;
                     
                     const auth_db = await authDbConnect();
                     const user = await getUserByIdentifier({db: auth_db, 
@@ -88,6 +86,9 @@ export const authOptions = {
                     const refreshTokenCipherText = await encrypt({       data: refreshToken,
                                                                       options: { secret: REFRESH_TOKEN_ENCRYPTION_KEY }     });
 
+                    const ipAddressCipherText = await encrypt({          data: ip,
+                                                                      options: { secret: IP_ADDRESS_ENCRYPTION_KEY }     });
+                                                                      
                     const savedLoginSession = await createLoginSession({          id: sessionId, 
                                                                                  user, 
                                                                              provider: 'local-'+identifierName,
@@ -95,7 +96,8 @@ export const authOptions = {
                                                                  accessTokenExpiresAt: accessTokenExpAt,
                                                                          refreshToken: refreshTokenCipherText,
                                                                 refreshTokenExpiresAt: refreshTokenExpAt,
-                                                                                   ip,
+                                                                          fingerprint: fingerprint,
+                                                                                   ip: ipAddressCipherText,
                                                                             userAgent,
                                                                                    db: auth_db,
                                                                            db_session: atuh_db_session })
@@ -103,6 +105,7 @@ export const authOptions = {
                         await createLoginHistory({   userId: user._id, 
                                                   sessionId: savedLoginSession._id, 
                                                    provider: 'local-'+identifierName,
+                                                fingerprint: fingerprint,
                                                          ip, 
                                                   userAgent,
                                                          db: auth_db,
@@ -131,8 +134,8 @@ export const authOptions = {
                               refreshToken: refreshToken,
                                   provider: 'local-'+identifierName,
                                       role: user.role,
-                                isVerified: Boolean( user.verification?.isEmailVerified ||
-                                                     user.verification?.isPhoneVerified  )
+                                isVerified: Boolean( user?.isEmailVerified ||
+                                                     user?.isPhoneVerified  )
                             };
                 } catch (error) {
                     await atuh_db_session.abortTransaction()
@@ -156,17 +159,17 @@ export const authOptions = {
             const { token, user, account } = params
             console.log(token)
             if (user) {
-                token.accessToken = user.accessToken;
-                token.accessTokenExpAt = user.accessTokenExpAt;
-                token.refreshToken = user.refreshToken;
-                token.loginSession = user.loginSession;
-                token.username = user?.username || '';
-                token.name = user?.name || '';
-                token.email = user?.email || '';
-                token.phone = user?.phone || '';
-                token.role = user.role || '';
-                token.isVerified = user.isVerified || false;
-                token.provider = user.provider;
+                token.accessToken       = user.accessToken;
+                token.accessTokenExpAt  = user.accessTokenExpAt;
+                token.refreshToken      = user.refreshToken;
+                token.loginSession      = user.loginSession;
+                token.username          = user?.username        || ''; /* optional fields */
+                token.name              = user?.name            || '';
+                token.email             = user?.email           || '';
+                token.phone             = user?.phone           || '';
+                token.role              = user.role             || '';
+                token.isVerified        = user.isVerified || false;
+                token.provider          = user.provider;
             }
 
             const accessTokenExpire_ms  = new Date(token.accessTokenExpAt).getTime()
@@ -195,9 +198,9 @@ export const authOptions = {
                                                             })
                 if(!newTokens) return null
                         
-              token.accessToken = newTokens.accessToken;
-              token.accessTokenExpAt =  newTokens.accessTokenExpAt;
-              token.refreshToken = newTokens.refreshToken;
+              token.accessToken      = newTokens.accessToken;
+              token.accessTokenExpAt = newTokens.accessTokenExpAt;
+              token.refreshToken     = newTokens.refreshToken;
               return token 
             } catch (error) {
               return null

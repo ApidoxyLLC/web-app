@@ -1,18 +1,21 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/option";
 import { NextResponse } from "next/server";
-import { createShopDTOSchema } from "./schema/createShopDTOSchema";
+import { createShopDTOSchema } from "./createShopDTOSchema";
 import mongoose from "mongoose";
 import { dbConnect } from "@/app/lib/mongodb/db";
 import shopDbConnect from "@/app/lib/mongodb/shopDbConnect";
 import authDbConnect from "@/app/lib/mongodb/authDbConnect";
 import { createShop } from "@/services/auth/shop.service";
-import { encrypt } from "@/app/utils/cryptoEncryption";
+import { encrypt } from "@/lib/encryption/cryptoEncryption";
 import { getUserByIdentifier } from "@/services/auth/user.service";
 import { getToken } from "next-auth/jwt";
+import { randomBytes, createHmac } from 'crypto';
 
 
 export async function POST(request, response) {
+    // const host = request.headers.get('host');
+    // const origin = request.headers.get('origin');
 
     const secret = process.env.NEXTAUTH_SECRET;
     const token = await getToken({ req:request, secret });
@@ -25,18 +28,8 @@ export async function POST(request, response) {
 
         const { email, phone, role } = user_auth_session.user
         const auth_db = await authDbConnect()
-        // const session = await auth_db.startSession(); 
 
-        // const user = await getUserByIdentifier({db: auth_db, 
-        //                                     // session, 
-        //                                     data: { email, phone } })
-        
-        
         console.log(token)
-
-
-        // console.log(user)
-
         NextResponse.json({ success: true,  data:user_auth_session, message: "Session Found" }, { status: 200 });
     }
     
@@ -106,46 +99,43 @@ export async function POST(request, response) {
     // const encodingFormates = [ 'hex', 'base64' ];
     // const keyLengths  = [ 32, 64 ]
 
-    const  ACCESS_TOKEN_SECRET = crypto.randomBytes(32).toString('base64');
-    const REFRESH_TOKEN_SECRET = crypto.randomBytes(64).toString('hex');
-
-    const END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY=process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY
-
     
-    const accessTokenSecretCipherText = await encrypt({ data: ACCESS_TOKEN_SECRET,
-                                           options: { secret: END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY }      });
 
-    const END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY=process.env.END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY                                           
 
-    const refreshTokenSecretCipherText = await encrypt({ data: REFRESH_TOKEN_SECRET,
-                                           options: { secret: END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY }      });
+    const                         ACCESS_TOKEN_SECRET = crypto.randomBytes(32).toString('base64');
+    const END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY
+    const                 accessTokenSecretCipherText = await encrypt({    data: ACCESS_TOKEN_SECRET,
+                                                                        options: { secret: END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY }      });
+
+    const                         REFRESH_TOKEN_SECRET = crypto.randomBytes(64).toString('hex');
+    const END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY = process.env.END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY                                           
+    const                 refreshTokenSecretCipherText = await encrypt({ data: REFRESH_TOKEN_SECRET,
+                                                                      options: { secret: END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY }      });
     
-    const VENDOR_DB_PROVIDER_ENCRYPTION_KEY=process.env.VENDOR_DB_PROVIDER_ENCRYPTION_KEY
-    const VENDOR_DEFAULT_DB_PROVIDER=process.env.VENDOR_DEFAULT_DB_PROVIDER
+    const         shopId = new mongoose.Types.ObjectId();
+    const SHOP_DB_PREFIX = process.env.SHOP_DB_PREFIX
+    const     shopDbName = SHOP_DB_PREFIX + shopId
 
-    const dbProviderCipherText = await encrypt({ data: VENDOR_DEFAULT_DB_PROVIDER,
-                                           options: { secret: VENDOR_DB_PROVIDER_ENCRYPTION_KEY }      });                                           
+    const        VENDOR_DB_DEFAULT_URI = process.env.VENDOR_DB_DEFAULT_URI+'/'+shopDbName
+    const VENDOR_DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY
+    const              dbUriCipherText = await encrypt({     data: VENDOR_DB_DEFAULT_URI,
+                                                          options: { secret: VENDOR_DB_URI_ENCRYPTION_KEY }      });
 
-           const VENDOR_DB_DEFAULT_URI=process.env.VENDOR_DB_DEFAULT_URI
-    const VENDOR_DB_URI_ENCRYPTION_KEY=process.env.VENDOR_DB_URI_ENCRYPTION_KEY
+    // const VENDOR_DB_NAME_ENCRYPTION_KEY = process.env.VENDOR_DB_NAME_ENCRYPTION_KEY
+    // const dbNameCipherText = await encrypt({ data: shopDbName,
+    //                                       options: { secret: VENDOR_DB_NAME_ENCRYPTION_KEY }      });
 
-    const dbUriCipherText = await encrypt({ data: VENDOR_DB_DEFAULT_URI,
-                                           options: { secret: VENDOR_DB_URI_ENCRYPTION_KEY }      });
-
-    const _shop_id = new mongoose.Types.ObjectId();
-    const SHOP_DB_PREFIX=process.env.SHOP_DB_PREFIX
-    const shopDbName=`${SHOP_DB_PREFIX}_${_shop_id}`
-    const VENDOR_DB_NAME_ENCRYPTION_KEY=process.env.VENDOR_DB_NAME_ENCRYPTION_KEY
-    const dbNameCipherText = await encrypt({ data: shopDbName,
-                                          options: { secret: VENDOR_DB_NAME_ENCRYPTION_KEY }      });
     // const DB_PROVIDER = process.env.VENDOR_DB_PROVIDER
     // const DB_URI = process.env.VENDOR_DB_DEFAULT_URI
 
-    const  ACCESS_TOKEN_EXPIRE_MINUTES=Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES)
-    const REFRESH_TOKEN_EXPIRE_MINUTES=Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES)
+    const       ACCESS_TOKEN_EXPIRE_MINUTES = Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES)  || 30
+    const      REFRESH_TOKEN_EXPIRE_MINUTES = Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES) || 10080
+    const EMAIL_VERIFICATION_EXPIRE_MINUTES = Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRE_MINUTES)    || 10
+    const PHONE_VERIFICATION_EXPIRE_MINUTES = Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRE_MINUTES)    || 3
+
     try {
         const data = {
-              _id: _shop_id,
+              _id: shopId,
          vendorId: new mongoose.Types.ObjectId(),
           ownerId: _sample_ownerId,
 ownerLoginSession: new mongoose.Types.ObjectId(),
@@ -154,29 +144,24 @@ ownerLoginSession: new mongoose.Types.ObjectId(),
      businessName: businessName,
          location: location,
            dbInfo:  { 
-                    provider: dbProviderCipherText,
+                    provider: VENDOR_DEFAULT_DB_PROVIDER,
                          uri: dbUriCipherText,
-                      dbName: dbNameCipherText
+                      prefix: SHOP_DB_PREFIX
                     },
-             keys:  {
-                             ACCESS_TOKEN_SECRET: accessTokenSecretCipherText,
-                            REFRESH_TOKEN_SECRET: refreshTokenSecretCipherText,
-                     ACCESS_TOKEN_EXPIRE_MINUTES: ACCESS_TOKEN_EXPIRE_MINUTES,
-                    REFRESH_TOKEN_EXPIRE_MINUTES: REFRESH_TOKEN_EXPIRE_MINUTES,
+             keys:  {    ACCESS_TOKEN_SECRET: accessTokenSecretCipherText,
+                        REFRESH_TOKEN_SECRET: refreshTokenSecretCipherText,
+                  //  EMAIL_VERIFICATION_SECRET: emailVerificationCipherText
+                    },
+  timeLimitations:  {
+                        EMAIL_VERIFICATION_EXPIRE_MINUTES,
+                        PHONE_VERIFICATION_EXPIRE_MINUTES,
+                        ACCESS_TOKEN_EXPIRE_MINUTES,
+                        REFRESH_TOKEN_EXPIRE_MINUTES                        
                     }
         }
-        
+
         const shop = await createShop({ db: auth_db, data: data })
-
-
-
-        return NextResponse.json({
-            message: "Shop created successfully",
-            success: true,
-            data: shop
-          }, { status: 201 })
-
-        
+        return NextResponse.json({ message: "Shop created successfully", success: true, data: shop }, { status: 201 })
     } catch (error) {
       return NextResponse.json({
               error: error.message || "Shop Not created",
