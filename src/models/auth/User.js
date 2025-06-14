@@ -99,7 +99,7 @@ const userSchema = new mongoose.Schema({
   // Profile Delete information
   isDeleted: { type: Boolean, default: false, select: false  },
   deletedAt: { type: Date, default: null, select: false  },
-  role: {type: [String], enum: ['user', 'operator'], default: ['user']},
+  role: {type: [String], default: ['user']},
   theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
   language: { type: String, default: 'english',
             enum: ['english', 'bangla'] },

@@ -60,7 +60,7 @@ const baseAppSchema = new mongoose.Schema({
        appUrl: { type: String, required: false, default: null },  
     contactUs: { type: String, default: null },
      settings: appSettingsSchema,
-  socialLinks: socialLinksSchema,
+  socialLinks: [socialLinksSchema],
 extraPolicies: [extraPolicySchema], 
   siteMap: { type: String, default: null },
   
@@ -154,6 +154,7 @@ const shopSchema = new mongoose.Schema({
        businessName: { type: String, required: true },
            location: { type: String, required: true },
 
+        //  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
   maxSessionAllowed: { type: Number, default: Number(process.env.END_USER_DEFAULT_MAX_SESSIONS || 5), select: false },
              dbInfo: { type: dbSchema,  required: true, select: false },
                keys: { type: keySchema, required: true, select: false },

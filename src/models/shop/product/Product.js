@@ -1,129 +1,117 @@
 import mongoose from 'mongoose';
 import { inventorySchema } from '../inventory/Inventory';
-import { reviewSchema } from '../review/Review';
+import cuid from '@bugsnag/cuid';
 
-const priceSchema = new mongoose.Schema({
-  currency: { type: String, enum: ['BDT', 'USD', 'EUR', 'GBP'], default: 'BDT' },
-  price: { type: Number, required: true, min: 0 },
-  compareAtPrice: { type: Number, min: 0 },
-  minPrice: { type: Number, min: 0 },
-  maxPrice: { type: Number, min: 0 },
-
-  //   salePrice: { type: Number, min: 0 },
-  costPrice: { type: Number, min: 0 },
-  discount: {   enable: { type:Boolean, default:false },
-                value: {type: Number, default: 0 },                
-                type:{ type: String, enum: ['fixed', 'percentage', null]} },
-  taxInfo: String
+const discountSchema = new mongoose.Schema({
+  type: { type: String, enum: ['fixed', 'percentage'], default: undefined },
+  value: { type: Number, min: 0, default: undefined }
 }, { _id: false });
 
+const priceSchema = new mongoose.Schema({
+   currency: { type: String, enum: ['BDT', 'USD', 'EUR', 'GBP'], default: undefined },
+       base: { type: Number, required: true, min: 0, default: undefined },
+  compareAt: { type: Number, min: 0, default: undefined },
+       cost: { type: Number, min: 0, default: undefined },
+   discount: { type: discountSchema, default: undefined },
+   minPrice: { type: Number, min: 0, default: undefined },
+   maxPrice: { type: Number, min: 0, default: undefined },
+}, { _id: false });
+
+const attributeSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    value: { type: String, required: true }
+}, { _id: false });
+
+// Improved variant schema
 const variantSchema = new mongoose.Schema({
-    title: {type: String, default:undefined},
-    options: {type: [String], enum: ['small','black', 'cotton']},
-    option1: {type: String, default: undefined },
-    opiton2: {type: String, default: undefined },
-    option3: {type: String, default: undefined },
-    price:  {type: Number, default: undefined},
-    weight: {type: Number, default: undefined},
-    compareAtPrice: { type: Number, required: true, min: 0 },
-    inventoryManagement: {type: String, default: undefined },
-    isAvailable:{type: Boolean, default: undefined },
-    sku: {type: String, default: undefined },
-    requireShipping: {type: Boolean, default: undefined },
-    taxable: {type: Boolean, default: undefined },
-    barcode: { type: String, unique: true, sparse: true },
-    images: [{ imageId: String }],  
-//   variantPrice: { type: priceSchema }
+  title: { type: String, required: true }, 
+  options: { type: [attributeSchema], default: undefined },
+  price: { type: priceSchema, default: undefined },
+  priceVaries: { type: Boolean, default: undefined },
+  weight: Number,
+  sku: { type: String, sparse: true },
+  barcode: String,
+  isAvailable: { type: Boolean, default: undefined },
+  requiresShipping: { type: Boolean, default: undefined  },
+  taxable: { type: Boolean, default: true },
+  inventory: { type: inventorySchema } // Moved from product level
 }, { _id: true });
+
+const detailSchema = new mongoose.Schema({
+             material: String, 
+                  fit: String,
+         fabricWeight: String,
+             neckLine: String,
+               madeIn: String,
+           dimensions: String, 
+     careInstructions: String                   
+}, { _id: false });
 
 const image = new mongoose.Schema({
     id: { type: Number, default: 0 },
     url: { type: String, required: true },
     alt: String,
+    position: Number
+}, { _id: false });
+
+const mediaSchema = new mongoose.Schema({
+  type: { type: String,  enum: ['image', 'video', 'document'], required: true },
+  url: { type: String, required: true },
+  about: String,
+//   isThumbnail: { type: Boolean, default: false } // Replaces separate thumbnail field
+}, { _id: false });
+
+const shippingSchema = new mongoose.Schema({
+    weight: Number,
+    dimensions: { length: Number, width: Number, height: Number },
+    freeShipping: { type: Boolean, default: false },
+    shippingClass: String
+}, { _id: false });
+
+// Digital assets schema
+const digitalAssetSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  url: { type: String, required: true },
+  mimeType: String,
+  accessLimit: Number,
+  expiry: Date
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({
-    title: { type: String, required: true},
-    description: {type: String, default: undefined },
-    tags: [String],
-    keywords: [String],
-
-    // handle 
-    slug: { type: String, required: true, unique: true, lowercase: true, index: true },
-    gallery: [image],
-    thumbnail: { type: String, default:''},
-    medias: { type:[String], required: true },
-    price: priceSchema,
-    details:{
-        material:{ type: String, default: undefined },
-        fit: { type: String, default: undefined },
-        febricWeight:{ type: String, default: undefined },
-        neckLine: { type: String, default: undefined },
-        careInstruction: { type: String, default: undefined },
-        madeIn: { type: String, default: undefined },
-    },
-
-    categories: { type:[String], default:[] },    
-    barcode: { type: String, unique: true, sparse: true },
-    hasVariants: { type: Boolean, default: false },
-    warranty: { period: {type:String, default:0},
-                terms: String },
-    sku: { type: String, unique: true, index: true },
-    status: { type: String, default: 'draft', 
-        enum: ['active', 'inactive', 'draft', 'unpublished', 'archived', 'discontinued'] },
-    approvalStatus: { type: String, default: 'pending',
-        enum: ['pending', 'approved', 'rejected', 'flagged'],},        
-    productType:{ type: String, enum: ['physical', 'digital']},
-    digitalAssets: [{   name: String,
-                        url: String,
-                        fileSize: Number,
-                        fileType: String,
-                        accessCount: { type: Number, default: 0 },
-                        downloadLimit: Number,
-                        accessExpiry: Number // days
-                    }],
-    brand: { type: String, default: 'generic' },
-    shipping: {
-        weight: { type: Number, min: 0 }, // in grams
-        dimensions: {
-        length: { type: Number, min: 0 }, // in cm
-        width: { type: Number, min: 0 },
-        height: { type: Number, min: 0 }
-        },
-        isFreeShipping: { type: Boolean, default: false },
-        requiresShipping: { type: Boolean, default: true },
-        shippingClass: String, // e.g., 'fragile', 'oversized'
-        restrictions: {     countries: [String], // ISO country codes
-                            zipCodes: [String] }
-    },
-    promotions: [{
-        type: { type: String, enum: ['discount', 'bundle', 'flash-sale'] },
-        name: String,
-        startDate: Date,
-        endDate: Date
-    }],
-    vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    ratings: {  average: { type: Number, min: 0, max: 5, default: 0 },
-                count: { type: Number, default: 0 } },
-    reviewsCount: { type: Number, default: 0 },
-    delivery: {
-        availablePartner: [{ type: mongoose.Schema.Types.ObjectId, ref: 'DeliveryPartner' }],
-        estimatedDays: { type: Number, default: 5 }
-    },
-    isFeatured: { type: Boolean, default: false },
-    isBestSeller: { type: Boolean, default: false },
-    isNewArrival: { type: Boolean, default: false },
-
-    publishedAt: {type: Date, default: null},
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    variants: [variantSchema],
-    inventory: inventorySchema,
-    reviews: [reviewSchema]
+  // productId: { type: String, default: () => cuid(), unique: true },
+  slug: { type: String, required: true, unique: true },
+  title: { type: String, required: true, trim: true },
+  description: String, 
+  tags: [{ type: String }],
+  gallery: { type:[image] },
+  otherMediaContents: { type:[mediaSchema] },
+  price: { type: priceSchema  },
+  thumbnail: { type: String, required: true },
+  options: { type: [String], enum:["size", "color", "material"] },
+  details: { type: detailSchema, default: undefined },
+  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category'}],
+  hasVariants: { type: Boolean, default: false },
+  isAvailable: { type: Boolean, default: undefined },
+  warranty: { duration: Number, terms: String, default: undefined },
+  status: { type: String, default: 'draft',  enum: ['active', 'draft', 'archived', 'discontinued'] },
+  approvalStatus: { type: String, default: 'pending', enum: ['pending', 'approved', 'rejected'] },
+   productFormat: { type: String, enum: ['physical', 'digital'],  default: 'physical' },
+  digitalAssets: { type: [digitalAssetSchema], default: undefined },
+  brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand' },
+  shipping: { type: shippingSchema, default: undefined},
+  ratings: { average: { type: Number, min: 0, max: 5, default: 0 },
+               count: { type: Number, default: 0 }  },
+  isFeatured: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+  variants: { type:[variantSchema] },
+  reviews: { type: [mongoose.Schema.Types.ObjectId], ref: 'Review', default: [] },
+  productUrl: { type:String, default: undefined },
+  publishedAt: { type: Date, default: undefined }
 }, {
-    timestamps: true,
-    collection: 'products'
+  timestamps: true,
+  collection: 'products',
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-export const Product = mongoose.models.Product || mongoose.model("Product", productSchema, 'products');
-export default Product;
+export const productModel = (db) => db.models.Product || db.model('Product', productSchema);

@@ -13,6 +13,22 @@ export async function getSessionTokenById({db, sessionId}) {
                                             '+revoked' ).lean();
 }
 
+export async function getSessionById({db, sessionId}) {
+    const Session = sessionModel(db)  
+    return await Session.findOne({ _id: String(sessionId) })
+                                    .select('+_id '                     +
+                                            '+userId'                   +
+                                            '+provider '                + 
+                                            '+accessToken '             +
+                                            '+accessTokenExpiresAt '    +
+                                            '+refreshToken '            +
+                                            '+refreshTokenExpiresAt '   +
+                                            '+fingerprint '             +
+                                            '+ip '                      +
+                                            '+role '                    +
+                                            '+revoked' ).lean();
+}
+
 export async function createLoginSession({ id, user, provider, 
                                                   accessToken, 
                                          accessTokenExpiresAt,
@@ -20,6 +36,7 @@ export async function createLoginSession({ id, user, provider,
                                         refreshTokenExpiresAt,
                                                 ip, userAgent,
                                                 fingerprint,
+                                                role,
                                             db, db_session }) {
 
     const Session = sessionModel(db)                              
@@ -32,6 +49,7 @@ export async function createLoginSession({ id, user, provider,
                                 accessTokenExpiresAt,
                                 refreshToken,
                                 refreshTokenExpiresAt,
+                                role,
                                 ip,
                                 userAgent
                             });

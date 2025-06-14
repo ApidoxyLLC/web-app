@@ -11,6 +11,7 @@ const sessionSchema = new mongoose.Schema({
               fingerprint: { type: String,  select: false,  required: true },  
                        ip: { type: String,                  required: false },
                 userAgent: { type: String,                  required: false },
+                    role: {type: [String], default: ['user']},
                   // device: { type: String, required: false },
                 createdAt: { type: Date,    default: Date.now },
                lastUsedAt: { type: Date,    default: Date.now },

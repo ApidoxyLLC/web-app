@@ -17,6 +17,7 @@ export async function GET(request) {
              request.headers.get('x-real-ip') || 'unknown_ip';
   const authHeader = request.headers.get('authorization');
   
+  
   if (!vendorId && !host) {return NextResponse.json( { error: "Missing vendor identifier or host" }, { status: 400 });}
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return NextResponse.json({ success: false, message: "Unauthorized", code: "MISSING_TOKEN" },{ status: 401 }); }

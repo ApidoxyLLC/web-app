@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto'; 
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 
 
 // Funcionality with database 
@@ -33,6 +34,27 @@ export   async function getUserByIdentifier({ db, session, data}) {
     
 }
 
+export   async function getUserBySessionId({ db, session, data}) {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format');
+    }
+    const { sessionId } = data || {};
+    if (!sessionId) throw new Error('At least one identifier (email or phone) is required.');
+    
+    const User = userModel(db);
+    try {
+        const query = User.findOne({ activeSessions: new mongoose.Types.ObjectId(sessionId),
+                                          isDeleted: false                                      })
+                          .select('+activeSessions +shops' )
+                          .lean();
+        if (session) query.session(session);
+        return await query;
+    } catch (error) {
+        throw new Error("something went wrong...")
+    }
+    
+}
+
 // export async function getUserSessionsIdById({ db, session, id}) {
 //     const User = userModel(db);
 //     const query = User.findById(id).lean();
@@ -40,7 +62,7 @@ export   async function getUserByIdentifier({ db, session, data}) {
 //     return await query;
 // }
 
-export            async function createUser({ db, session, data }) {
+export        async function createUser({ db, session, data }) {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid data format');
     }

@@ -1,19 +1,21 @@
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 import authDbConnect from "@/app/lib/mongodb/authDbConnect";
 import { dbConnect } from "@/app/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
 import { userModel } from "@/models/shop/shop-user/ShopUser";
-import bcrypt from "bcryptjs";
 import { encrypt, decrypt } from "@/lib/encryption/cryptoEncryption";
-import mongoose from "mongoose";
-import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
-import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
-import jwt from "jsonwebtoken";
 import loginDTOSchema from "./loginDTOSchema";
 import { sessionModel } from "@/models/shop/shop-user/Session";
 import { loginHistoryModel } from "@/models/shop/shop-user/LoginHistory";
+import { cookies } from "next/headers";
 import sendSMS from "@/services/mail/sendSMS";
 import rateLimit from "./rateLimit";
+import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
+import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
+import addMinutesToISO from "@/app/utils/addMinutesToISO";
 
 function applyHeaders(response, headers) {
   Object.entries(headers).forEach(([key, value]) => {
@@ -32,11 +34,13 @@ export async function POST(request) {
   const        ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                     request.headers.get('x-real-ip') || 'unknown_ip';
   const userAgent = request.headers.get('user-agent') || '';
+  const fingerprint = request.headers.get('x-fingerprint') || null;
+
+
   if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
   const    parsed = loginDTOSchema.safeParse(body);
   if (!parsed.success)    return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 422 });
 
-  const fingerprint     = parsed.data.fingerprint?.trim()|| null;
   const { allowed, headers} = rateLimit({ip, fingerprint});
   if (!allowed) return NextResponse.json( { error: "Too many requests" }, { status: 429, headers: headers } );
 
@@ -54,7 +58,8 @@ export async function POST(request) {
                                         "+timeLimitations.ACCESS_TOKEN_EXPIRE_MINUTES +timeLimitations.REFRESH_TOKEN_EXPIRE_MINUTES" 
                                       ).lean();
 
-    if (!shop) return NextResponse.json( { error: "Authentication failed" }, { status: 400 } )
+    if (!shop) 
+      return NextResponse.json( { error: "Authentication failed" }, { status: 400 } )
 
     // Decrypt DB URI
     const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
@@ -104,12 +109,12 @@ export async function POST(request) {
     const validPassword = await bcrypt.compare(password, user.security.password);
     
     if (!validPassword) {
-      const MAX_ATTEMPTS = Number(process.env.END_USER_MAX_LOGIN_ATTEMPT) || 5;
+      const MAX_ATTEMPTS = parseInt(process.env.END_USER_MAX_LOGIN_ATTEMPT || "5", 10);
       user.security.failedAttempts = (user.security.failedAttempts || 0) + 1;
       
       if (user.security.failedAttempts >= MAX_ATTEMPTS) {
         // Exponential backoff lock
-        const LOCK_MINUTES = Number(process.env.END_USER_LOCK_MINUTES);
+        const LOCK_MINUTES = parseInt(process.env.END_USER_LOCK_MINUTES || "15", 10);
         const lockMinutes = LOCK_MINUTES * Math.pow(2, user.security.failedAttempts - MAX_ATTEMPTS);
         user.lock = { lockUntil: Date.now() + lockMinutes * 60 * 1000 };
       }
@@ -178,6 +183,8 @@ export async function POST(request) {
     // Regular login flow (no 2FA)
 
     const sessionId = new mongoose.Types.ObjectId();
+    const newAccessTokenId = crypto.randomBytes(16).toString('hex');
+    const newRefreshTokenId = crypto.randomBytes(16).toString('hex');
     const MAX_SESSIONS = shop.maxSessionAllowed || Number(process.env.END_USER_DEFAULT_MAX_SESSIONS) || 5;
 
     // Token configuration
@@ -190,9 +197,7 @@ export async function POST(request) {
     
     if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
-
-    // JWT payload with session binding
-    const payload = {     userId: user._id,
+    const payload = {     
                          session: sessionId.toString(),
                      fingerprint,
                             name: user.name,
@@ -201,18 +206,21 @@ export async function POST(request) {
                             role: user.role,
                       isVerified: user.isEmailVerified || user.isPhoneVerified };
 
-    // Generate tokens
-    const accessToken = jwt.sign( payload, ACCESS_TOKEN_SECRET, { expiresIn: minutesToExpiresIn(AT_EXPIRY) });
+    const accessToken = jwt.sign( { ...payload, tokenId: newAccessTokenId },
+                                  ACCESS_TOKEN_SECRET,
+                                  { expiresIn: minutesToExpiresIn(AT_EXPIRY) } );
     
-    const refreshToken = jwt.sign( payload, REFRESH_TOKEN_SECRET,  { expiresIn: minutesToExpiresIn(RT_EXPIRY) });
 
-    const  accessTokenCipherText = await encrypt({ data: accessToken,
-                                                options: { secret: AT_ENCRYPT_KEY }   });
-    const refreshTokenCipherText = await encrypt({ data: refreshToken,
-                                                options: { secret: RT_ENCRYPT_KEY }  });
+    const refreshToken = jwt.sign(
+      { ...payload, tokenId: newRefreshTokenId },
+      REFRESH_TOKEN_SECRET,
+      { expiresIn: minutesToExpiresIn(RT_EXPIRY) }
+    );
+
     const    ipAddressCipherText = await encrypt({ data: ip,
                                                 options: { secret: IP_ENCRYPT_KEY }     });                    
-
+    const  accessTokenExpiry = minutesToExpiryTimestamp(AT_EXPIRY)
+    const refreshTokenExpiry = minutesToExpiryTimestamp(RT_EXPIRY)
     // Start transaction for login
     const dbSession = await vendor_db.startSession();
     try {
@@ -224,10 +232,12 @@ export async function POST(request) {
         await new SessionModel({               _id: sessionId,
                                             userId: user._id,
                                           provider: `local-${identifierName}`, // Fixed template literal
-                                       accessToken: accessTokenCipherText,
-                                 accessTokenExpiry: minutesToExpiryTimestamp(AT_EXPIRY),
-                                      refreshToken: refreshTokenCipherText,
-                                refreshTokenExpiry: minutesToExpiryTimestamp(RT_EXPIRY),
+                                     accessTokenId: newAccessTokenId,
+                                    refreshTokenId: newRefreshTokenId,
+                                      //  accessToken: accessTokenCipherText,
+                                 accessTokenExpiry: accessTokenExpiry,
+                                      // refreshToken: refreshTokenCipherText,
+                                refreshTokenExpiry: refreshTokenExpiry,                                     
                                                 ip: ipAddressCipherText,
                                        fingerprint,
                                          userAgent
@@ -259,20 +269,15 @@ export async function POST(request) {
                                       fingerprint,
                                     }).save({ session: dbSession });
       });
-      // dbSession.endSession();
     }    
-    catch (error){
-      dbSession.endSession(); 
-      return NextResponse.json( { error: "Login failed" }, { status: 500 } );
-    }
-    finally {
-      await dbSession.endSession();
-    }
+
+    finally { await dbSession.endSession() }
+    
     const response = NextResponse.json({      success: true,
                                           accessToken,
                                          refreshToken,
-                                    accessTokenExpiry: minutesToExpiryTimestamp(AT_EXPIRY),
-                                   refreshTokenExpiry: minutesToExpiryTimestamp(RT_EXPIRY),
+                                  accessTokenExpireAt: new Date(accessTokenExpiry).toISOString(),
+                                 refreshTokenExpireAt: new Date(refreshTokenExpiry).toISOString(),
                                                  user: {   _id: user._id,
                                                           name: user.name,
                                                          email: user.email,
@@ -285,6 +290,21 @@ export async function POST(request) {
                                                                   currency: user.currency   },
                                                       }
                                         }, { status: 200 });
+    response.cookies.set('access_token', accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: AT_EXPIRY * 60, // in seconds
+    });
+
+    response.cookies.set('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: RT_EXPIRY * 60,
+    });                                        
     response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('X-Frame-Options', 'DENY');

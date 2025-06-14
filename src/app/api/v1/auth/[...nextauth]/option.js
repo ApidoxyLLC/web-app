@@ -99,6 +99,7 @@ export const authOptions = {
                                                                           fingerprint: fingerprint,
                                                                                    ip: ipAddressCipherText,
                                                                             userAgent,
+                                                                                 role: user.role,
                                                                                    db: auth_db,
                                                                            db_session: atuh_db_session })
 
@@ -121,7 +122,6 @@ export const authOptions = {
                         }
 
                         await atuh_db_session.commitTransaction();
-                        atuh_db_session.endSession();
 
                         return {
                                      email: user.email,
@@ -139,9 +139,11 @@ export const authOptions = {
                             };
                 } catch (error) {
                     await atuh_db_session.abortTransaction()
-                    atuh_db_session.endSession()
+                    
                     console.error("Login failed:", error);
                     throw new Error("Authentication failed")
+                }finally{
+                    atuh_db_session.endSession()
                 }
 
                 // Return user object                    

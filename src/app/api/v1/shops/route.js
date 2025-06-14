@@ -13,6 +13,7 @@ import { getToken } from "next-auth/jwt";
 import { randomBytes, createHmac } from 'crypto';
 
 
+
 export async function POST(request, response) {
     // const host = request.headers.get('host');
     // const origin = request.headers.get('origin');
@@ -20,18 +21,22 @@ export async function POST(request, response) {
     const secret = process.env.NEXTAUTH_SECRET;
     const token = await getToken({ req:request, secret });
     const user_auth_session = await getServerSession(authOptions)
+
+
+
+
+
     
-    if(!user_auth_session && !token) return NextResponse.json({ error: "...not authorized" }, { status: 401 });    
-    if(user_auth_session){
-        console.log(user_auth_session)
-        console.log("has session")
-
-        const { email, phone, role } = user_auth_session.user
-        const auth_db = await authDbConnect()
-
-        console.log(token)
-        NextResponse.json({ success: true,  data:user_auth_session, message: "Session Found" }, { status: 200 });
-    }
+    if(!user_auth_session && !token) 
+        return NextResponse.json({ error: "...not authorized" }, { status: 401 });    
+    // if(user_auth_session){
+    //     console.log(user_auth_session)
+    //     console.log("has session")
+    //     const { email, phone, role } = user_auth_session.user
+    //     const auth_db = await authDbConnect()
+    //     console.log(token)
+    //     NextResponse.json({ success: true,  data:user_auth_session, message: "Session Found" }, { status: 200 });
+    // }
     
 
   let body;
@@ -161,6 +166,9 @@ ownerLoginSession: new mongoose.Types.ObjectId(),
         }
 
         const shop = await createShop({ db: auth_db, data: data })
+        
+
+
         return NextResponse.json({ message: "Shop created successfully", success: true, data: shop }, { status: 201 })
     } catch (error) {
       return NextResponse.json({
