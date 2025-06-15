@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import cuid from "@bugsnag/cuid";
 
-// Coupon usage history by individual customers
+
 const historySchema = new mongoose.Schema({
       customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
          orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
@@ -9,7 +9,6 @@ const historySchema = new mongoose.Schema({
   discountAmount: Number
 }, { _id: false });
 
-// Track usage limits and history
 const couponUsageSchema = new mongoose.Schema({
              limit: { type: Number, min: [1, 'Usage limit must be at least 1'] },
   perCustomerLimit: { type: Number, min: [1, 'Per customer limit must be at least 1'], default: 1 },
@@ -17,14 +16,12 @@ const couponUsageSchema = new mongoose.Schema({
            history: { type: [historySchema], default: [] }
 }, { _id: false });
 
-// Optional geographic restrictions
 const geographicRestrictionsSchema = new mongoose.Schema({
     countries: [String],
       regions: [String],
   postalCodes: [String]
 }, { _id: false });
 
-// Simplified exclude logic
 const excludeSchema = new mongoose.Schema({
         products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
       categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
@@ -32,7 +29,6 @@ const excludeSchema = new mongoose.Schema({
   paymentMethods: [{ type: String, enum: ['cod', 'bkash', 'bank_transfer'] }]
 }, { _id: false });
 
-// Main coupon schema
 export const couponSchema = new mongoose.Schema({
                 couponId: { type: String, default: () => cuid() },
                     code: { type: String, required: true, unique: true, trim: true },
