@@ -1,4 +1,4 @@
-import { categoryModel } from '@/models/shop/product/category';
+import { categoryModel } from '@/models/shop/product/_Category';
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import slugify from 'slugify';
 import mongoose from 'mongoose';

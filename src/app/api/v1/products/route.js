@@ -12,6 +12,7 @@ import { productDTOSchema } from './productDTOSchema';
 import { getToken } from 'next-auth/jwt';
 import { userModel } from '@/models/auth/User';
 import slugify from 'slugify';
+import securityHeaders from "../utils/securityHeaders";
 
 export const dynamic = 'force-dynamic'; // Ensure dynamic fetching
 
@@ -226,21 +227,6 @@ export async function GET(request) {
   }
 }
 
-
-
-
-const securityHeaders = {
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
-  'Permissions-Policy': 'geolocation=(), microphone=()',
-  'X-XSS-Protection': '1; mode=block',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
-  'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Resource-Policy': 'same-site'
-};
 
 export async function POST(request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 

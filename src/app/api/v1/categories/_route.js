@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { categoryModel } from '@/models/shop/product/category';
+import { categoryModel } from '@/models/shop/product/_Category';
 import mongoose from 'mongoose';
 import { categoryDTOSchema } from './categoryDTOSchema';
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';

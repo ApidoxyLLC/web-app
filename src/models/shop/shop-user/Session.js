@@ -15,7 +15,8 @@ const shopSessionSchema = new mongoose.Schema({
     userAgent: { type: String, required: false },
     timezone: { type: String, required: false },
     createdAt: { type: Date, default: Date.now },
-    lastUsedAt: {  type: Date, default: Date.now },
+    // lastUsedAt: {  type: Date, default: Date.now },
+    // lastRefreshedAt:{  type: Date, default: Date.now },
     revoked: { type: Boolean, default: false }
 }, {
   timestamps: false,

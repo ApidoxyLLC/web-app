@@ -295,7 +295,8 @@ export async function POST(request) {
       secure: true,
       sameSite: 'Strict',
       path: '/',
-      maxAge: AT_EXPIRY * 60, // in seconds
+      domain: host,
+      maxAge: Math.floor((accessTokenExpiry - Date.now()) / 1000),
     });
 
     response.cookies.set('refresh_token', refreshToken, {
@@ -303,7 +304,8 @@ export async function POST(request) {
       secure: true,
       sameSite: 'Strict',
       path: '/',
-      maxAge: RT_EXPIRY * 60,
+      domain: host,
+      maxAge: Math.floor((refreshTokenExpiry - Date.now()) / 1000),
     });                                        
     response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
     response.headers.set('X-Content-Type-Options', 'nosniff');

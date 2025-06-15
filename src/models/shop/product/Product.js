@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { inventorySchema } from '../inventory/Inventory';
+import { inventorySchema } from './Inventory';
 import cuid from '@bugsnag/cuid';
 
 const discountSchema = new mongoose.Schema({

@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from '../../auth/[...nextauth]/option';
 import { getToken } from 'next-auth/jwt';
 import { userModel } from '@/models/auth/User';
-import { categoryModel } from '@/models/shop/product/category';
+import { categoryModel } from '@/models/shop/product/_Category';
 import slugify from 'slugify';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/app/lib/mongodb/db';

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 
-import { categoryModel } from '@/models/shop/product/category';
+import { categoryModel } from '@/models/shop/product/_Category';
 import { categoryDTOSchema } from './categoryDTOSchema';
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import { shopModel } from '@/models/auth/Shop';
