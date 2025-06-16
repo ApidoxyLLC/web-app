@@ -68,10 +68,9 @@ export async function POST(request) {
 
     if (!user) return NextResponse.json({ success: true, message: "If your phone number exists and isn't verified, you'll receive a verification code." },{ status: 200 });
 
-    const PHONE_OTP_MIN = parseInt(process.env.PHONE_OTP_MIN || "100000", 10);
-    const PHONE_OTP_MAX = parseInt(process.env.PHONE_OTP_MAX || "999999", 10);
 
-    const       otp = crypto.randomInt(PHONE_OTP_MIN, PHONE_OTP_MAX).toString();
+    const OTP_DIGITS = parseInt(process.env.PHONE_OTP_DIGITS || "6", 10);
+    const otp = crypto.randomInt(0, Math.pow(10, OTP_DIGITS)).toString().padStart(OTP_DIGITS, '0');
     const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
     const    expiry = minutesToExpiryTimestamp(Number(shop.timeLimitations?.PHONE_VERIFICATION_EXPIRE_MINUTES) || 10);
 
