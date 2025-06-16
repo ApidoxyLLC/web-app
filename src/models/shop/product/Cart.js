@@ -27,13 +27,10 @@ const cartSchema = new mongoose.Schema({
                 deliveryCharge: {type: Number, default:0 },
                 grandTotal: {type: Number, default:0 },         },
     coupons : { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon' },
-
-
 }, {
   timestamps: true,
   collection: 'carts'
 });
 
 
-export const Cart = mongoose.models.Cart ||  mongoose.model("Cart", cartSchema, "carts")
-export default Cart
+export const cartModel = (db) => db.models.Cart || db.model('Cart', cartSchema);

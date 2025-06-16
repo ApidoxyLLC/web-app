@@ -1,18 +1,23 @@
 import mongoose from "mongoose";
 import cuid from "@bugsnag/cuid";
 
-
 const historySchema = new mongoose.Schema({
       customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
          orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
           usedAt: { type: Date, default: Date.now },
-  discountAmount: Number
+  discountAmount: Number,
+        location: {      ip: String,
+                    country: String,
+                     device: String   }
 }, { _id: false });
 
 const couponUsageSchema = new mongoose.Schema({
-             limit: { type: Number, min: [1, 'Usage limit must be at least 1'] },
-  perCustomerLimit: { type: Number, min: [1, 'Per customer limit must be at least 1'], default: 1 },
-             count: { type: Number, default: 0, min: [0, 'Used count cannot be negative'] },
+             limit: { type: Number, min: 1 },
+  perCustomerLimit: { type: Number, min: 1, default: 1 },
+             count: { type: Number, default: 0, min: 0 },
+        applyCount: { type: Number, default: 0 },
+        dailyLimit: { type: Number, min: 1 },
+       expireAfter: { type: Number, min: 1 },
            history: { type: [historySchema], default: [] }
 }, { _id: false });
 
@@ -29,37 +34,60 @@ const excludeSchema = new mongoose.Schema({
   paymentMethods: [{ type: String, enum: ['cod', 'bkash', 'bank_transfer'] }]
 }, { _id: false });
 
+const targetSchema = new mongoose.Schema({
+    products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+  userGroups: {  type: String, enum: ['all', 'new', 'vip', 'referral', 'first_time'] }
+}, { _id: false });
+
+const auditTrailSchema = new mongoose.Schema({
+     action: { type: String, enum: ['created', 'edited', 'disabled'] },
+    actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+  timestamp: { type: Date, default: Date.now }
+}, { _id: false });
+
+const bogoRulesSchema = new mongoose.Schema({
+  buyQuantity: Number,
+  getQuantity: Number,
+   productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
+}, { _id: false });
+
 export const couponSchema = new mongoose.Schema({
                 couponId: { type: String, default: () => cuid() },
+                   title: { type: String, required: true, trim: true },
                     code: { type: String, required: true, unique: true, trim: true },
-            discountType: { type: String, enum: ['percentage', 'fixed', 'free_shipping'], required: true },
-                  amount: { type: Number, min: [0, 'Discount value cannot be negative'], required: function () { return this.discountType !== 'free_shipping' } },
-               appliesTo: { type: String, enum: ['entire_order', 'specific_products', 'specific_category', 'specific_payment_method'], default: 'entire_order' },
-                products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: function () { return this.appliesTo === 'specific_products' }}],
-              categories: [{type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: function () { return this.appliesTo === 'specific_category' }}],
-          paymentMethods: [{ type: String, enum: ['cod', 'bkash', 'bank_transfer'], required: function () {return this.appliesTo === 'specific_payment_method';}}],
-     customerEligibility: { type: String, enum: ['all', 'new_customers', 'existing_customers', 'specific_customers'], default: 'all' },
-               customers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: function () {return this.customerEligibility === 'specific_customers' } }],
+                    type: { type: String, enum: [ 'percentage_off', 'fixed_amount', 'free_shipping', 'bogo', 'free_gift', 'tiered', 'flash_sale', 'first_purchase', 'next_purchase', 'cashback', 'preorder_discount', 'bundle' ], required: true },
+                  target: { type: targetSchema, default: {} },
                  exclude: { type: excludeSchema, default: undefined },
   geographicRestrictions: { type: geographicRestrictionsSchema, default: undefined },
-                currency: { type: String, enum: ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'BDT'], default: 'BDT' },
-                minValue: { type: Number, min: [0, 'Minimum cart value cannot be negative'] },
-               maxAmount: { type: Number, min: [0, 'Max discount cannot be negative'] },
+                  amount: { type: Number, min: 0 , required: function() { return !['free_shipping', 'bogo', 'free_gift'].includes(this.type) }},
+                minValue: { type: Number, min: 0 }, 
+             maxDiscount: { type: Number, min: 0 },
+                priority: { type: Number, default: 1 },
                startDate: { type: Date, default: Date.now },
-           allowStacking: {type: Boolean, default: false },
-                validity: { type: Date, required: true },
+                 endDate: { type: Date, required: true },          
+               bogoRules: { type: bogoRulesSchema, required: function () { return this.type === 'bogo' }, default: undefined },
+           allowStacking: { type: Boolean, default: false },
+     customerEligibility: { type: String, enum: ['all', 'new_customers', 'existing_customers', 'specific_customers'], default: 'all' },
+               customers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: function () { return this.customerEligibility === 'specific_customers'; } }],
                createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopOwner', required: true },
                    usage: { type: couponUsageSchema },
                 isActive: { type: Boolean, default: true },
-  metadata: {
-    affiliateId: String,
-    utmSource: String,
-    customRules: mongoose.Schema.Types.Mixed
-  }
+               autoApply: { type: Boolean, default: false },
+                isPublic: { type: Boolean, default: false },
+            redeemMethod: { type: String, enum: ['link', 'automatic', 'code'], default: 'code' },
+               platforms: { type: [String], enum: ['web', 'mobile', 'app'], default: [] },
+              storeScope: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }, // new multi-tenant scope
+              auditTrail: { type: [auditTrailSchema], default: [] },
+                currency: { type: String, enum: ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'BDT'], default: 'BDT' },
+                metadata: { template: String,
+                                note: String,
+                                icon: String,
+                         affiliateId: String,
+                           utmSource: String,
+                         customRules: mongoose.Schema.Types.Mixed }
 }, {
   timestamps: true,
-  collection: 'coupon'
+  collection: 'coupons'
 });
-
 export const couponModel = (db) => db.models.Coupon || db.model('Coupon', couponSchema);
-

@@ -13,20 +13,3 @@ const loginHistorySchema = new mongoose.Schema({
 });
 
 export const loginHistoryModel = (db) => db.models.LoginHistory || db.model('LoginHistory', loginHistorySchema);
-// export const LoginHistory = mongoose.models.LoginHistory || mongoose.model("LoginHistory", loginHistorySchema, 'login_histories');
-// export default LoginHistory;
-
-// attempt: { type: String, required: true,
-//     enum: ['success', 'failed', '2fa_required', 'blocked'] },
-// failureReason: { type: String, default: null,
-//     enum: ['wrong_password', 'expired_token', 'ip_blocked', null] },
-// device: {
-//     fingerprint: String,
-//     type: { type: String, enum: ['desktop', 'mobile', 'tablet', 'unknown'] },
-//     trusted: { type: Boolean, default: false } 
-// },
-// status: {  // Track success/failure
-//     type: String,
-//     enum: ['success', 'failed', 'suspicious'],
-//     default: 'success'
-// },
