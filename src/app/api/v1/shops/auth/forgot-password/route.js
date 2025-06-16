@@ -75,11 +75,9 @@ export async function POST(request) {
     const resetTokenExpiry = Date.now() + FORGET_PASSWORD_TOKEN_EXPIRE_MINUTES * 60 * 1000;
 
     const user = await UserModel.findOneAndUpdate( { email },
-                                                  {
-                                                    $set: {
+                                                  { $set: {
                                                       "security.forgotPasswordToken"       : hashedToken,
-                                                      "security.forgotPasswordTokenExpiry" : resetTokenExpiry
-                                                    }
+                                                      "security.forgotPasswordTokenExpiry" : resetTokenExpiry }
                                                   },
                                                   {
                                                     new: true,

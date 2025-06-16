@@ -70,9 +70,9 @@ export async function POST(request) {
 
 
     const OTP_DIGITS = parseInt(process.env.PHONE_OTP_DIGITS || "6", 10);
-    const otp = crypto.randomInt(0, Math.pow(10, OTP_DIGITS)).toString().padStart(OTP_DIGITS, '0');
-    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
-    const    expiry = minutesToExpiryTimestamp(Number(shop.timeLimitations?.PHONE_VERIFICATION_EXPIRE_MINUTES) || 10);
+    const        otp = crypto.randomInt(0, Math.pow(10, OTP_DIGITS)).toString().padStart(OTP_DIGITS, '0');
+    const  hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    const     expiry = minutesToExpiryTimestamp(Number(shop.timeLimitations?.PHONE_VERIFICATION_EXPIRE_MINUTES) || 10);
 
     await UserModel.updateOne({ _id: user._id },
                               { $set: { 'verification.phoneVerificationToken': hashedOtp,

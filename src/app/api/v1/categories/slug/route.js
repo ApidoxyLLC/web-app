@@ -12,13 +12,7 @@ import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/app/lib/mongodb/db';
 import rateLimit from '@/lib/rateLimit';
 
-// sample testing input 
-// GET /api/v1/shops/categories/slug?title=Fresh Organic Market&vendor=662f3f7e5e1b6d001dd26f0c
-// GET /api/v1/shops/categories/slug?slug=fresh-market&title=Fresh Organic Market&vendor=662f3f7e5e1b6d001dd26f0c
-// GET /api/v1/shops/categories/slug?slug=tech-hub-zone&vendor=662f3f7e5e1b6d001dd26f0c
-// GET /api/v1/shops/categories/slug?slug=urban-style&title=Urban Clothing Style&vendor=662f3f7e5e1b6d001dd26f0c&exclude=urban-style-shop,urban-style-mart
-// GET /api/v1/shops/categories/slug?title=Luxury & Affordable Fashion&vendor=662f3f7e5e1b6d001dd26f0c
-// Constants
+
 const DICTIONARY_WORDS = ['pro', 'shop', 'store', 'mart', 'boutique', 'hub', 'zone', 'central', 'elite', 'premium'];
 const MAX_SUGGESTIONS = 3;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;

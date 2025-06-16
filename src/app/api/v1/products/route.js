@@ -48,18 +48,19 @@ export async function GET(request) {
 
   // Parse query parameters
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = parseInt(searchParams.get('limit') || '20', 10);
-  const sortBy = searchParams.get('sortBy') || 'createdAt';
-  const sortOrder = searchParams.get('sortOrder') || 'desc';
-  const category = searchParams.get('category');
-  const minPrice = parseFloat(searchParams.get('minPrice'));
-  const maxPrice = parseFloat(searchParams.get('maxPrice'));
-  const searchQuery = searchParams.get('q') || '';
-  const status = searchParams.get('status') || 'active';
-  const type = searchParams.get('type');
-  const hasVariants = searchParams.get('hasVariants');
-  const isFeatured = searchParams.get('isFeatured');
+  
+  const           page = parseInt(searchParams.get('page') || '1', 10);
+  const          limit = parseInt(searchParams.get('limit') || '20', 10);
+  const         sortBy = searchParams.get('sortBy') || 'createdAt';
+  const      sortOrder = searchParams.get('sortOrder') || 'desc';
+  const       category = searchParams.get('category');
+  const       minPrice = parseFloat(searchParams.get('minPrice'));
+  const       maxPrice = parseFloat(searchParams.get('maxPrice'));
+  const    searchQuery = searchParams.get('q') || '';
+  const         status = searchParams.get('status') || 'active';
+  const           type = searchParams.get('type');
+  const    hasVariants = searchParams.get('hasVariants');
+  const     isFeatured = searchParams.get('isFeatured');
   const approvalStatus = searchParams.get('approvalStatus');
 
   // Validate parameters
@@ -131,12 +132,10 @@ export async function GET(request) {
 
     // Search query
     if (searchQuery) { 
-      query.$or = [
-        { title: { $regex: searchQuery, $options: 'i' } },
-        { description: { $regex: searchQuery, $options: 'i' } },
-        { tags: { $in: [new RegExp(searchQuery, 'i')] } },
-        { 'variants.sku': { $regex: searchQuery, $options: 'i' } }
-      ];
+      query.$or = [ { title: { $regex: searchQuery, $options: 'i' } },
+                    { description: { $regex: searchQuery, $options: 'i' } },
+                    { tags: { $in: [new RegExp(searchQuery, 'i')] } },
+                    { 'variants.sku': { $regex: searchQuery, $options: 'i' } }  ];
     }
 
     // Sorting
@@ -245,7 +244,7 @@ export async function POST(request) {
   const { vendorId } = parsed.data;
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
-  if (!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session)) 
+  if (!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session) || !token.fingerprint || token.fingerprint != fingerprint) 
     return NextResponse.json({ success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
   
 
@@ -272,8 +271,10 @@ export async function POST(request) {
     return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403, headers: securityHeaders });
 
   const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-  if (!DB_URI_ENCRYPTION_KEY) 
+  if (!DB_URI_ENCRYPTION_KEY) {
+    console.log(" missing DB_URI_ENCRYPTION_KEY")
     return NextResponse.json({ success: false, error: "Server configuration error" }, { status: 500, headers: securityHeaders });
+  }
 
   const dbUri = await decrypt({   cipherText: shop.dbInfo.uri, 
                                      options: { secret: DB_URI_ENCRYPTION_KEY } });
@@ -290,18 +291,12 @@ export async function POST(request) {
       title, description, tags, gallery, otherMediaContents,
       price, thumbnail, options, details,  categories,
       hasVariants, isAvailable, warranty, status, approvalStatus, 
-      productFormat, digitalAssets, brand, shipping, variants } = parsed.data;
+      productFormat, digitalAssets, brand, shipping, variants, slug } = parsed.data;
 
-    // Generate slug if not provided
-    const slugOptions = { lower: true, strict: true, trim: true };
-    const _slug = parsed.data.slug || slugify(title, slugOptions);
-    let slug = _slug;
-    let counter = 1;
 
-    // Ensure unique slug
-    while (await ProductModel.exists({ slug })) {
-      slug = `${_slug}-${counter++}`;
-    }
+      const     slugExist = await ProductModel.exists({ slug });
+      if (slugExist)
+        return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
     // Validate categories exist
     if (categories && categories.length > 0) {
@@ -313,15 +308,6 @@ export async function POST(request) {
       }
     }
 
-    // Validate brand exists if provided
-    // if (brand) {
-    //   const brandExists = await vendor_db.model('Brand').exists({ _id: brand });
-    //   if (!brandExists) {
-    //     throw new Error("Brand not found");
-    //   }
-    // }
-
-    // Create new product
     const newProduct = new ProductModel({ title, slug, description, tags, gallery,
                                           otherMediaContents, price, thumbnail, options,
                                           details, categories, hasVariants, isAvailable,

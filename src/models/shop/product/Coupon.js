@@ -77,7 +77,7 @@ export const couponSchema = new mongoose.Schema({
                 isPublic: { type: Boolean, default: false },
             redeemMethod: { type: String, enum: ['link', 'automatic', 'code'], default: 'code' },
                platforms: { type: [String], enum: ['web', 'mobile', 'app'], default: [] },
-              storeScope: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }, // new multi-tenant scope
+              // storeScope: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop' },
               auditTrail: { type: [auditTrailSchema], default: [] },
                 currency: { type: String, enum: ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'BDT'], default: 'BDT' },
                 metadata: { template: String,

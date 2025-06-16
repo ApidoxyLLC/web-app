@@ -9,21 +9,9 @@ import { getToken } from 'next-auth/jwt';
 import { userModel } from '@/models/auth/User';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/app/lib/mongodb/db';
+import securityHeaders from '../utils/securityHeaders';
 
 const MAX_CATEGORY_DEPTH = parseInt(process.env.MAX_CATEGORY_DEPTH || '5', 10);
-
-const securityHeaders = {
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
-  'Permissions-Policy': 'geolocation=(), microphone=()',
-  'X-XSS-Protection': '1; mode=block',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
-  'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Resource-Policy': 'same-site',
-};
 
 export async function POST(request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -86,7 +74,6 @@ export async function POST(request) {
   const     slugExist = await CategoryModel.exists({ slug: inputSlug });
   if (slugExist)
     return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
-  
 
   // Start mongoose session & transaction
   const session = await vendor_db.startSession();
