@@ -28,23 +28,24 @@ const cache = new LRUCache({
 
 setInterval(() => {
   const connectionKeys = [...cache.keys()];
-    connectionKeys.forEach(key => {
-    const connection = cache.get(key)
+  connectionKeys.forEach(key => {
+    const connection = cache.get(key);
     if (!connection) return;
 
-      if (typeof entry.readyState === 'number'){
-        if(connection.readyState !== 1){
-          connection.close?.().catch(() => {})
-          cache.delete(key);
-          console.log(`♻️ Purged dead connection: ${key}`);
-        }
-      }
-      
-      if (connection?.status === "error" && Date.now() - connection.timestamp > 10_000) {
+    // Check if it's a connection object
+    if (connection && typeof connection.readyState === 'number') {
+      if (connection.readyState !== 1) {
+        connection.close?.().catch(() => {});
         cache.delete(key);
-        return;
+        console.log(`♻️ Purged dead connection: ${key}`);
       }
-  })
+    } 
+    // Check if it's an error object
+    else if (connection?.status === "error" && Date.now() - connection.timestamp > 10_000) {
+      cache.delete(key);
+      return;
+    }
+  });
 }, 30_000);
 
 export async function dbConnect({dbKey, dbUri}) {

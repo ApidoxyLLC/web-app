@@ -122,7 +122,7 @@ export const couponDTOSchema = z.object({
   createdBy: z.instanceof(ObjectId),
   usage: couponUsageSchema.optional(),
   isActive: z.boolean().default(true),
-  autoApply: z.boolean().default(false),
+  // autoApply: z.boolean().default(false),
   isPublic: z.boolean().default(false),
   redeemMethod: z.enum(['link', 'automatic', 'code']).default('code'),
   platforms: z.array(z.enum(['web', 'mobile', 'app'])).default([]),

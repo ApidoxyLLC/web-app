@@ -65,10 +65,10 @@ export async function POST(request) {
       return NextResponse.json({ error: "User already Exist" }, { status: 409 });
     }
 
-    const newUser = createUser({  db: auth_db, session, 
+    const user = await createUser({  db: auth_db, session, 
                                 data: {  name, email, phone, password } })
                                      
-    const { role, theme, language, timezone, currency, plan } = newUser.toObject();
+    const { role, theme, language, timezone, currency, plan } = user
     const userResponse = {  name, email, phone, role,
                             local: { theme, language, timezone, currency, plan } };
 

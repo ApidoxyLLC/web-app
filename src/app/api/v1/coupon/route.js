@@ -7,17 +7,14 @@ import { dbConnect } from '@/app/lib/mongodb/db';
 import { shopModel } from '@/models/auth/Shop';
 import { userModel } from '@/models/auth/User';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
-import rateLimit from '@/app/utils/rateLimit';
 import securityHeaders from '../utils/securityHeaders';
 import { headers } from 'next/headers';
 import { couponModel } from '@/models/shop/product/Coupon';
 import { productModel } from '@/models/shop/product/Product';
+import limiter from './limiter';
 
 // Rate limiter configuration
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500, // Max users per minute
-});
+
 
 export async function POST(request) {
   // Get client IP for rate limiting
@@ -48,18 +45,20 @@ export async function POST(request) {
   const { vendorId, code, storeScope, ...couponData } = parsed.data;
 
   // Authentication check
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req: request, 
+                              secret: process.env.NEXTAUTH_SECRET });
   if (!token?.session) 
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: securityHeaders } )
 
   // Database connections
-  const auth_db = await authDbConnect();
-  const User = userModel(auth_db);
+  const   auth_db = await authDbConnect();
+  const      User = userModel(auth_db);
   const ShopModel = shopModel(auth_db);
 
   try {
     // Verify user exists and has permission
-    const user = await User.findOne({ activeSessions: new mongoose.Types.ObjectId(token.session), isDeleted: false })
+    const user = await User.findOne({ activeSessions: new mongoose.Types.ObjectId(token.session), 
+                                           isDeleted: false })
                            .select('+_id +shops')
                            .lean();
 
@@ -74,19 +73,17 @@ export async function POST(request) {
       return NextResponse.json( { error: "Shop not found or access denied" }, { status: 404, headers: securityHeaders }) }
 
     // Verify coupon code uniqueness
-    const shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
+    const            shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
     const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
     
     if (!DB_URI_ENCRYPTION_KEY) 
       return NextResponse.json({ error: "Server configuration error" }, { status: 500, headers: securityHeaders } );
 
-    const dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
-                                     options: { secret: DB_URI_ENCRYPTION_KEY } });
-
-    const vendor_db = await dbConnect({ dbKey: shopDbName, dbUri });
-    const CouponModel = couponModel(vendor_db)
-    const ProductModel = productModel(vendor_db)
-
+    const          dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
+                                              options: { secret: DB_URI_ENCRYPTION_KEY } });
+    const      vendor_db = await dbConnect({ dbKey: shopDbName, dbUri });
+    const    CouponModel = couponModel(vendor_db)
+    // const ProductModel = productModel(vendor_db)
 
     // Check if coupon code already exists
     const existingCoupon = await CouponModel.findOne({ code }).lean();
@@ -178,8 +175,9 @@ export async function POST(request) {
       const savedCoupon = await newCoupon.save({ session });
 
       // Update shop's coupon references
-      await ShopModel.updateOne( { _id: shop._id }, { $addToSet: { coupons: savedCoupon._id } }, { session } );
-
+      await ShopModel.updateOne( {       _id: shop._id }, 
+                                 { $addToSet: { coupons: savedCoupon._id } }, 
+                                 { session } );
       await session.commitTransaction();
     
       return NextResponse.json({ success: true, data: savedCoupon.toObject(), message: "Coupon created successfully" }, { status: 201, headers: securityHeaders });

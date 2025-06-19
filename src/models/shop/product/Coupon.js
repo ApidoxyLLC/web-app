@@ -73,7 +73,7 @@ export const couponSchema = new mongoose.Schema({
                createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopOwner', required: true },
                    usage: { type: couponUsageSchema },
                 isActive: { type: Boolean, default: true },
-               autoApply: { type: Boolean, default: false },
+              //  autoApply: { type: Boolean, default: false },
                 isPublic: { type: Boolean, default: false },
             redeemMethod: { type: String, enum: ['link', 'automatic', 'code'], default: 'code' },
                platforms: { type: [String], enum: ['web', 'mobile', 'app'], default: [] },

@@ -20,7 +20,6 @@ export   async function getUserByIdentifier({ db, session, data}) {
         const query = User.findOne({ $or: [{ email }, { phone }] })
                             .select('+security '            +
                                     '+security.password '   +
-
                                     '+lock '            +
                                     '+verification '    )
                                     // '+refreshTokenExpiresAt '   +

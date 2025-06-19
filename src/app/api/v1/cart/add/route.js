@@ -4,16 +4,18 @@ import centralDbConnect from "@/app/lib/mongodb/authDbConnect";
 import { dbConnect } from "@/app/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
 import { productModel } from "@/models/shop/product/Product";
+import { cartModel } from "@/models/shop/product/Cart";
+import { reservationModel } from "@/models/shop/product/Reservation";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import rateLimit from "@/app/utils/rateLimit";
 import { headers } from "next/headers";
 import { getToken } from 'next-auth/jwt';
 import { userModel } from '@/models/auth/User';
 import slugify from 'slugify';
-import securityHeaders from "../utils/securityHeaders";
+import securityHeaders from "../../utils/securityHeaders";
 import { cookies } from "next/headers";
-import { authenticationStatus } from "../middleware/auth";
-
+import { authenticationStatus } from "../../middleware/auth";
+import cartDTOSchema from "./cartDTOSchema";
 
 export const dynamic = 'force-dynamic'; // Ensure dynamic fetching
 
@@ -36,15 +38,61 @@ const limiter = rateLimit({
 
 
 export async function POST(request) {
-  
-  const auth = await authenticationStatus(request);
-  const isAuthenticated = auth.success
-  const shop = auth.shop 
-  if(!shop)
-    return NextResponse.json({ success: false, error: "Unable to proceed..." }, { status: 500, headers: securityHeaders })
+  let body;
+  try { body = await request.json() } 
+  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders });}
 
+  const          ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                      request.headers.get('x-real-ip') || 'unknown_ip';
+  const fingerprint = request.headers.get('x-fingerprint') || null;
+  const { allowed, headers} = rateLimit({ip, fingerprint});
+  if (!allowed) return NextResponse.json( { error: "Too many requests" }, { status: 429, headers: headers } );
   
+  const vendorId = request.headers.get('x-vendor-identifier');
+  const     host = request.headers.get('host');
+  if (!vendorId && !host) 
+    return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
+  
+  const parsed = cartDTOSchema.safeParse(body);
+  if (!parsed.success)
+    return NextResponse.json({  success: false, error: "Validation failed", details: parsed.error.flatten()}, { status: 422, headers: securityHeaders });
 
+  const { success, shop, data: user, isTokenRefreshed, token: newTokens } = await authenticationStatus(request);
+  
+  if (!success || !shop || !user)
+    return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 403, headers: securityHeaders });
+
+  // ✅ DB Connection
+  const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
+  if (!DB_URI_ENCRYPTION_KEY) {
+    console.log("missing VENDOR_DB_URI_ENCRYPTION_KEY")
+    return NextResponse.json({ success: false, error: "Missing encryption key" }, { status: 500, headers: securityHeaders }) 
+  }
+
+  const dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
+                                   options: { secret: DB_URI_ENCRYPTION_KEY } });
+  const dbKey = `${shop.dbInfo.prefix}${shop._id}`;
+
+  const vendor_db = await dbConnect({ dbKey, dbUri });
+
+  const     ProductModel = productModel(vendor_db);
+  const        CartModel = cartModel(vendor_db);
+  const ReservationModel = reservationModel(vendor_db);
+
+  const { productId, variantId, quantity, sessionId, isGuest } = parsed.data
+  const product = await ProductModel.findOne({ productId })
+                                    .select("title price variants inventory")
+                                    .lean();                 
+  if (!product) 
+    return NextResponse.json( { error: "Product not available" }, { status: 404, headers: securityHeaders })
+
+  let variant;
+  if(variantId){
+    variant = product.variants.find(varientItem => varientItem.variantId.toString() === variantId);
+    if(!product.hasVariants || !variant)
+      return NextResponse.json({  success: false, error: "Validation failed", details: parsed.error.flatten()}, { status: 422, headers: securityHeaders });    
+  }
+  const price = variant?.price.base || product.price.base;
 
 
 

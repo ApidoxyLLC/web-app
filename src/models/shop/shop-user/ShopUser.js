@@ -49,42 +49,41 @@ const twoFactorSchema = new mongoose.Schema({
   attempts: { type: Number, default: null, select: false  },
 }, { _id: false });
 
-const shopSchema = new mongoose.Schema({
-  shopId: {  type: mongoose.Schema.Types.ObjectId },
-  dbCluster: { type: String },
-  dbUri: { type: String },
-  dbSecret: { type: String },
-  dbNamePrefix: { type: String, default: process.env.APP_DB_PREFIX || 'app_db_' }
-}, { _id: false });
+// const shopSchema = new mongoose.Schema({
+//   shopId: {  type: mongoose.Schema.Types.ObjectId },
+//   dbCluster: { type: String },
+//   dbUri: { type: String },
+//   dbSecret: { type: String },
+//   dbNamePrefix: { type: String, default: process.env.APP_DB_PREFIX || 'app_db_' }
+// }, { _id: false });
 
 
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, maxlength: 255, required: true },
-  avatar: { type: String, default: null},
-  activeSessions:[{ type: mongoose.Schema.Types.ObjectId,   
-                      ref: 'Session',
-                      select: false,
-                    }],
-  email: { type: String, trim: true, unique: true, index: true, sparse: true  },
-  phone: { type: String, trim: true, unique: true, sparse: true },
+             name: { type: String, maxlength: 255, required: true },
+           avatar: { type: String, default: null},
+   activeSessions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],
+            email: { type: String, trim: true, unique: true, index: true, sparse: true  },
+            phone: { type: String, trim: true, unique: true, sparse: true },
+           gender: { type: String, enum: ['male', 'female', 'other'], default: null },
+              dob: { type: Date, default: null },
+              bio: { type: String, maxlength: 1000, default: null },
   isEmailVerified: { type: Boolean, default: false },
   isPhoneVerified: { type: Boolean, default: false },
-  verification:  { type: verificationSchema, default: () => ({}), select: false },
-  security: { type: securitySchema, default: () => ({}), select: false },
-  consent: { type: consentSchema, default: () => ({}) },
-  status: { type: statusSchema, default: () => ({}), select: false  },
-  lock: { type: lockSchema, default: () => ({}), select: false },
-  twoFactor: { type: twoFactorSchema, default: () => ({}), select: false },
-
-  isDeleted: { type: Boolean, default: false, select: false  },
-  deletedAt: { type: Date, default: null, select: false  },
-  role: {type: [String], default: ['end-user']},
-  theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
-  language: { type: String, default: 'english',
-            enum: ['english', 'bangla'] },
-  timezone: { type: String, default: null },
-  currency: { type: String, default: null },
+     verification: { type: verificationSchema, default: () => ({}), select: false },
+         security: { type: securitySchema,     default: () => ({}), select: false },
+          consent: { type: consentSchema,      default: () => ({}) },
+           status: { type: statusSchema,       default: () => ({}), select: false  },
+             lock: { type: lockSchema,         default: () => ({}), select: false },
+        twoFactor: { type: twoFactorSchema,    default: () => ({}), select: false },
+        isDeleted: { type: Boolean,  default: false, select: false  },
+        deletedAt: { type: Date,     default: null, select: false  },
+             role: { type: [String], default: ['end-user']},
+            theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
+         language: { type: String, default: 'english', enum: ['english', 'bangla'] },
+         timezone: { type: String, default: null },
+         currency: { type: String, default: null },
+             cart: { type: mongoose.Schema.Types.ObjectId, ref:'Cart' }
 }, {
   timestamps: true,
   collection: 'users'

@@ -61,7 +61,7 @@ export async function authenticationStatus(request) {
       const decoded = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
       if (decoded.fingerprint !== fingerprint)
         return { success: false, error: "Fingerprint mismatch" };
-      return { success: true, isTokenRefreshed: true, data: decoded, shop };
+      return { success: true, isTokenRefreshed: false, data: decoded, shop };
     } catch (accessTokenError) {
       if (accessTokenError.name === 'TokenExpiredError' && refreshToken) {
           const          ACCESS_TOKEN_EXPIRY = Number(shop.timeLimitations?.ACCESS_TOKEN_EXPIRE_MINUTES) || 15;

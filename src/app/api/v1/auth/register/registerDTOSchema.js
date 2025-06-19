@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 
-export const registerSchema = z
+export const registerDTOSchema = z
   .object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("Invalid email").optional(),
@@ -26,4 +26,4 @@ export const registerSchema = z
   //   path: ["phone"],
   // });
 
-  export default registerSchema;
+  export default registerDTOSchema;
