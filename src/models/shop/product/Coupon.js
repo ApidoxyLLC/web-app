@@ -18,14 +18,12 @@ const couponUsageSchema = new mongoose.Schema({
         applyCount: { type: Number, default: 0 },
         dailyLimit: { type: Number, min: 1 },
        expireAfter: { type: Number, min: 1 },
-           history: { type: [historySchema], default: [] }
 }, { _id: false });
 
-const geographicRestrictionsSchema = new mongoose.Schema({
-    countries: [String],
-      regions: [String],
-  postalCodes: [String]
-}, { _id: false });
+const geographicRestrictionsSchema = new mongoose.Schema({  countries: [String],
+                                                              regions: [String],
+                                                          postalCodes: [String]
+                                                        }, { _id: false });
 
 const excludeSchema = new mongoose.Schema({
         products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
@@ -35,37 +33,38 @@ const excludeSchema = new mongoose.Schema({
 }, { _id: false });
 
 const targetSchema = new mongoose.Schema({
-    products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
-  userGroups: {  type: String, enum: ['all', 'new', 'vip', 'referral', 'first_time'] }
+        products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+      categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+      userGroups: {  type: String, enum: ['all', 'new', 'vip', 'referral', 'first_time'] },
+  paymentMethods: [{ type: String, enum: ['cod', 'rocket', 'nagad', 'bkash', 'bank_transfer'] }]
 }, { _id: false });
 
 const auditTrailSchema = new mongoose.Schema({
-     action: { type: String, enum: ['created', 'edited', 'disabled'] },
-    actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
-  timestamp: { type: Date, default: Date.now }
+          action: { type: String, enum: ['created', 'edited', 'disabled'] },
+         actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+       timestamp: { type: Date, default: Date.now }
 }, { _id: false });
 
 const bogoRulesSchema = new mongoose.Schema({
-  buyQuantity: Number,
-  getQuantity: Number,
-   productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
+     buyQuantity: Number,
+     getQuantity: Number,
+      productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
 }, { _id: false });
 
 export const couponSchema = new mongoose.Schema({
                 couponId: { type: String, default: () => cuid() },
                    title: { type: String, required: true, trim: true },
                     code: { type: String, required: true, unique: true, trim: true },
-                    type: { type: String, enum: [ 'percentage_off', 'fixed_amount', 'free_shipping', 'bogo', 'free_gift', 'tiered', 'flash_sale', 'first_purchase', 'next_purchase', 'cashback', 'preorder_discount', 'bundle' ], required: true },
-                  target: { type: targetSchema, default: {} },
+                    type: { type: String, enum: ['percentage_off', 'fixed_amount', 'free_shipping', 'bogo', 'free_gift', 'tiered', 'flash_sale', 'first_purchase', 'next_purchase', 'cashback', 'preorder_discount', 'bundle' ], required: true },
+                  target: { type: targetSchema, default: undefined },
                  exclude: { type: excludeSchema, default: undefined },
   geographicRestrictions: { type: geographicRestrictionsSchema, default: undefined },
-                  amount: { type: Number, min: 0 , required: function() { return !['free_shipping', 'bogo', 'free_gift'].includes(this.type) }},
-                minValue: { type: Number, min: 0 }, 
+                  amount: { type: Number, min: 0, required: function() { return !['free_shipping', 'bogo', 'free_gift'].includes(this.type) }},
+                minValue: { type: Number, min: 0 },
              maxDiscount: { type: Number, min: 0 },
                 priority: { type: Number, default: 1 },
                startDate: { type: Date, default: Date.now },
-                 endDate: { type: Date, required: true },          
+                 endDate: { type: Date, required: true },
                bogoRules: { type: bogoRulesSchema, required: function () { return this.type === 'bogo' }, default: undefined },
            allowStacking: { type: Boolean, default: false },
      customerEligibility: { type: String, enum: ['all', 'new_customers', 'existing_customers', 'specific_customers'], default: 'all' },
@@ -74,7 +73,7 @@ export const couponSchema = new mongoose.Schema({
                    usage: { type: couponUsageSchema },
                 isActive: { type: Boolean, default: true },
               //  autoApply: { type: Boolean, default: false },
-                isPublic: { type: Boolean, default: false },
+                isPublic: { type: Boolean, default: true },
             redeemMethod: { type: String, enum: ['link', 'automatic', 'code'], default: 'code' },
                platforms: { type: [String], enum: ['web', 'mobile', 'app'], default: [] },
               // storeScope: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop' },
@@ -85,7 +84,31 @@ export const couponSchema = new mongoose.Schema({
                                 icon: String,
                          affiliateId: String,
                            utmSource: String,
-                         customRules: mongoose.Schema.Types.Mixed }
+                         customRules: mongoose.Schema.Types.Mixed,
+                   freeGiftProductId: String,
+                         tieredRules: [{       name: String,
+                                          threshold: Number,
+                                               type: { type: String, enum: ['percentage', 'fixed'] },
+                                              value: Number
+                                        }],
+                              
+                              // For bundle type
+                      bundleProducts: [{ productId: String,
+                                          required: { type: Boolean, default: true }  }],
+                          bundleType: { type: String, enum: ['percentage', 'fixed_amount', 'fixed_price'] },
+                         bundlePrice: Number,
+                          bundleName: String,
+                              
+                              // For cashback type
+                        cashbackType: { type: String, enum: ['percentage', 'fixed'] },
+                      cashbackMethod: String, // e.g., 'wallet', 'credit', 'voucher'
+                       cashbackTerms: String,
+                              
+                              // For next_purchase type
+                      issuedForOrder: String,
+                   issuedForCustomer: String,
+                          expiryDays: Number 
+                        }
 }, {
   timestamps: true,
   collection: 'coupons'

@@ -93,6 +93,7 @@ export async function POST(request) {
       return NextResponse.json({  success: false, error: "Validation failed", details: parsed.error.flatten()}, { status: 422, headers: securityHeaders });    
   }
   const price = variant?.price.base || product.price.base;
+  
 
 
 

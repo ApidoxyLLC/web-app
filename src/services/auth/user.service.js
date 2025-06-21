@@ -91,8 +91,6 @@ export        async function createUser({ db, session, data }) {
                       ...(email && { email }),
                       ...(phone && {  phone })
                     };
-                    
-                    
 
     const newUser = new User(userData);
     return await newUser.save(session ? { session } : {});
