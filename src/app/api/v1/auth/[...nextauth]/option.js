@@ -34,8 +34,7 @@ export const authOptions = {
                     const parsed = loginSchema.safeParse(credentials);
                     if (!parsed.success) { throw new Error("Invalid input") }
                 
-                    const { identifier, password, 
-                        identifierName, fingerprint, userAgent, timezone } = parsed.data;
+                    const { identifier, password, identifierName, fingerprint, userAgent, timezone } = parsed.data;
                     
                     const auth_db = await authDbConnect();
                     const user = await getUserByIdentifier({db: auth_db, 
@@ -56,8 +55,8 @@ export const authOptions = {
                             readConcern: { level: 'local' },
                             writeConcern: { w: 'majority' }
                             };
-                    const atuh_db_session = await auth_db.startSession(sessionOptions);
-                          atuh_db_session.startTransaction()
+                    const auth_db_session = await auth_db.startSession(sessionOptions);
+                          auth_db_session.startTransaction()
                 try {
                     const ip =  req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
                                 req.headers['x-real-ip'] || 
@@ -70,7 +69,12 @@ export const authOptions = {
                     const               ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ;
                     const       ACCESS_TOKEN_ENCRYPTION_KEY = process.env.ACCESS_TOKEN_ENCRYPTION_KEY || ''
                     const      REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || ''
-
+                    const         IP_ADDRESS_ENCRYPTION_KEY = process.env.IP_ADDRESS_ENCRYPTION_KEY
+                    
+                    if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_ENCRYPTION_KEY) {
+                        return null;
+                    }
+                    
                     const {token: accessToken, 
                         expireAt: accessTokenExpAt  } = createAccessToken({ user,
                                                                             sessionId, 
@@ -101,7 +105,7 @@ export const authOptions = {
                                                                             userAgent,
                                                                                  role: user.role,
                                                                                    db: auth_db,
-                                                                           db_session: atuh_db_session })
+                                                                           db_session: auth_db_session })
 
                         await createLoginHistory({   userId: user._id, 
                                                   sessionId: savedLoginSession._id, 
@@ -110,7 +114,7 @@ export const authOptions = {
                                                          ip, 
                                                   userAgent,
                                                          db: auth_db,
-                                                 db_session: atuh_db_session })     
+                                                 db_session: auth_db_session })     
 
                         if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
                             await cleanInvalidSessions({ activeSessions: user.activeSessions, 
@@ -118,10 +122,10 @@ export const authOptions = {
                                                  currentSessionId: savedLoginSession._id.toString(), 
                                                      sessionLimit: MAX_SESSIONS_ALLOWED, 
                                                                db: auth_db,
-                                                       db_session: atuh_db_session  })
+                                                       db_session: auth_db_session  })
                         }
 
-                        await atuh_db_session.commitTransaction();
+                        await auth_db_session.commitTransaction();
 
                         return {
                                      email: user.email,
@@ -138,12 +142,12 @@ export const authOptions = {
                                                      user?.isPhoneVerified  )
                             };
                 } catch (error) {
-                    await atuh_db_session.abortTransaction()
+                    await auth_db_session.abortTransaction()
                     
                     console.error("Login failed:", error);
                     throw new Error("Authentication failed")
                 }finally{
-                    atuh_db_session.endSession()
+                    auth_db_session.endSession()
                 }
 
                 // Return user object                    
@@ -262,6 +266,7 @@ async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTo
     if (token.provider === "local-email" || token.provider === "local-phone") {
             
       const data = jwt.decode(token.accessToken, accessTokenSecret)
+
       const { sessionId } = data
       if ( !sessionId ) return null 
 

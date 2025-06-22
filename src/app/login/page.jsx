@@ -11,7 +11,6 @@ export default function page() {
         const email = formData.get("email")?.toString() ?? "";
         const password = formData.get("password")?.toString() ?? "";
         const result = await signIn('login', {
-                            redirect: false,
                           identifier: email,
                             password: password,
                          fingerprint: fingerprint?.fingerprintId || '',

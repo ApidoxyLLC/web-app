@@ -1,16 +1,15 @@
 import mongoose from "mongoose";
+import cuid from "@bugsnag/cuid";
 
 const itemPriceSchema = new mongoose.Schema({
           basePrice: { type: Number, required: [true, 'Original price is required'], min: [0, 'Price cannot be negative'] },
-    discountedPrice: { type: Number, min: [0, 'Discounted price cannot be negative'], },
+    // discountedPrice: { type: Number, min: [0, 'Discounted price cannot be negative'], },
            currency: { type: String, enum: ["USD", "BDT"]} 
 }, { _id: false });
 
 const cartItemSchema = new mongoose.Schema({
-    sessionId: { type: String, required: false },
     productId: { type: mongoose.Schema.Types.ObjectId },
     variantId: { type: mongoose.Schema.Types.ObjectId },
-        title: {type: String, required: true},
      quantity: { type: Number, default: 1, min: [1, 'Quantity must be at least 1'], validate: { validator: Number.isInteger, message: 'Quantity must be an integer' } }, 
         price: { type: itemPriceSchema },
      subtotal: { type: Number, default: 0}, 
@@ -30,6 +29,11 @@ const metaInfoSchema = new mongoose.Schema({
     currency: { type: String, enum: ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'BDT'], default: undefined }
 }, { _id: false });
 
+const bogoSchema = new mongoose.Schema({
+    qualifyingItems: [{ productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' }, quantity: Number }],
+      rewardedItems: [{ productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' }, quantity: Number }]
+}, { _id: false });
+
 
 const discountDetailSchema = new mongoose.Schema({
         couponId: { type: String, ref: 'Coupon', required: true }, // Match with coupon.couponId (cuid), not Mongo _id
@@ -37,12 +41,9 @@ const discountDetailSchema = new mongoose.Schema({
             type: { type: String, enum: [ 'percentage_off', 'fixed_amount', 'free_shipping', 'bogo', 'free_gift', 'tiered', 'flash_sale', 'first_purchase', 'next_purchase', 'cashback', 'preorder_discount', 'bundle' ], required: true },
           amount: { type: Number, required: true }, // Actual discount applied (after calculation)
        appliedTo: {          type: { type: String, enum: ['products', 'categories', 'cart'], required: true },
-                         products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], 
-                       categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }] },
-                             bogo: { qualifyingItems: [{ productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' }, 
-                                                          quantity: Number }],
-                                       rewardedItems: [{ productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-                                                          quantity: Number }]  },
+                         products: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], default: undefined}, 
+                       categories: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }], default: undefined} },
+            bogo: { type: bogoSchema, default: undefined },
   validationHash: { type: String, required: true },
   verifiedAt: Date,
   metadata: { type: metaInfoSchema, default: undefined }
@@ -52,19 +53,23 @@ const discountDetailSchema = new mongoose.Schema({
 
 
 const cartSchema = new mongoose.Schema({
-           user: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopUser' },
-          items: [cartItemSchema],
-      sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session' },
+         cartId: { type: String, default: ()=> cuid() },
+         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopUser', default: undefined },
+          items: { type: [cartItemSchema], default:[] },
+      // sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session' },
         isGuest: { type: Boolean, default: true },
-    fingerprint: { type: String, select: false, required: true },  
+    fingerprint: { type: String, select: false, required: true },
+             ip: { type: String, default: undefined },
+      userAgent: { type: String, default: undefined },
+      expiresAt: { type: Date, default: undefined },
          totals: {   subtotal: { type: Number, default:0 },
                      discount: { type: Number, default:0 },
                           tax: { type: Number, default:0 },
                deliveryCharge: { type: Number, default:0 },
-            discountBreakdown: { type: [discountDetailSchema], default: undefined },
+            // discountBreakdown: { type: [discountDetailSchema], default: undefined },
                    grandTotal: { type: Number, default:0 },         },
         
-       currency: { type: String, enum: ["USD", "BDT"], required: true },
+       currency: { type: String, enum: ["USD", "BDT"], required: false, default: 'BDT' },
     lastUpdated: { type: Date, default: Date.now }
 }, 
 { timestamps: true, collection: 'carts' });

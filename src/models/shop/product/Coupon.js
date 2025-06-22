@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
 import cuid from "@bugsnag/cuid";
 
-const historySchema = new mongoose.Schema({
-      customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-         orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
-          usedAt: { type: Date, default: Date.now },
-  discountAmount: Number,
-        location: {      ip: String,
-                    country: String,
-                     device: String   }
-}, { _id: false });
+// const historySchema = new mongoose.Schema({
+//       customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+//          orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+//           usedAt: { type: Date, default: Date.now },
+//   discountAmount: Number,
+//         location: {      ip: String,
+//                     country: String,
+//                      device: String   }
+// }, { _id: false });
 
 const couponUsageSchema = new mongoose.Schema({
              limit: { type: Number, min: 1 },
@@ -20,10 +20,11 @@ const couponUsageSchema = new mongoose.Schema({
        expireAfter: { type: Number, min: 1 },
 }, { _id: false });
 
-const geographicRestrictionsSchema = new mongoose.Schema({  countries: [String],
-                                                              regions: [String],
-                                                          postalCodes: [String]
-                                                        }, { _id: false });
+const geographicRestrictionsSchema = new mongoose.Schema({  
+        countries: [String],
+          regions: [String],
+      postalCodes: [String]
+    }, { _id: false });
 
 const excludeSchema = new mongoose.Schema({
         products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
@@ -92,19 +93,19 @@ export const couponSchema = new mongoose.Schema({
                                               value: Number
                                         }],
                               
-                              // For bundle type
+                    // For bundle type
                       bundleProducts: [{ productId: String,
                                           required: { type: Boolean, default: true }  }],
                           bundleType: { type: String, enum: ['percentage', 'fixed_amount', 'fixed_price'] },
                          bundlePrice: Number,
                           bundleName: String,
                               
-                              // For cashback type
+                    // For cashback type
                         cashbackType: { type: String, enum: ['percentage', 'fixed'] },
                       cashbackMethod: String, // e.g., 'wallet', 'credit', 'voucher'
                        cashbackTerms: String,
                               
-                              // For next_purchase type
+                    // For next_purchase type
                       issuedForOrder: String,
                    issuedForCustomer: String,
                           expiryDays: Number 

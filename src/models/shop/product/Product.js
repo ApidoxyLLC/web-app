@@ -106,6 +106,7 @@ const productSchema = new mongoose.Schema({
           isFeatured: { type: Boolean, default: false },
            createdAt: { type: Date, default: Date.now },
             variants: { type: [variantSchema] },
+           inventory: { type: inventorySchema, default: undefined },
              reviews: { type: [mongoose.Schema.Types.ObjectId], ref: 'Review', default: [] },
           productUrl: { type: String, default: undefined },
          publishedAt: { type: Date, default: undefined },

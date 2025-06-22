@@ -1,6 +1,6 @@
-import mongoose from 'mongoose';
+import   mongoose   from 'mongoose';
 import { LRUCache } from 'lru-cache';
-import AsyncLock from 'async-lock';
+import   AsyncLock  from 'async-lock';
 
 const        MAX_CONNECTIONS = Number(process.env.DB_MAX_CONNECTION);
 const         CONNECTION_TTL = Number(process.env.DB_CONNECTION_TTL_MINUTES   || 15) * 60 * 1000; // 15 min
@@ -8,21 +8,20 @@ const MAX_TENANT_CONNECTIONS = Number(process.env.DB_MAX_TENANT_CONNECTIONS)  ||
 const   MAX_AUTH_CONNECTIONS = Number(process.env.DB_MAX_AUTH_CONNECTIONS)    || 20;
 const                   lock = new AsyncLock();
 
-const cache = new LRUCache({
-             max: MAX_CONNECTIONS,
-             ttl: CONNECTION_TTL,
-  updateAgeOnGet: true,
-      allowStale: false,
-         dispose: async (dbKey, connection) => {
-                        try {
-                          if (connection?.readyState === 1) {
-                            await connection.close();
-                            console.log(`🧹 Connection closed for ${dbKey} due to inactivity`);
-                          }
-                        } 
-                        catch (err) { console.log(`🧹 Eviction failed for ${dbKey}: ${err.message}`) }
-                      }
-});
+const cache = new LRUCache({ max: MAX_CONNECTIONS,
+                             ttl: CONNECTION_TTL,
+                  updateAgeOnGet: true,
+                      allowStale: false,
+                         dispose: async (dbKey, connection) => {
+                                                try {
+                                                  if (connection?.readyState === 1) {
+                                                    await connection.close();
+                                                    console.log(`🧹 Connection closed for ${dbKey} due to inactivity`);
+                                                  }
+                                                } 
+                                                catch (err) { console.log(`🧹 Eviction failed for ${dbKey}: ${err.message}`) }
+                                              }
+                  });
 
 setInterval(() => {
   const connectionKeys = [...cache.keys()];
@@ -61,7 +60,6 @@ export async function dbConnect({dbKey, dbUri}) {
     else cache.delete(dbKey);
   }
 
-  
   try {
     return await lock.acquire(dbKey, async ()=> {
       const lockedConnection = cache.get(dbKey);
@@ -69,19 +67,18 @@ export async function dbConnect({dbKey, dbUri}) {
       if (lockedConnection?.status     === "error" ) throw new Error("❌ Recent connection failure");
 
       try {
-        const newConnection = await mongoose.createConnection(dbUri, {
-          dbName: dbKey,
-          maxPoolSize: (dbKey === 'auth_db')
-                                    ? MAX_AUTH_CONNECTIONS 
-                                    : MAX_TENANT_CONNECTIONS,
-          socketTimeoutMS: 5000,
-          serverSelectionTimeoutMS: 3000
-        }).asPromise();
+        const newConnection = await mongoose.createConnection(dbUri, {  dbName: dbKey,
+                                                                   maxPoolSize: (dbKey === 'auth_db') 
+                                                                                  ? MAX_AUTH_CONNECTIONS 
+                                                                                  : MAX_TENANT_CONNECTIONS,
+                                                               socketTimeoutMS: 5000,
+                                                      serverSelectionTimeoutMS: 3000    }).asPromise();
 
         newConnection.createdAt = Date.now(); 
         cache.set(dbKey, newConnection);
         console.log(`✅ Connected: ${dbKey}`);
         return newConnection;
+
       } catch (error) {
         cache.set(dbKey, { status: "error", timestamp: Date.now() }, { ttl: 10_000 });
         console.log(`❌ Connection Failed: ${dbKey}`, error.message)
@@ -98,13 +95,12 @@ export async function dbConnect({dbKey, dbUri}) {
 ['SIGINT', 'SIGTERM'].forEach(sig => {
   process.on(sig, async () => {
     console.log(`🛑 Received ${sig}, closing all DB connections...`)
-    await Promise.all(
-      Array.from(cache.entries())
-            .map(([key, conn]) => 
-              conn?.readyState === 1 
-                  ? conn.close().catch(err => console.log({ err, key }, "Shutdown close failed")) 
-                  : Promise.resolve()        
-    ));
+    await Promise.all(Array.from(cache.entries())
+                           .map(([key, conn]) => 
+                              conn?.readyState === 1 
+                                  ? conn.close().catch(err => console.log({ err, key }, "Shutdown close failed")) 
+                                  : Promise.resolve()
+                    ));
     process.exit(0);
   });
 });

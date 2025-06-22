@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
+import cuid from "@bugsnag/cuid";
 
 const couponUsageHistorySchema = new mongoose.Schema({
+ couponHistoryId: { type: String, default: ()=> cuid() },
         couponId: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon', required: true },
       customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
          orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },

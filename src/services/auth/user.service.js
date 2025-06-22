@@ -62,14 +62,14 @@ export   async function getUserBySessionId({ db, session, data}) {
 // }
 
 export        async function createUser({ db, session, data }) {
-    if (!data || typeof data !== 'object') {
+    if (!data || typeof data !== 'object') 
       throw new Error('Invalid data format');
-    }
+    
     const { name, email, phone, password } = data || {}
-    const User = userModel(db)
-    const salt = await bcrypt.genSalt(14);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const token = crypto.randomBytes(32).toString('hex');
+    const         UserModel = userModel(db)
+    const              salt = await bcrypt.genSalt(14);
+    const    hashedPassword = await bcrypt.hash(password, salt);
+    const             token = crypto.randomBytes(32).toString('hex');
     const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
 
     const EMAIL_VERIFICATION_EXPIRY = Number(process.env.EMAIL_VERIFICATION_EXPIRY || 15); // minutes
@@ -92,7 +92,7 @@ export        async function createUser({ db, session, data }) {
                       ...(phone && {  phone })
                     };
 
-    const newUser = new User(userData);
+    const newUser = new UserModel(userData);
     return await newUser.save(session ? { session } : {});
 }
 

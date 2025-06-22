@@ -23,7 +23,6 @@ export async function POST(request) {
   let body;
   try { body = await request.json(); } 
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-  
 
   // Rate limiting 
   const userIP =  await getClientIp();
@@ -60,23 +59,16 @@ export async function POST(request) {
     session.startTransaction();
     const existingUser = await getUserByIdentifier({db: auth_db, session, data: { phone, email } })
 
-    // Error for Existing User 
-    if(existingUser){
-      return NextResponse.json({ error: "User already Exist" }, { status: 409 });
-    }
+    if(existingUser)
+      return NextResponse.json({ error: "User already Exist" }, { status: 409 });    
 
     const user = await createUser({  db: auth_db, session, 
                                 data: {  name, email, phone, password } })
-                                     
     const { role, theme, language, timezone, currency, plan } = user
     const userResponse = {  name, email, phone, role,
                             local: { theme, language, timezone, currency, plan } };
-
     await session.commitTransaction();
-    return NextResponse.json({ message: "User registered successfully",
-          success: true,
-          data: userResponse
-        }, { status: 201 })
+    return NextResponse.json({ message: "User registered successfully", success: true, data: userResponse }, { status: 201 })
   } catch (error) {
       await session.abortTransaction();
       return NextResponse.json({ error: error.message || "Something went wrong", stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined }, { status: 500 });
