@@ -7,6 +7,7 @@ import { encrypt, decrypt } from '@/lib/encryption/cryptoEncryption';
 import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/auth/user.service';
 import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
 import { createLoginHistory } from '@/services/auth/history.service';
+import { userModel } from '@/models/auth/User';
 
 // import GoogleProvider from 'next-auth/providers/google';
 // import AppleProvider from 'next-auth/providers/apple';
@@ -33,13 +34,29 @@ export const authOptions = {
                 try {
                     const parsed = loginSchema.safeParse(credentials);
                     if (!parsed.success) { throw new Error("Invalid input") }
-                
-                    const { identifier, password, identifierName, fingerprint, userAgent, timezone } = parsed.data;
-                    
-                    const auth_db = await authDbConnect();
-                    const user = await getUserByIdentifier({db: auth_db, 
-                            // session, 
-                            data: { [identifierName]: identifier } })
+                    const { identifier, password, identifierName, fingerprint, userAgent, timezone } = parsed.data;                    
+
+                    const          auth_db = await authDbConnect();
+                    const        UserModel = userModel(auth_db);
+                    const { phone, email } = { [identifierName]: identifier }
+
+                    if (!email && !phone) 
+                        throw new Error('At least one identifier (email or phone) is required.');
+                    const user = await UserModel.findOne({ $or: [{ email }, { phone }] })
+                                                .select('+_id '                 +
+                                                        '+security '            +
+                                                        '+security.password '   +
+                                                        '+security.failedAttempts '            +
+                                                        '+lock '                +
+                                                        '+lock.isLocked '       +
+                                                        '+lock.lockReason '     +
+                                                        '+lock.lockUntil '      +
+                                                        '+verification '        +
+                                                        '+isEmailVerified '     +                                    
+                                                        '+isPhoneVerified '     +
+                                                        '+role '                )
+                                                .lean();
+
                     if (!user || !user.security?.password) throw new Error("Invalid credentials");
 
                     checkLockout(user)

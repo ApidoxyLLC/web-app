@@ -13,17 +13,24 @@ export   async function getUserByIdentifier({ db, session, data}) {
       throw new Error('Invalid data format');
     }
     const { phone, email } = data || {};
-    if (!email && !phone) throw new Error('At least one identifier (email or phone) is required.');
+    if (!email && !phone) 
+        throw new Error('At least one identifier (email or phone) is required.');
     
-    const User = userModel(db);
+    const UserModel = userModel(db);
     try {
-        const query = User.findOne({ $or: [{ email }, { phone }] })
-                            .select('+security '            +
+        const query = UserModel.findOne({ $or: [{ email }, { phone }] })
+                            .select('+_id '                 +
+                                    '+security '            +
                                     '+security.password '   +
-                                    '+lock '            +
-                                    '+verification '    )
-                                    // '+refreshTokenExpiresAt '   +
-                                    // '+revoked' )
+                                    '+security.failedAttempts '            +
+                                    '+lock '                +
+                                    '+lock.isLocked '       +
+                                    '+lock.lockReason '     +
+                                    '+lock.lockUntil '      +
+                                    '+verification '        +
+                                    '+isEmailVerified '     +                                    
+                                    '+isPhoneVerified '     +
+                                    '+role '                )
                           .lean();
         if (session) query.session(session);
         return await query;
