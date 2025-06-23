@@ -105,7 +105,7 @@ export        async function createUser({ db, session, data }) {
     const result = await sendEmail({    receiverEmail: email,
                                         emailType: 'VERIFY',
                                         senderEmail: 'no-reply@apidoxy.com',
-                                        token: verificationToken,
+                                        token,
                                     });
 
     console.log('Email sent successfully:', result.messageId);
