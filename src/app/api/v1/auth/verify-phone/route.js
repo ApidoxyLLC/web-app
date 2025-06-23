@@ -20,7 +20,7 @@ export async function POST(request) {
     const db = authDbConnect()
     const UserModel = userModel(db);
 
-    const user = UserModel.findOne({ phone, "verification.phoneVerificationOTP": otp, "verification.phoneVerificationOTPExpire":{ $gt: Date.now() } })
+    const user = UserModel.findOne({ phone, "verification.phoneVerificationOTP": otp, "verification.phoneVerificationOTPExpiry":{ $gt: Date.now() } })
     if(!user) return NextResponse.json({ error: "Invalid token" }, { status: 400 })
                                 user.isEmailVerified = true;
             user.verification.phoneVerificationOTP = undefined;

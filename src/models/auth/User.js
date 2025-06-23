@@ -10,10 +10,10 @@ const ConsentSchema = new mongoose.Schema({
 const VerificationSchema = new mongoose.Schema({
   // isEmailVerified: { type: Boolean, default: undefined },
   emailVerificationToken: { type: String, default: undefined, select: false },
-  emailVerificationTokenExpire: { type: Number, default: undefined, select: false  },
+  emailVerificationTokenExpiry: { type: Number, default: undefined, select: false  },
   // isPhoneVerified: { type: Boolean, default: undefined },
   phoneVerificationOTP: { type: String, default: undefined, select: false  },
-  phoneVerificationOTPExpire: { type: Date, default: undefined, select: false  },
+  phoneVerificationOTPExpiry: { type: Date, default: undefined, select: false  },
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
@@ -22,7 +22,7 @@ const SecuritySchema = new mongoose.Schema({
   failedAttempts: { type: Number, default: null },
   lastLogin: { type: Date, default: null },
   forgotPasswordToken: { type: String, default: undefined },
-  forgotPasswordTokenExpire: { type: Number, default: undefined }
+  forgotPasswordTokenExpiry: { type: Number, default: undefined }
 }, { _id: false });
 
 const StatusSchema = new mongoose.Schema({

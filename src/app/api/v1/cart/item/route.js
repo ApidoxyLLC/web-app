@@ -8,6 +8,7 @@ import { authenticationStatus } from "../../middleware/auth";
 import       cartDTOSchema      from "./cartDTOSchema";
 import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
 import   { RateLimiterMemory }  from "rate-limiter-flexible";
+import { inventoryReservationModel } from "@/models/shop/product/InventoryReservation";
 export const dynamic = 'force-dynamic'; 
 
 // Rate limiter configuration
@@ -67,10 +68,8 @@ export async function PATCH(request) {
     return NextResponse.json({ success: false, error: "Missing encryption key" }, { status: 500, headers: securityHeaders });
   }
 
-  const dbUri = await decrypt({
-    cipherText: shop.dbInfo.uri,
-    options: { secret: DB_URI_ENCRYPTION_KEY },
-  });
+  const dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
+                                   options: { secret: DB_URI_ENCRYPTION_KEY }  });
   const dbKey = `${shop.dbInfo.prefix}${shop._id}`;
   const vendor_db = await dbConnect({ dbKey, dbUri });
 
@@ -94,10 +93,14 @@ export async function PATCH(request) {
     if (!product.hasVariants || !variant) 
       return NextResponse.json({ success: false, error: "Invalid variant" }, { status: 422, headers: securityHeaders });
   }
+  const InventoryReservationModel = inventoryReservationModel(vendor_db)
+  const              reservations = await InventoryReservationModel.find({ productId: product._id, variantId: variant._id, status: 'reserved', expiry: { $gt: Date.now() } })
+                                                                   .lean();
+  const     totalReservedQuentity = reservations.reduce((sum, r) => sum + (r.quantity || 0), 0)
 
   // 📦 3. Get Stock
   const inventory = variant?.inventory || product.inventory;
-  const stock = inventory.quantity - inventory.reserved;
+  const     stock = inventory.quantity - totalReservedQuentity;
 
   // 💰 4. Price Info
   const itemPrice = variant?.price || product.price;
@@ -130,8 +133,6 @@ export async function PATCH(request) {
       expiresAt: new Date(Date.now() + (1 * 24 * 60 * 60 * 1000))
     });
   }
-
-
 
   // 🔄 6. Update/Add/Remove Item
   const itemIndex = cart.items.findIndex(item =>
@@ -177,6 +178,54 @@ export async function PATCH(request) {
   //                                                 (cart.totals.deliveryCharge  || 0);
   const savedCart = await cart.save();
 
+
+  
+const CART_RESERVATION_TTL_MINUTES = parseInt(process.env.END_USER_CART_RESERVATION_TTL_MINUTES || '15', 10)
+const expiryTime = Date.now() + (CART_RESERVATION_TTL_MINUTES * 60 * 1000);
+const existingReservations = await InventoryReservationModel.find({ cartId: savedCart._id }).lean();
+
+const updatedReservations = [];
+const newReservations = [];
+
+for (const item of savedCart.items) {
+  const existing = existingReservations.find(
+    r => r.productId.toString() === item.productId.toString() &&
+         ((!item.variantId && !r.variantId) || (item.variantId && r.variantId?.toString() === item.variantId.toString()))
+  );
+
+  if (existing) {
+    updatedReservations.push({
+      filter: { _id: existing._id },
+      update: { $set: { quantity: item.quantity, expiry: expiryTime } },
+    });
+  } else {
+    newReservations.push({
+      reservationId: cuid(),
+      productId: item.productId,
+      variantId: item.variantId,
+      cartId: savedCart._id,
+      userId: savedCart.userId,
+      fingerprint: savedCart.fingerprint,
+      quantity: item.quantity,
+      expiry: expiryTime,
+      status: 'reserved',
+      originalPrice: item.price.basePrice,
+      reservedPrice: item.price.basePrice,
+    });
+  }
+}
+
+// Apply updates
+await Promise.all(
+  updatedReservations.map(r =>
+    InventoryReservationModel.updateOne(r.filter, r.update)
+  )
+);
+
+// Insert new ones
+if (newReservations.length > 0) {
+  await InventoryReservationModel.insertMany(newReservations);
+}
   // ✅ 8. Return Updated Cart Summary
   const response = NextResponse.json( { success: true,
                                            cartId: savedCart.cartId,

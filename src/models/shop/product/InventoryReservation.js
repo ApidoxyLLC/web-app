@@ -9,7 +9,7 @@ const inventoryReservationSchema = new mongoose.Schema({
   userId:         { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   fingerprint:    { type: String, select: false },
   quantity:       { type: Number, required: true },
-  expiresAt:      { type: Date, required: false, default: undefined },
+  expiry:         { type: Number, required: false, default: undefined },
   status:         { type: String, enum: ['reserved', 'released', 'used'], default: 'reserved' },
   originalPrice:  { type: Number },
   reservedPrice:  { type: Number, required: true },
@@ -21,3 +21,5 @@ const inventoryReservationSchema = new mongoose.Schema({
 });
 
 export const inventoryReservationModel = (db) => db.models.InventoryReservation || db.model('InventoryReservation', inventoryReservationSchema);
+
+
