@@ -74,11 +74,11 @@ export        async function createUser({ db, session, data }) {
       throw new Error('Invalid data format');
     
     const { name, email, phone, password } = data || {}
-    const         UserModel = userModel(db)
-    const              salt = await bcrypt.genSalt(14);
-    const    hashedPassword = await bcrypt.hash(password, salt);
-    const             token = crypto.randomBytes(32).toString('hex');
-    const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
+    const      UserModel = userModel(db)
+    const           salt = await bcrypt.genSalt(14);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const          token = crypto.randomBytes(32).toString('hex');
+    const    hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
     const EMAIL_VERIFICATION_EXPIRY = Number(process.env.EMAIL_VERIFICATION_EXPIRY || 15); // minutes
     const PHONE_VERIFICATION_EXPIRY = Number(process.env.PHONE_VERIFICATION_EXPIRY || 5); // minutes
@@ -88,7 +88,7 @@ export        async function createUser({ db, session, data }) {
                                       && {  password: hashedPassword,
                                             salt } ) },
                         verification: { ...(email && {
-                                            emailVerificationToken: verificationToken,
+                                            emailVerificationToken: hashedToken,
                                             emailVerificationTokenExpiry: new Date( Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60 * 1000)).getTime(),
                                           }),
                                         ...((phone && !email) && { 
