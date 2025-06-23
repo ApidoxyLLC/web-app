@@ -205,6 +205,5 @@ export async function PATCH(request) {
           maxAge: Math.floor((refreshTokenExpiry - Date.now()) / 1000),
       });
   }
-
   return response
 }

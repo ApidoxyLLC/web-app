@@ -6,8 +6,6 @@ import crypto from 'crypto';
 
 export default async function sendEmail({receiverEmail, emailType, senderEmail, token}) {
     try {
-
-
         const transporter = nodemailer.createTransport({
                                 host: process.env.MAILTRAP_HOST,
                                 port: parseInt(process.env.MAILTRAP_PORT),

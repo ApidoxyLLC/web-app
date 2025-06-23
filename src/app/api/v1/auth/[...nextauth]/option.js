@@ -159,11 +159,10 @@ export const authOptions = {
                                                      user?.isPhoneVerified  )
                             };
                 } catch (error) {
-                    await auth_db_session.abortTransaction()
-                    
+                    await auth_db_session.abortTransaction()                    
                     console.error("Login failed:", error);
                     throw new Error("Authentication failed")
-                }finally{
+                }finally {
                     auth_db_session.endSession()
                 }
 
@@ -207,10 +206,9 @@ export const authOptions = {
             const  ACCESS_TOKEN_EXPIRE_MINUTES = Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || 15);
             const REFRESH_TOKEN_EXPIRE_MINUTES = Number(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || 86400)  
             
-            if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_ENCRYPTION_KEY) {
-                    // console.error('Missing required environment variables');
-                    return null;
-                }
+            if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_ENCRYPTION_KEY) {                    
+                return null;
+            }
 
             try {
                 const newTokens  = await tokenRefresh({                    token, 

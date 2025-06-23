@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto'; 
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import { NextResponse } from 'next/server';
+import sendEmail from '../mail/sendEmail';
 import mongoose from 'mongoose';
 
 
@@ -98,6 +99,8 @@ export        async function createUser({ db, session, data }) {
                       ...(email && { email }),
                       ...(phone && {  phone })
                     };
+
+    await sendEmail({ receiverEmail: email, emailType: 'VERIFY' , senderEmail: "mamunofficialmail@gmail.com", token: verificationToken  })
 
     const newUser = new UserModel(userData);
     return await newUser.save(session ? { session } : {});

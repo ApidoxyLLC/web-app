@@ -3,7 +3,9 @@ import { NextResponse } from 'next/server';
 import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import { userModel } from '@/models/auth/User';
 
-const schema = z.object({ token: z.string() });
+const schema = z.object({ token: z.string(),
+                    fingerprint: z.string().length(32, 'Invalid fingerprint ID length').optional()
+                  });
 
 export async function POST(request) {
   let body;
@@ -12,7 +14,7 @@ export async function POST(request) {
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid data..." }, { status: 422 });
-  const { token } = parsed.data
+  const { token, fingerprint } = parsed.data
 
   try {
     const db = authDbConnect()

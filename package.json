@@ -18,6 +18,7 @@
     "aws-sdk": "^2.1692.0",
     "backblaze-b2": "^1.7.1",
     "bcryptjs": "^3.0.2",
+    "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
     "libsodium-wrappers": "^0.7.15",
     "lru-cache": "^11.1.0",
