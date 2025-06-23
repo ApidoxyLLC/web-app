@@ -20,21 +20,22 @@ export async function POST(request) {
     const db = authDbConnect()
     const UserModel = userModel(db);
 
-    const user = UserModel.findOne({ "verification.emailVerificationToken": token, "verification.emailVerificationTokenExpiry":{ $gt: Date.now() } })
-                          .select("+verification " +
-                                  "+isEmailVerified" +
-                                  "+verification.emailVerificationToken"  +
-                                  "+verification.emailVerificationTokenExpiry")
+    const user = await UserModel.findOne({ "verification.emailVerificationToken": token, "verification.emailVerificationTokenExpiry":{ $gt: Date.now() } })
+                          .select("+email " +                                  
+                                  "+isEmailVerified " +
+                                  "+verification " +
+                                  "+verification.emailVerificationToken "  +
+                                  "+verification.emailVerificationTokenExpiry ")
                           .lean();
     if(!user) return NextResponse.json({ error: "Invalid token" }, { status: 400 })
                                 user.isEmailVerified = true;
             user.verification.emailVerificationToken = undefined;
       user.verification.emailVerificationTokenExpiry = undefined;
       
-      user.save()
+      const savedUser = await user.save()
 
     // You can add custom logic here, e.g. check if email exists in Db
-    return NextResponse.json({ valid: true, email });
+    return NextResponse.json({ valid: true, email: savedUser.email });
   } catch (error) {
     return NextResponse.json(
       { valid: false, error: 'Invalid email format' },
