@@ -22,13 +22,14 @@ export async function POST(request) {
 
     const user = UserModel.findOne({ "verification.emailVerificationToken": token, "verification.emailVerificationTokenExpiry":{ $gt: Date.now() } })
                           .select("+verification " +
+                                  "+isEmailVerified" +
                                   "+verification.emailVerificationToken"  +
                                   "+verification.emailVerificationTokenExpiry")
                           .lean();
     if(!user) return NextResponse.json({ error: "Invalid token" }, { status: 400 })
                                 user.isEmailVerified = true;
             user.verification.emailVerificationToken = undefined;
-      user.verification.emailVerificationTokenExpire = undefined;
+      user.verification.emailVerificationTokenExpiry = undefined;
       
       user.save()
 
