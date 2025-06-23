@@ -100,10 +100,16 @@ export        async function createUser({ db, session, data }) {
                       ...(phone && {  phone })
                     };
 
-    await sendEmail({ receiverEmail: email, emailType: 'VERIFY' , senderEmail: "mamunofficialmail@gmail.com", token: verificationToken  })
+    const user = new UserModel(userData);
+    const newUser = await  user.save(session ? { session } : {});
+    const result = await sendEmail({    receiverEmail: email,
+                                        emailType: 'VERIFY',
+                                        senderEmail: 'no-reply@apidoxy.com',
+                                        token: verificationToken,
+                                    });
 
-    const newUser = new UserModel(userData);
-    return await newUser.save(session ? { session } : {});
+    console.log('Email sent successfully:', result.messageId);
+    return newUser
 }
 
 export       async function addLoginSession({ db, session, data }){
