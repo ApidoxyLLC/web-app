@@ -22,7 +22,7 @@ export async function POST(request) {
     const user = await UserModel.findOne({        phone,
               "verification.phoneVerificationOTPExpiry": { $gt: Date.now() },});
 
-    if (!user || !user.verification?.phoneVerificationOTP) 
+    if (!user || !user.verification?.phoneVerificationOTP)
       return NextResponse.json({ error: "No active verification request" }, { status: 400 });    
 
     const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
