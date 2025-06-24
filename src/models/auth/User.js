@@ -80,36 +80,34 @@ const usageSchema = new mongoose.Schema({
 
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, maxlength: 255, required: true },
-  avatar: { type: String, default: null},
-  activeSessions:[{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],
-  shops: { type: [mongoose.Schema.Types.ObjectId], select: false, default: [] },
-  email: { type: String, trim: true, unique: true, index: true, sparse: true  },
-  phone: { type: String, trim: true, unique: true, sparse: true },
-  isEmailVerified: { type: Boolean, default: false, select: false  },
-  isPhoneVerified: { type: Boolean, default: false, select: false  },
-  verification: { type: VerificationSchema, default: () => ({}), select: false },
-  security: { type: SecuritySchema, default: () => ({}), select: false },
-  consent: { type: ConsentSchema, default: () => ({}), select: false },
-  status: { type: StatusSchema, default: () => ({}), select: false  },
-  lock: { type: LockSchema, default: () => ({}), select: false },
-  twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
-  activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref:'Subscription',  default:[] },
-  usage: { type:usageSchema },
-  // Profile Delete information
-  isDeleted: { type: Boolean, default: false, select: false  },
-  deletedAt: { type: Date, default: null, select: false  },
-  role: {type: [String], default: ['user']},
-  theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
-  language: { type: String, default: 'english',
-            enum: ['english', 'bangla'] },
-  timezone: { type: String, default: null },
-  currency: { type: String, default: null },
+                  name: { type: String, maxlength: 255, required: true },
+                avatar: { type: String, default: null},
+        activeSessions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],
+                 shops: { type: [mongoose.Schema.Types.ObjectId], select: false, default: [] },
+                 email: { type: String, trim: true, unique: true, index: true, sparse: true  },
+                 phone: { type: String, trim: true, unique: true, sparse: true },
+       isEmailVerified: { type: Boolean, default: false, select: false  },
+       isPhoneVerified: { type: Boolean, default: false, select: false  },
+          verification: { type: VerificationSchema, default: () => ({}), select: false },
+              security: { type: SecuritySchema, default: () => ({}), select: false },
+               consent: { type: ConsentSchema, default: () => ({}), select: false },
+                status: { type: StatusSchema, default: () => ({}), select: false  },
+                  lock: { type: LockSchema, default: () => ({}), select: false },
+             twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
+    activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref:'Subscription',  default:[] },
+                 usage: { type:usageSchema },
+    // Profile Delete information
+             isDeleted: { type: Boolean, default: false, select: false  },
+             deletedAt: { type: Date, default: null, select: false  },
+                  role: {type: [String], default: ['user']},
+                 theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
+              language: { type: String, default: 'english', enum: ['english', 'bangla'] },
+              timezone: { type: String, default: null },
+              currency: { type: String, default: null },
 }, {
   timestamps: true,
   collection: 'users'
 });
-
 
 export const userModel = (db) => db.models.User || db.model('User', userSchema);
 // export const User = mongoose.models.User ||  mongoose.model("User", userSchema, "users")

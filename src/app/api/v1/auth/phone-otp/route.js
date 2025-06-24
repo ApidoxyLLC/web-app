@@ -30,7 +30,7 @@ export async function POST(request) {
   
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid  email address..." }, { status: 422 });
-  const { email } = parsed?.data
+  const { phone } = parsed?.data
 
   try {
     const db = authDbConnect()
@@ -42,15 +42,13 @@ export async function POST(request) {
                                     })
     if(!user) return NextResponse.json({ error: "If your number exists, you'll receive a OTP" }, { status: 400 })
 
-
-
-
     const PHONE_VERIFICATION_EXPIRY = Number(process.env.PHONE_VERIFICATION_EXPIRY || 5); // minutes
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
     // ===== 6. Secure Update =====
                                 user.isPhoneVerified = false;
                                    user.verification = user.verification || {}; 
-              user.verification.phoneVerificationOTP = otp
+              user.verification.phoneVerificationOTP = hashedOtp
       user.verification.emailVerificationTokenExpire = new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000));
       const savedUser = await user.save()
 
