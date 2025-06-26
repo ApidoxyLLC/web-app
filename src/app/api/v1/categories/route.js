@@ -3,12 +3,12 @@ import mongoose from 'mongoose';
 
 import { categoryModel } from '@/models/shop/product/_Category';
 import { categoryDTOSchema } from './categoryDTOSchema';
-import authDbConnect from '@/app/lib/mongodb/authDbConnect';
+import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { shopModel } from '@/models/auth/Shop';
 import { getToken } from 'next-auth/jwt';
 import { userModel } from '@/models/auth/User';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
-import { dbConnect } from '@/app/lib/mongodb/db';
+import { dbConnect } from '@/lib/mongodb/db';
 import securityHeaders from '../utils/securityHeaders';
 
 const MAX_CATEGORY_DEPTH = parseInt(process.env.MAX_CATEGORY_DEPTH || '5', 10);

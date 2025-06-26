@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import B2 from 'backblaze-b2';
 import crypto from 'crypto';
-import authDbConnect from '@/app/lib/mongodb/authDbConnect';
+import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { shopModel } from '@/models/auth/Shop';
 
 export const config = { api: {  bodyParser: false,

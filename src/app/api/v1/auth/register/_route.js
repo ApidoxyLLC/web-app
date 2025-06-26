@@ -1,4 +1,4 @@
-import authDbConnect from "@/app/lib/mongodb/authDbConnect";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
 import bcrypt from "bcryptjs";
 import User from "@/models/auth/User";
 import mongoose from "mongoose";

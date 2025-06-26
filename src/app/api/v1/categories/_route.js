@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { categoryModel } from '@/models/shop/product/_Category';
 import mongoose from 'mongoose';
 import { categoryDTOSchema } from './categoryDTOSchema';
-import authDbConnect from '@/app/lib/mongodb/authDbConnect';
+import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { shopModel } from '@/models/auth/Shop';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/option";
@@ -11,7 +11,7 @@ import { getUserBySessionId } from '@/services/auth/user.service';
 import { userModel } from '@/models/auth/User';
 import slugify from 'slugify';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
-import { dbConnect } from '@/app/lib/mongodb/db';
+import { dbConnect } from '@/lib/mongodb/db';
 
 
 const securityHeaders = {

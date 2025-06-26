@@ -2,7 +2,7 @@ import { userModel } from '@/models/auth/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto'; 
-import authDbConnect from '@/app/lib/mongodb/authDbConnect';
+import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { NextResponse } from 'next/server';
 import sendEmail from '../mail/sendEmail';
 import mongoose from 'mongoose';

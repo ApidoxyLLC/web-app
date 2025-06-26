@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import authDbConnect from "@/app/lib/mongodb/authDbConnect";
-import { dbConnect } from "@/app/lib/mongodb/db";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
+import { dbConnect } from "@/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
 import { userModel } from "@/models/shop/shop-user/ShopUser";
 import bcrypt from "bcryptjs";

@@ -1,5 +1,26 @@
 import mongoose from 'mongoose';
 
+
+// const oauthSchema = new mongoose.Schema({
+//     provider: { type: String, enum: ['google', 'facebook']},
+//     providerUserId: { type: String, },
+//     providerAccessToken: { type: String, },
+//     providerRefreshToken: { type: String, },
+//     providerTokenExpiresAt: { type: Date}
+// , }, { _id: false });
+const OAuthProviderSchema = new mongoose.Schema({
+    provider: String,
+    providerUserId: String,
+    providerAccessToken: String,
+    providerRefreshToken: String,
+    providerTokenExpiresAt: Date
+  }, { _id: false });
+
+// const oauthSchema = new mongoose.Schema({
+//     google: { type: OAuthProviderSchema },
+//   facebook: { type: OAuthProviderSchema }
+// }, { _id: false });
+
 const sessionSchema = new mongoose.Schema({
                       _id: { type: String },
                    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -8,10 +29,11 @@ const sessionSchema = new mongoose.Schema({
      accessTokenExpiresAt: { type: Date,    select: false,  required: true },
              refreshToken: { type: String,  select: false,  required: true },    
     refreshTokenExpiresAt: { type: Date,    select: false,  required: true },
-              fingerprint: { type: String,  select: false,  required: true },  
+              fingerprint: { type: String,  select: false,  required: false },  
                        ip: { type: String,                  required: false },
                 userAgent: { type: String,                  required: false },
-                    role: {type: [String], default: ['user']},
+                     role: { type: [String], default: ['user'] },
+             providerData: { type: OAuthProviderSchema, default: undefined },
                   // device: { type: String, required: false },
                 createdAt: { type: Date,    default: Date.now },
                lastUsedAt: { type: Date,    default: Date.now },

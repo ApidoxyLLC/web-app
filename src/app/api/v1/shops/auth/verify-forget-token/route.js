@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import crypto from 'crypto';
-import authDbConnect from '@/app/lib/mongodb/authDbConnect';
+import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { NextResponse } from 'next/server';
-import { dbConnect } from '@/app/lib/mongodb/db';
+import { dbConnect } from '@/lib/mongodb/db';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { userModel } from '@/models/auth/User';
 import { shopModel } from '@/models/auth/Shop';

@@ -1,6 +1,6 @@
 import CredentialsProvider from 'next-auth/providers/credentials';
 import loginSchema from './loginDTOSchema';
-import authDbConnect from '@/app/lib/mongodb/authDbConnect';
+import authDbConnect from '@/lib/mongodb/authDbConnect';
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { encrypt, decrypt } from '@/lib/encryption/cryptoEncryption';

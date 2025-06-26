@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import authDbConnect from '@/app/lib/mongodb/authDbConnect';
+import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { userModel } from '@/models/auth/User';
 
 const phoneVefiryDTOSchema = z.object({ phone: z.string().email(),

@@ -1,4 +1,4 @@
-import { dbConnect  } from "@/app/lib/mongodb/db";
+import { dbConnect  } from "@/lib/mongodb/db";
 import { decrypt    } from "@/lib/encryption/cryptoEncryption";
 
 export async function connectVendorDb(shop) {

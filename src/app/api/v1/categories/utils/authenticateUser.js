@@ -1,7 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/__option";
-import authDbConnect from "@/app/lib/mongodb/authDbConnect";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { userModel } from "@/models/auth/User";
 import mongoose from "mongoose";
 

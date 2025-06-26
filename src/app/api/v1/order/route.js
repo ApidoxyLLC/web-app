@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
-import { dbConnect } from "@/app/lib/mongodb/db";
+import { dbConnect } from "@/lib/mongodb/db";
 import { cartModel } from "@/models/shop/product/Cart";
 import { orderModel } from "@/models/shop/product/Order";
 import { productModel } from "@/models/shop/product/Product";

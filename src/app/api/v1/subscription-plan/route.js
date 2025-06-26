@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import authDbConnect from "@/app/lib/mongodb/authDbConnect";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
 import subscriptionPlanDTOSchema from "./subscriptionPlanDTOSchema";
 import { createSubscriptionPlan } from "@/services/subscription/plan.service";
 import { subscriptionPlanModel } from "@/models/subscription/SubscriptionPlan";

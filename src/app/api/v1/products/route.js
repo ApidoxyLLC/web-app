@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
-import authDbConnect from "@/app/lib/mongodb/authDbConnect";
-import { dbConnect } from "@/app/lib/mongodb/db";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
+import { dbConnect } from "@/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
 import { productModel } from "@/models/shop/product/Product";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";

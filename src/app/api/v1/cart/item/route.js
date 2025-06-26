@@ -1,5 +1,5 @@
 import     { NextResponse }     from "next/server";
-import       { dbConnect }      from "@/app/lib/mongodb/db";
+import       { dbConnect }      from "@/lib/mongodb/db";
 import      { productModel }    from "@/models/shop/product/Product";
 import       { cartModel }      from "@/models/shop/product/Cart";
 import        { decrypt }       from "@/lib/encryption/cryptoEncryption";

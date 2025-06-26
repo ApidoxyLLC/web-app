@@ -38,6 +38,16 @@ const LockSchema = new mongoose.Schema({
   lockUntil: { type: Date, default: null  },
 }, { _id: false });
 
+const OAuthProviderSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  accessToken: { type: String, required: true, select: false },
+  refreshToken: { type: String, select: false }, // For token refresh
+  tokenExpiresAt: { type: Date, select: false }, // When the token expires
+  picture: { type: String }, // Profile picture URL from provider
+  scope: { type: String }, // Granted permissions scope
+  tokenType: { type: String }, // e.g., "Bearer"
+}, { _id: false });
+
 const TwoFactorSchema = new mongoose.Schema({
   enabled: { type: Boolean, default: false },
   token: { type: String, select: false, default: null, select: false  },
@@ -78,6 +88,12 @@ const usageSchema = new mongoose.Schema({
          monthlyOrders: { type: Number, default: 0 },
 }, { _id: false });
 
+const oauthSchema = new mongoose.Schema({
+    google: { type: OAuthProviderSchema },
+  facebook: { type: OAuthProviderSchema }
+}, { _id: false });
+
+
 
 const userSchema = new mongoose.Schema({
                   name: { type: String, maxlength: 255, required: true },
@@ -96,7 +112,9 @@ const userSchema = new mongoose.Schema({
              twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
     activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref:'Subscription',  default:[] },
                  usage: { type:usageSchema },
-    // Profile Delete information
+                 oauth: { type: oauthSchema, default: undefined, select: false},
+    // Profile Delete informationf
+
              isDeleted: { type: Boolean, default: false, select: false  },
              deletedAt: { type: Date, default: null, select: false  },
                   role: {type: [String], default: ['user']},
@@ -110,29 +128,3 @@ const userSchema = new mongoose.Schema({
 });
 
 export const userModel = (db) => db.models.User || db.model('User', userSchema);
-// export const User = mongoose.models.User ||  mongoose.model("User", userSchema, "users")
-// export default User
-
-  // GDPR/Privacy
-  // acceptedTermsAt: { type: Date, default: null},
-  // marketingConsent: { type: Boolean, default: false },
-  // dataProcessingConsent: { type: Boolean, default: false },
-
-  // Email  
-  // email: { type: String, trim: true, default: null, sparse: true },
-  // isEmailVerified: { type: Boolean, default: null },
-  // emailVerificationToken: { type: String, default: null },
-  // emailVerificationTokenExpires: { type: Date, default: null },
-
-  // Phone 
-  // phone: { type: String, trim: true, default: null, sparse: true },
-  // isPhoneVerified: { type: Boolean, default: null },
-  // phoneVerificationToken: { type: String, default: null },
-  // phoneVerificationTokenExpires: { type: Date, default: null },
-
-  // Security
-  // password: { type: String, select: false , default: null },
-  // salt: { type: String, select: false, default: null},
-  // isTwoFactorEnable: { type: Boolean, default: false, },
-  // lastLogin: { type: Date, default: null },
-  // failedAttempts: {  type: Number,  default: 0 },

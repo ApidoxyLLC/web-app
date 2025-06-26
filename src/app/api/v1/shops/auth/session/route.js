@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { dbConnect } from "@/app/lib/mongodb/db";
+import { dbConnect } from "@/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
 import { userModel } from "@/models/shop/shop-user/ShopUser";
 import { sessionModel } from "@/models/shop/shop-user/Session";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
-import authDbConnect from "@/app/lib/mongodb/authDbConnect";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
 import jwt from "jsonwebtoken";
 import rateLimit from "@/app/utils/rateLimit";
 import mongoose from "mongoose";

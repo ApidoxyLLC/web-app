@@ -1,6 +1,5 @@
 import CredentialsProvider from 'next-auth/providers/credentials';
 import loginSchema from './loginDTOSchema';
-import authDbConnect from '@/app/lib/mongodb/authDbConnect';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { encrypt, decrypt } from '@/lib/encryption/cryptoEncryption';
@@ -8,13 +7,10 @@ import { checkLockout, checkVerification, createAccessToken, createRefreshToken,
 import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
 import { createLoginHistory } from '@/services/auth/history.service';
 import { userModel } from '@/models/auth/User';
-
-// import GoogleProvider from 'next-auth/providers/google';
-// import AppleProvider from 'next-auth/providers/apple';
-// import FacebookProvider from "next-auth/providers/facebook";
-// import GitHubProvider from "next-auth/providers/github";
-
-
+import { sessionModel } from '@/models/auth/Session';
+import GoogleProvider from 'next-auth/providers/google'
+import FacebookProvider from 'next-auth/providers/facebook'
+import authDbConnect from '@/lib/mongodb/authDbConnect';
 
 export const authOptions = {
     providers: [
@@ -110,7 +106,7 @@ export const authOptions = {
                     const ipAddressCipherText = await encrypt({          data: ip,
                                                                       options: { secret: IP_ADDRESS_ENCRYPTION_KEY }     });
                                                                       
-                    const savedLoginSession = await createLoginSession({          id: sessionId, 
+                    const savedLoginSession = await createLoginSession({           id: sessionId, 
                                                                                  user, 
                                                                              provider: 'local-'+identifierName,
                                                                           accessToken: accessTokenCipherText,  
@@ -124,25 +120,25 @@ export const authOptions = {
                                                                                    db: auth_db,
                                                                            db_session: auth_db_session })
 
-                        await createLoginHistory({   userId: user._id, 
-                                                  sessionId: savedLoginSession._id, 
-                                                   provider: 'local-'+identifierName,
-                                                fingerprint: fingerprint,
-                                                         ip, 
-                                                  userAgent,
-                                                         db: auth_db,
-                                                 db_session: auth_db_session })     
+                    await createLoginHistory({   userId: user._id, 
+                                                sessionId: savedLoginSession._id, 
+                                                provider: 'local-'+identifierName,
+                                            fingerprint: fingerprint,
+                                                        ip, 
+                                                userAgent,
+                                                        db: auth_db,
+                                                db_session: auth_db_session })     
 
-                        if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
-                            await cleanInvalidSessions({ activeSessions: user.activeSessions, 
-                                                           userId: user._id, 
-                                                 currentSessionId: savedLoginSession._id.toString(), 
-                                                     sessionLimit: MAX_SESSIONS_ALLOWED, 
-                                                               db: auth_db,
-                                                       db_session: auth_db_session  })
-                        }
+                    if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
+                        await cleanInvalidSessions({ activeSessions: user.activeSessions, 
+                                                        userId: user._id, 
+                                                currentSessionId: savedLoginSession._id.toString(), 
+                                                    sessionLimit: MAX_SESSIONS_ALLOWED, 
+                                                            db: auth_db,
+                                                    db_session: auth_db_session  })
+                    }
 
-                        await auth_db_session.commitTransaction();
+                    await auth_db_session.commitTransaction();
 
                         return {
                                      email: user.email,
@@ -168,18 +164,232 @@ export const authOptions = {
 
                 // Return user object                    
                 } catch (error) {
-                    throw new Error("Authentication failed")
+                    console.error("Authentication error:", error);
+                    throw new Error(error.message || "Authentication failed");
                 }                
             },
             
 
         }),
-
+        GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            authorization: {
+                params: {
+                    prompt: "consent",
+                    access_type: "offline",
+                    response_type: "code",
+                    scope: 'openid email profile' // Request necessary user data
+                }
+            },
+            profile(profile) {
+                return {
+                    id: profile.sub,
+                    name: profile.name,
+                    email: profile.email,
+                    image: profile.picture,
+                    verified: profile.email_verified
+                }
+            }
+        }),
+        FacebookProvider({
+            clientId: process.env.FACEBOOK_CLIENT_ID,
+            clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+            authorization: {
+                params: {
+                    prompt: "consent",
+                    access_type: "offline",
+                    response_type: "code",
+                    scope: 'email,public_profile' // Request necessary user data
+                }
+            },
+            profile(profile) {
+                return {
+                    id: profile.id,
+                    name: profile.name,
+                    email: profile.email,
+                    image: profile.picture?.data?.url,
+                    verified: true // Facebook doesn't provide email_verified
+                }
+            }
+        }),
     ],
     callbacks: {
+        async signIn({ user, account, profile, req }) {
+            if (account.provider === 'google' || account.provider === 'facebook') {
+            const sessionOptions = {
+                readPreference: 'primary',
+                readConcern: { level: 'local' },
+                writeConcern: { w: 'majority' }
+            };
+
+            const auth_db = await authDbConnect();
+            const UserModel = userModel(auth_db);
+            const SessionModel = sessionModel(auth_db);
+            const auth_db_session = await auth_db.startSession(sessionOptions);
+            await auth_db_session.startTransaction();
+
+            try {
+                const existingUser = await UserModel.findOne({
+                $or: [
+                    { email: profile.email },
+                    { [`oauth.${account.provider}.id`]: profile.id }
+                ]
+                }).lean();
+
+                let userId;
+                let userRole = ['user'];
+
+                if (!existingUser) {
+                    const newUser = {
+                                    email: profile.email,
+                                    name: profile.name || '',
+                                    username: profile.email?.split('@')[0] || cuid(),
+                                    oauth: {
+                                        [account.provider]: {
+                                        id: profile.id,
+                                        accessToken: account.access_token,
+                                        refreshToken: account.refresh_token,
+                                        tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null
+                                        }
+                                    },
+                                    isEmailVerified: true,
+                                    role: ['user'],
+                                    security: { password: null }
+                                    };
+
+                                    const createdUser = await UserModel.create([newUser], { session: auth_db_session });
+                                    userId = createdUser[0]._id;
+                } else {
+                userId = existingUser._id;
+                userRole = existingUser.role;
+                }
+                await UserModel.updateOne(
+                            { _id: userId },
+                            { 
+                                $set: { 
+                                    [`oauth.${account.provider}`]: {
+                                        id: profile.id,
+                                        accessToken: account.access_token,
+                                        refreshToken: account.refresh_token,
+                                        tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null
+                                    }
+                                } 
+                            },
+                            { session: auth_db_session }
+                        );
+                    
+
+
+
+                const ip = req?.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+                        req?.headers['x-real-ip'] ||
+                        req?.socket?.remoteAddress || '';
+
+                const userAgent = req?.headers['user-agent'] || '';
+                const sessionId = new mongoose.Types.ObjectId();
+
+                const MAX_SESSIONS_ALLOWED = Math.abs(Number(process.env.MAX_SESSIONS_ALLOWED)) || 5;
+                const ACCESS_TOKEN_EXPIRE_MINUTES = Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES || 15);
+                const REFRESH_TOKEN_EXPIRE_MINUTES = Number(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || 43200);
+                const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
+                const ACCESS_TOKEN_ENCRYPTION_KEY = process.env.ACCESS_TOKEN_ENCRYPTION_KEY || '';
+                const REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || '';
+                const IP_ADDRESS_ENCRYPTION_KEY = process.env.IP_ADDRESS_ENCRYPTION_KEY || '';
+
+                if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_ENCRYPTION_KEY) return false;
+
+                const { token: accessToken, expireAt: accessTokenExpAt } = createAccessToken({
+                user, sessionId, secret: ACCESS_TOKEN_SECRET, expire: ACCESS_TOKEN_EXPIRE_MINUTES
+                });
+
+                const { token: refreshToken, expireAt: refreshTokenExpAt } = createRefreshToken({
+                expire: REFRESH_TOKEN_EXPIRE_MINUTES
+                });
+
+                const accessTokenCipherText = await encrypt({
+                data: accessToken, options: { secret: ACCESS_TOKEN_ENCRYPTION_KEY }
+                });
+
+                const refreshTokenCipherText = await encrypt({
+                data: refreshToken, options: { secret: REFRESH_TOKEN_ENCRYPTION_KEY }
+                });
+
+                const ipAddressCipherText = await encrypt({
+                data: ip, options: { secret: IP_ADDRESS_ENCRYPTION_KEY }
+                });
+
+                const loginSession = await SessionModel.create([{
+                _id: sessionId,
+                userId,
+                provider: account.provider,
+                accessToken: accessTokenCipherText,
+                accessTokenExpiresAt: accessTokenExpAt,
+                refreshToken: refreshTokenCipherText,
+                refreshTokenExpiresAt: refreshTokenExpAt,
+                fingerprint: null,
+                ip: ipAddressCipherText,
+                userAgent,
+                role: userRole,
+                providerData: {
+                            provider: account.provider,
+                            providerUserId: profile.id,
+                            providerAccessToken: account.access_token,
+                            providerRefreshToken: account.refresh_token,
+                            providerTokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null
+                        }
+                }], { session: auth_db_session });
+
+                await createLoginHistory({
+                        userId: loginSession._id,
+                        sessionId,
+                        provider: account.provider,
+                        fingerprint: null,
+                        ip,
+                        userAgent,
+                        db: auth_db,
+                        db_session: auth_db_session
+                    });
+
+                if (MAX_SESSIONS_ALLOWED && existingUser?.activeSessions?.length) {
+                await cleanInvalidSessions({
+                    activeSessions: existingUser.activeSessions,
+                    userId,
+                    currentSessionId: sessionId.toString(),
+                    sessionLimit: MAX_SESSIONS_ALLOWED,
+                    db: auth_db,
+                    db_session: auth_db_session
+                });
+                }
+
+                await auth_db_session.commitTransaction();
+
+                user.loginSession = sessionId;
+                user.provider = account.provider;
+                user.accessToken = accessToken;
+                user.accessTokenExpAt = accessTokenExpAt;
+                user.refreshToken = refreshToken;
+                user.role = userRole;
+                user.name = profile.name;
+                user.username = profile.email?.split('@')[0] || profile.id;
+                user.email = profile.email;
+                user.isVerified = true;
+
+                return true;
+            } catch (err) {
+                await auth_db_session.abortTransaction();
+                console.error("OAuth signIn error:", err);
+                return false;
+            } finally {
+                auth_db_session.endSession();
+            }
+            }
+
+            return true; // fallback for Credentials provider
+        },
         async jwt(params) {
-            const { token, user, account } = params
-            console.log(token)
+            const { token, user, account, profile } = params
+            // console.log(token)
             if (user) {
                 token.accessToken       = user.accessToken;
                 token.accessTokenExpAt  = user.accessTokenExpAt;
@@ -278,7 +488,7 @@ async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTo
       return null;
     }
   try {
-    if (token.provider === "local-email" || token.provider === "local-phone") {
+    if (token.provider === 'google' || token.provider === 'facebook' || token.provider === "local-email" || token.provider === "local-phone") {
             
       const data = jwt.decode(token.accessToken, accessTokenSecret)
 
@@ -287,10 +497,12 @@ async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTo
 
       const auth_db = await authDbConnect();
       const session = await getSessionTokenById({db: auth_db, sessionId})
-      if(!session)  return null // throw new Error( `No login data...`, );
+      
+      if(!session)  return null
       const oldRefreshToken = await decrypt({  cipherText: session.refreshToken, 
-                                                  options: { secret: refreshTokenKey } })                         
-      if( oldRefreshToken != token.refreshToken ) return null //  throw new Error( `No login data...`, );
+                                                  options: { secret: refreshTokenKey } })
+
+      if( oldRefreshToken != token.refreshToken ) return null
 
         const {    token: accessToken, 
                 expireAt: accessTokenExpAt  } = createAccessToken({user: { ...data}, sessionId, secret: accessTokenSecret, expire: accessTokenExpire })
@@ -309,4 +521,54 @@ async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTo
     console.error("Error refreshing access token:", error);
     return null
   }
+}
+
+async function refreshGoogleToken(refreshToken) {
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+  });
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params,
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error('Failed to refresh Google token:', data);
+    throw new Error(data.error || 'Google token refresh failed');
+  }
+
+  return {
+    accessToken: data.access_token,
+    accessTokenExpires: Date.now() + data.expires_in * 1000,
+    refreshToken: data.refresh_token || refreshToken, // May not return new one
+  };
+}
+
+async function refreshFacebookToken(refreshToken) {
+  const params = new URLSearchParams({
+    grant_type: "fb_exchange_token",
+    client_id: process.env.FACEBOOK_CLIENT_ID,
+    client_secret: process.env.FACEBOOK_CLIENT_SECRET,
+    fb_exchange_token: refreshToken,
+  });
+
+  const res = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?${params}`);
+  const data = await res.json();
+
+  if (!res.ok) throw new Error(data.error?.message || "Failed to refresh Facebook token");
+
+  return {
+    accessToken: data.access_token,
+    accessTokenExpires: Date.now() + data.expires_in * 1000,
+    refreshToken, // Facebook doesn't return a new one
+  };
 }
