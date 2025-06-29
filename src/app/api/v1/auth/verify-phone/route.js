@@ -12,11 +12,12 @@ export async function POST(request) {
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
 
   const parsed = phoneVefiryDTOSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data..." }, { status: 422 });
+  if (!parsed.success) 
+    return NextResponse.json({ error: "Invalid data..." }, { status: 422 });
   const { phone, otp } = parsed.data
 
   try {
-    const db = await authDbConnect();
+    const        db = await authDbConnect();
     const UserModel = userModel(db);
 
     const user = await UserModel.findOne({        phone,

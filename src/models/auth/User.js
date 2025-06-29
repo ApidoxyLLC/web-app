@@ -14,6 +14,7 @@ const VerificationSchema = new mongoose.Schema({
   // isPhoneVerified: { type: Boolean, default: undefined },
   phoneVerificationOTP: { type: String, default: undefined, select: false  },
   phoneVerificationOTPExpiry: { type: Date, default: undefined, select: false  },
+  otpAttempts: { type: Number, default: 0 },
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
