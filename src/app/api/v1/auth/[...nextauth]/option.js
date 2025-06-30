@@ -15,7 +15,7 @@ import FacebookProvider from 'next-auth/providers/facebook'
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import crypto from 'crypto'; 
 import cuid from '@bugsnag/cuid';
-import tokenRefresh from './utils/tokenRefresh';
+import tokenRefresh from '../utils/tokenRefresh';
 import { generateTokenWithEncryption, generateAccessTokenWithEncryption, generateRefreshTokenWithEncryption } from '@/services/auth/user.service';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';

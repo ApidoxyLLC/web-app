@@ -8,6 +8,10 @@ const config = {
   // refresh token 
   refreshTokenExpireMinutes: parseInt(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || '1440', 10),
   refreshTokenEncryptionKey: process.env.REFRESH_TOKEN_ENCRYPTION_KEY,
+
+  // NEXT AUTH SECRET 
+  nextAuthSecret: process.env.NEXTAUTH_SECRET,
+  
 };
 export default config
 

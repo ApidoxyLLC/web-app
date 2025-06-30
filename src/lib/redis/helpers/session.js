@@ -6,14 +6,14 @@ const sessionRedis = getRedisClient('session');
 const SESSION_PREFIX = 'session:';
 const TTL = config.accessTokenExpireMinutes *  60; //default: 15 minute
 
-export async function setSession({ token, data = {}}) {
-    const key = `${SESSION_PREFIX}${crypto.createHash('sha256').update(token).digest('hex')}`;
+export async function setSession({ tokenId, data = {}}) {
+    const key = `${SESSION_PREFIX}${crypto.createHash('sha256').update(tokenId).digest('hex')}`;
     await sessionRedis.setex( key, TTL, JSON.stringify({ ...data, createdAt: new Date().toISOString()}));
     return key;
 }
 
-export async function getSession(token) {
-  const key = `${SESSION_PREFIX}${crypto.createHash('sha256').update(token).digest('hex')}`;
+export async function getSession(tokenId) {
+  const key = `${SESSION_PREFIX}${crypto.createHash('sha256').update(tokenId).digest('hex')}`;
   const sessionData = await sessionRedis.get(key);
   if (!sessionData) throw new Error('Session not found or expired');
   return JSON.parse(sessionData);
