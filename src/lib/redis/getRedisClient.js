@@ -1,13 +1,9 @@
 import Redis from "ioredis";
-// import urls from "./urls";
+import urls from "./urls";
 
 const clients = {};
 
-const urls =  {
-    rateLimit: process.env.REDIS_USER_RATE_LIMIT_URL,
-      session: process.env.REDIS_USER_SESSION_URL,
-         shop: process.env.REDIS_SHOP_URL,
-}
+
 
 function getRedisClient(purpose) {
     if(!purpose)
