@@ -6,6 +6,10 @@ import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { NextResponse } from 'next/server';
 import sendEmail from '../mail/sendEmail';
 import mongoose from 'mongoose';
+import { encrypt } from '@/lib/encryption/cryptoEncryption';
+import { setSession } from '@/lib/redis/helpers/session';
+import crypto from 'crypto';
+import config from '../../../config';
 
 
 // Funcionality with database 
@@ -339,4 +343,101 @@ function calculateLockTime(failedAttempts) {
   
 //   const lockMinutes = Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT);
   return new Date(Date.now() + (Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT) * 60 * 1000));
+}
+
+export async function generateAccessTokenWithEncryption({user, sessionId, userId, role = [] }) {
+    if (!user || !sessionId || !userId)  throw new Error('MISSING_REQUIRED_PARAMS');
+    // ✅ Token generation
+    const tokenId = crypto.randomBytes(16).toString('hex');
+    const expireMs = config.accessTokenExpireMinutes * 60 * 1000;
+    const payload = { 
+        sessionId,
+        ...(user.email && { email: user.email }),
+        ...(user.phone && { phone: user.phone }),
+        tokenId,
+        tokenType: 'access',
+        iat: Math.floor(Date.now() / 1000)
+    };
+
+    const accessToken = jwt.sign(payload, config.accessTokenSecret, { expiresIn: ACCESS_TOKEN_EXPIRE_MINUTES * 60 });
+    const accessTokenExpAt = new Date(Date.now() + expireMs);
+
+    // Store data to redis memory
+    await setSession({ token: tokenId, data: {...payload, userId, role }})
+    
+    let accessTokenCipherText;
+    try {
+        accessTokenCipherText = await encrypt({ 
+            data: accessToken, 
+            options: { secret: config.accessTokenEncryptionKey } 
+        });
+    } catch (err) { throw new Error('TOKEN_ENCRYPTION_FAILED'); }
+    return {
+        tokenId,
+        accessToken,
+        accessTokenExpAt,
+        accessTokenCipherText
+    }                                                    
+}
+
+export async function generateRefreshTokenWithEncryption() {
+
+    const expireMs  = config.refreshTokenExpireMinutes * 60 * 1000;
+    
+    const refreshToken = crypto.randomBytes(128).toString('hex');
+    const refreshTokenExpAt = new Date( Date.now() + expireMs ).toISOString();
+    let refreshTokenCipherText;
+    try {
+        refreshTokenCipherText = await encrypt({ 
+            data: refreshToken, 
+            options: { secret: config.refreshTokenEncryptionKey } 
+        });
+    } catch (err) {
+        throw new Error('REFRESH_TOKEN_ENCRYPTION_FAILED');
+    }
+
+    return {
+
+        refreshToken,
+        refreshTokenExpAt,
+        refreshTokenCipherText
+    }                                                    
+}
+
+export async function generateTokenWithEncryption({user, sessionId }) {
+    const  ACCESS_TOKEN_EXPIRE_MINUTES = process.env.ACCESS_TOKEN_EXPIRE_MINUTES || 15;
+    const REFRESH_TOKEN_EXPIRE_MINUTES = process.env.REFRESH_TOKEN_EXPIRE_MINUTES  || 86400;
+    const          ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
+    const  ACCESS_TOKEN_ENCRYPTION_KEY = process.env.ACCESS_TOKEN_ENCRYPTION_KEY || '';
+    const REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || '';
+
+    if (!ACCESS_TOKEN_SECRET){
+        console.log("missing ACCESS_TOKEN_SECRET")
+        throw new Error("Authentication failed")
+    }
+    if (!REFRESH_TOKEN_ENCRYPTION_KEY){
+        console.log("missing REFRESH_TOKEN_ENCRYPTION_KEY")
+        throw new Error("Authentication failed")
+    }
+    const { token: accessToken, 
+            expireAt: accessTokenExpAt  } = createAccessToken({   user,
+                                                            sessionId, 
+                                                                secret: ACCESS_TOKEN_SECRET, 
+                                                                expire: ACCESS_TOKEN_EXPIRE_MINUTES });                    
+
+    const { token: refreshToken,
+            expireAt: refreshTokenExpAt  } = createRefreshToken({ expire: REFRESH_TOKEN_EXPIRE_MINUTES  })
+
+    const  accessTokenCipherText = await encrypt({    data: accessToken,
+                                                    options: { secret: ACCESS_TOKEN_ENCRYPTION_KEY  } });
+    const refreshTokenCipherText = await encrypt({    data: refreshToken,
+                                                    options: { secret: REFRESH_TOKEN_ENCRYPTION_KEY } });
+    return {
+        accessToken,
+        accessTokenExpAt,
+        refreshToken,
+        refreshTokenExpAt,
+        accessTokenCipherText,
+        refreshTokenCipherText
+    }                                                    
 }
