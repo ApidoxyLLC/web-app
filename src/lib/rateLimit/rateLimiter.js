@@ -19,7 +19,7 @@ const scopeLimiters = {
   }),
   register: new RateLimiterRedis({
     storeClient: redis,
-    keyPrefix: 'rl:login',
+    keyPrefix: 'rl:register',
     points: 5,
     duration: 60,
   }),

@@ -4,9 +4,9 @@ import otpLoginDTOSchema from './otpLoginDTOSchema';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { encrypt } from '@/lib/encryption/cryptoEncryption';
-import { checkLockout, checkVerification, createAccessToken, createRefreshToken, getUserByIdentifier, verifyPassword } from '@/services/auth/user.service';
-import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
-import { createLoginHistory } from '@/services/auth/history.service';
+import { checkLockout, checkVerification, verifyPassword } from '@/services/auth/user.service';
+// import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
+// import { createLoginHistory } from '@/services/auth/history.service';
 import { loginHistoryModel } from '@/models/auth/LoginHistory';
 import { userModel } from '@/models/auth/User';
 import { sessionModel } from '@/models/auth/Session';
@@ -16,16 +16,8 @@ import authDbConnect from '@/lib/mongodb/authDbConnect';
 import crypto from 'crypto'; 
 import cuid from '@bugsnag/cuid';
 import tokenRefresh from '../utils/tokenRefresh';
-import { generateTokenWithEncryption, generateAccessTokenWithEncryption, generateRefreshTokenWithEncryption } from '@/services/auth/user.service';
-import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { generateAccessTokenWithEncryption, generateRefreshTokenWithEncryption } from '@/services/auth/user.service';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
-
-
-const rateLimiter = new RateLimiterMemory({
-  points: 5, // 5 attempts
-  duration: 300, // 5 minutes
-})
-
 
 export const authOptions = {
     providers: [

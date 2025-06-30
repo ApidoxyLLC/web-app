@@ -1,15 +1,9 @@
 import authDbConnect from "@/lib/mongodb/authDbConnect";
-import bcrypt from "bcryptjs";
 // import User from "@/models/auth/User";
-import { userModel } from "@/models/auth/User";
-import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import registerDTOSchema from "./registerDTOSchema";
-import rateLimiter from "./rateLimiter";
-import { getClientIp } from "@/app/utils/ip";
-import crypto from 'crypto';
 import { createUser, getUserByIdentifier } from "@/services/auth/user.service";
-import sendEmail from "@/services/mail/sendEmail";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
 
 // Task Need to Review 
@@ -25,26 +19,18 @@ export async function POST(request) {
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
   // Rate limiting 
-  const userIP =  await getClientIp();
-  try {
-    await rateLimiter.consume(userIP, 2);
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429 }
-    );
-  }
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'register' });
+  if (!allowed) return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
 
   // Validation with zod
   const parsed = registerDTOSchema.safeParse(body);
-  if (!parsed.success) {
+  if (!parsed.success) 
     return NextResponse.json({ error: "Invalid data..." }, { status: 422 });
-  }
 
   const { name, email, phone, password } = parsed?.data
-  if (!email && !phone) {
+  if (!email && !phone) 
     return NextResponse.json({ error: "Missing data ..." }, { status: 422 });
-  }
 
   if(password){
     // add more containing common password

@@ -22,7 +22,7 @@ export async function authenticateData(req, res) {
         return redisSessionData || null;
         // if(!redisSessionData)
         //     return null; 
-        else return redisSessionData
+        // else return redisSessionData
     } catch (err) {
         console.error('Invalid token:', err);
         return null;
