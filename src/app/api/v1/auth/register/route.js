@@ -5,14 +5,6 @@ import registerDTOSchema from "./registerDTOSchema";
 import { createUser, getUserByIdentifier } from "@/services/auth/user.service";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
-
-// Task Need to Review 
-// Enable Rate limiting
-// Check Error handeling
-// apply sending verififation Email 
-
-
-
 export async function POST(request) {
   let body;
   try { body = await request.json(); } 
