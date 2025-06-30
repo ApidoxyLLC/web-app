@@ -19,7 +19,7 @@ export async function POST(request) {
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
   // Rate limiting 
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'register' });
   if (!allowed) return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
 
