@@ -98,7 +98,7 @@ export const authOptions = {
                         const SessionModel = sessionModel(auth_db)
                         const LoginHistory = loginHistoryModel(auth_db)
 
-                        await Promise.all([SessionModel.create({ _id: sessionId,
+                        await Promise.all([SessionModel.create([{ _id: sessionId,
                                                               userId: user._id,
                                                             provider: 'local-'+identifierName,
                                                          fingerprint,
@@ -109,7 +109,7 @@ export const authOptions = {
                                                                 role: user.role,
                                                                   ip: ipAddressCipherText,
                                                             userAgent 
-                                                        }, { session: auth_db_session }),
+                                                        }], { session: auth_db_session }),
 
                                            UserModel.updateOne( { _id: user._id },
                                                                 { $set: { "security.failedAttempts": 0,
@@ -120,12 +120,12 @@ export const authOptions = {
                                                                                   $slice: -config.maxSessionsAllowed }  }
                                                                 }, { upsert: true, session: auth_db_session }),
                                                             
-                                           LoginHistory.create({ userId: user._id,
+                                           LoginHistory.create([{ userId: user._id,
                                                               sessionId,
                                                                provider: 'local-'+identifierName,
                                                             fingerprint,
                                                                      ip: ipAddressCipherText,
-                                                              userAgent },  
+                                                              userAgent }],  
                                                               { session: auth_db_session })])
 
                         if (config.maxSessionsAllowed && user?.activeSessions?.length) {
@@ -270,7 +270,7 @@ export const authOptions = {
                                                                       options: { secret: config.ipAddressEncryptionKey }     });
 
                         const SessionModel = sessionModel(auth_db) 
-                        await Promise.all([ SessionModel.create({       _id: sessionId,
+                        await Promise.all([ SessionModel.create([{       _id: sessionId,
                                                                      userId: user._id,
                                                                    provider: 'local-phone',
                                                                 fingerprint,
@@ -281,7 +281,7 @@ export const authOptions = {
                                                                        role: user.role,
                                                                          ip: ipAddressCipherText,
                                                                   userAgent
-                                                                    },{ session: auth_db_session }),
+                                                                    }],{ session: auth_db_session }),
 
                                             UserModel.updateOne({    _id: user._id },
                                                                 {   $set: {                         "isPhoneVerified": true,
@@ -299,12 +299,12 @@ export const authOptions = {
                                                                 { upsert: true, session: auth_db_session }
                                                             ),
 
-                                            LoginHistory.create({   userId: user._id,
+                                            LoginHistory.create([{   userId: user._id,
                                                                  sessionId,
                                                                   provider: 'local-phone',
                                                                fingerprint,
                                                                         ip: ipAddressCipherText,
-                                                                 userAgent       },  { session: auth_db_session })])
+                                                                 userAgent       }],  { session: auth_db_session })])
                         if (config.maxSessionsAllowed && user?.activeSessions?.length) {
                             // const sessionsToKeep = user.activeSessions.slice(-MAX_SESSIONS_ALLOWED)
                             //                                           .map(id => id.toString());
@@ -473,12 +473,12 @@ export const authOptions = {
                                                                  providerTokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null    }
                                                         }], { session: auth_db_session }),
                                                   
-                                    LoginHistory.create({ userId: user._id,
+                                    LoginHistory.create([{ userId: user._id,
                                                        sessionId,
                                                         provider: account.provider,
                                                      fingerprint: null,
                                                               ip: ipAddressCipherText,
-                                                       userAgent       },  { session: auth_db_session }) ])
+                                                       userAgent       }],  { session: auth_db_session }) ])
 
                 if (config.maxSessionsAllowed && existingUser?.activeSessions?.length) {
                     const sessionIds = existingUser?.activeSessions.map(id => id.toString());
