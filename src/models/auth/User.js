@@ -111,7 +111,7 @@ const userSchema = new mongoose.Schema({
                 status: { type: StatusSchema, default: () => ({}), select: false  },
                   lock: { type: LockSchema, default: () => ({}), select: false },
              twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
-    activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref:'Subscription',  default:[] },
+    activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref:'Subscription', default: undefined  },
                  usage: { type:usageSchema },
                  oauth: { type: oauthSchema, default: undefined, select: false},
     // Profile Delete informationf

@@ -24,11 +24,12 @@ export async function POST(request) {
   if (!email && !phone) 
     return NextResponse.json({ error: "Missing data ..." }, { status: 422 });
 
-  if(password){
-    // add more containing common password
-    const commonPasswords = ['password', '12345678', 'qwerty123'];
-    if (commonPasswords.includes(password.toLowerCase())) return NextResponse.json({ error: "Common password provided, change the password" }, { status: 422 });
-  }
+  // Common password check will resume later 
+  // if(password){
+  //   // add more containing common password
+  //   const commonPasswords = ['password', '12345678', 'qwerty123'];
+  //   if (commonPasswords.includes(password.toLowerCase())) return NextResponse.json({ error: "Common password provided, change the password" }, { status: 422 });
+  // }
 
   const auth_db = await authDbConnect();
   const session = await auth_db.startSession();

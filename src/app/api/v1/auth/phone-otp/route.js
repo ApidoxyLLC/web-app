@@ -21,36 +21,30 @@ export async function POST(request) {
   // catch (err) { return NextResponse.json( { error: 'Too many requests. Please try again later.' },{ status: 429 });}
 
   let body;
-  try { body = await request.json(); } 
+  try { body = await request.json(); }  
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
-
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid  email address..." }, { status: 422 });
   const { phone } = parsed?.data
-
   try {
     const        db = authDbConnect();
     const UserModel = userModel(db);
     const      user = UserModel.findOne({  phone, 
                                              $or: [{ "verification.phoneVerificationOTPExpire": { $lte: Date.now() } },
                                                    { "verification.phoneVerificationOTPExpire": { $exists: false } }   ]   });
-
     if(!user) return NextResponse.json({ error: "If your number exists, you'll receive a OTP" }, { status: 400 })
-
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
-    // ===== 6. Secure Update =====
+    // ===== 6. Secure Update =====6
                                 user.isPhoneVerified = false;
                                    user.verification = user.verification || {}; 
               user.verification.phoneVerificationOTP = hashedOtp
       user.verification.emailVerificationTokenExpire = new Date(Date.now() + (config.phoneVerificationExpireMinutes * 60 * 1000));
       const savedUser = await user.save()
-
       if(!savedUser) return NextResponse.json({ error: "Failed to save OTP" }, { status: 500 })
-      await sendSMS({ phone: user.phone, 
+      await sendSMS({   phone: user.phone, 
                       message: `Your verification code: ${otp} (valid for ${config.phoneVerificationExpireMinutes} minutes)`
                     });
-
     // ===== 7. Send Phone code... =====
     return NextResponse.json( { message: "OTP sent to your phone" }, { status: 200 } );
   } catch (error) {

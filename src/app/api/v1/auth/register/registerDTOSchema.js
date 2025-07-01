@@ -21,9 +21,6 @@ export const registerDTOSchema = z
     message: "Either email or phone is required",
     path: ["email"], // Show message under "email" field
   })
-  // .refine(data => !(data.email && data.phone), {
-  //   message: "Provide either email or phone, not both",
-  //   path: ["phone"],
-  // });
+
 
   export default registerDTOSchema;
