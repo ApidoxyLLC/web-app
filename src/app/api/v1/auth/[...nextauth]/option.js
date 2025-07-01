@@ -85,11 +85,11 @@ export const authOptions = {
 
                         const { accessToken,
                                 accessTokenExpAt,
-                                accessTokenCipherText  }  = generateAccessTokenWithEncryption({ user, sessionId, userId: user._id, role: user.role})
+                                accessTokenCipherText  }  = await generateAccessTokenWithEncryption({ user, sessionId, userId: user._id, role: user.role})
 
                         const { refreshToken,
                                 refreshTokenExpAt,
-                                refreshTokenCipherText }  = generateRefreshTokenWithEncryption()
+                                refreshTokenCipherText }  = await generateRefreshTokenWithEncryption()
 
                         const   ipAddressCipherText = await encrypt({    data: ip,
                                                                       options: { secret: config.ipAddressEncryptionKey }     });
@@ -260,11 +260,11 @@ export const authOptions = {
                         
                         const { accessToken,
                                 accessTokenExpAt,
-                                accessTokenCipherText   }  = generateAccessTokenWithEncryption({ user, sessionId})
+                                accessTokenCipherText   }  = await generateAccessTokenWithEncryption({ user, sessionId})
 
                         const { refreshToken,
                                 refreshTokenExpAt,
-                                refreshTokenCipherText  }  = generateRefreshTokenWithEncryption()
+                                refreshTokenCipherText  }  = await generateRefreshTokenWithEncryption()
 
                         const   ipAddressCipherText = await encrypt({    data: ip,
                                                                       options: { secret: config.ipAddressEncryptionKey }     });
@@ -433,11 +433,11 @@ export const authOptions = {
 
                 const { accessToken,
                         accessTokenExpAt,
-                        accessTokenCipherText   }  = generateAccessTokenWithEncryption({ user, sessionId})
+                        accessTokenCipherText   }  = await generateAccessTokenWithEncryption({ user, sessionId})
 
                 const { refreshToken,
                         refreshTokenExpAt,
-                        refreshTokenCipherText  }  = generateRefreshTokenWithEncryption()
+                        refreshTokenCipherText  }  = await generateRefreshTokenWithEncryption()
 
 
 
