@@ -84,13 +84,6 @@ export async function createUser({ db, session, data }) {
   const token = crypto.randomBytes(32).toString("hex");
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-  const EMAIL_VERIFICATION_EXPIRY = Number(
-    process.env.EMAIL_VERIFICATION_EXPIRY || 15
-  ); // minutes
-  const PHONE_VERIFICATION_EXPIRY = Number(
-    process.env.PHONE_VERIFICATION_EXPIRY || 5
-  ); // minutes
-
   const userData = {
     name,
     security: { ...(password && { password: hashedPassword, salt }) },
@@ -98,7 +91,7 @@ export async function createUser({ db, session, data }) {
       ...(email && {
         emailVerificationToken: hashedToken,
         emailVerificationTokenExpiry: new Date(
-          Date.now() + EMAIL_VERIFICATION_EXPIRY * 60 * 1000
+          Date.now() + config.emailVerificationExpireMinutes * 60 * 1000
         ).getTime(),
       }),
       ...(phone &&
@@ -107,7 +100,7 @@ export async function createUser({ db, session, data }) {
             100000 + Math.random() * 900000
           ).toString(),
           phoneVerificationOTPExpiry: new Date(
-            Date.now() + PHONE_VERIFICATION_EXPIRY * 60 * 1000
+            Date.now() + config.phoneVerificationExpireMinutes * 60 * 1000
           ).getTime(),
         }),
     },
@@ -139,8 +132,6 @@ export async function addLoginSession({ db, session, data }) {
     throw new Error("Invalid data format");
   }
   const { userId, sessionId } = data || {};
-  const MAX_SESSIONS_ALLOWED =
-    Math.abs(Number(process.env.MAX_SESSIONS_ALLOWED)) || 3;
   const User = userModel(db);
   const query = User.updateOne(
     { _id: userId },
@@ -153,7 +144,7 @@ export async function addLoginSession({ db, session, data }) {
       $push: {
         activeSessions: {
           $each: [sessionId],
-          $slice: -MAX_SESSIONS_ALLOWED, // Keep last N elements
+          $slice: -config.maxSessionsAllowed, // Keep last N elements
         },
       },
     },
@@ -365,16 +356,14 @@ export function createRefreshToken({ expire }) {
 }
 
 function calculateLockTime(failedAttempts) {
-  const MAX_LOGIN_ATTEMPT = Number(process.env.MAX_LOGIN_ATTEMPT) || 5;
-  if (failedAttempts > MAX_LOGIN_ATTEMPT)
+  if (failedAttempts > config.maxLoginAttempt)
     return NextResponse.json(
       { success: false, error: "Too many attempts. Please try again later" },
       { status: 429 }
     );
 
-  //   const lockMinutes = Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT);
   return new Date(
-    Date.now() + Math.pow(2, failedAttempts - MAX_LOGIN_ATTEMPT) * 60 * 1000
+    Date.now() + Math.pow(2, failedAttempts - config.maxLoginAttempt) * 60 * 1000
   );
 }
 
@@ -424,16 +413,13 @@ export async function generateAccessTokenWithEncryption({
 }
 
 export async function generateRefreshTokenWithEncryption() {
-  const expireMs = config.refreshTokenExpireMinutes * 60 * 1000;
-
-  const refreshToken = crypto.randomBytes(128).toString("hex");
+  const          expireMs = config.refreshTokenExpireMinutes * 60 * 1000;
+  const      refreshToken = crypto.randomBytes(128).toString("hex");
   const refreshTokenExpAt = new Date(Date.now() + expireMs).toISOString();
   let refreshTokenCipherText;
   try {
-    refreshTokenCipherText = await encrypt({
-      data: refreshToken,
-      options: { secret: config.refreshTokenEncryptionKey },
-    });
+    refreshTokenCipherText = await encrypt({ data: refreshToken,
+                                          options: { secret: config.refreshTokenEncryptionKey } });
   } catch (err) {
     throw new Error("REFRESH_TOKEN_ENCRYPTION_FAILED");
   }
@@ -446,42 +432,19 @@ export async function generateRefreshTokenWithEncryption() {
 }
 
 export async function generateTokenWithEncryption({ user, sessionId }) {
-  const ACCESS_TOKEN_EXPIRE_MINUTES =
-    process.env.ACCESS_TOKEN_EXPIRE_MINUTES || 15;
-  const REFRESH_TOKEN_EXPIRE_MINUTES =
-    process.env.REFRESH_TOKEN_EXPIRE_MINUTES || 86400;
-  const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
-  const ACCESS_TOKEN_ENCRYPTION_KEY =
-    process.env.ACCESS_TOKEN_ENCRYPTION_KEY || "";
-  const REFRESH_TOKEN_ENCRYPTION_KEY =
-    process.env.REFRESH_TOKEN_ENCRYPTION_KEY || "";
+  const { token: accessToken, expireAt: accessTokenExpAt } = createAccessToken({  user,
+                                                                                  sessionId,
+                                                                                  secret: config.accessTokenSecret,
+                                                                                  expire: config.accessTokenExpireMinutes,
+                                                                                });
 
-  if (!ACCESS_TOKEN_SECRET) {
-    console.log("missing ACCESS_TOKEN_SECRET");
-    throw new Error("Authentication failed");
-  }
-  if (!REFRESH_TOKEN_ENCRYPTION_KEY) {
-    console.log("missing REFRESH_TOKEN_ENCRYPTION_KEY");
-    throw new Error("Authentication failed");
-  }
-  const { token: accessToken, expireAt: accessTokenExpAt } = createAccessToken({
-    user,
-    sessionId,
-    secret: ACCESS_TOKEN_SECRET,
-    expire: ACCESS_TOKEN_EXPIRE_MINUTES,
-  });
+  const { token: refreshToken, expireAt: refreshTokenExpAt } = createRefreshToken({ expire: config.refreshTokenExpireMinutes });
 
-  const { token: refreshToken, expireAt: refreshTokenExpAt } =
-    createRefreshToken({ expire: REFRESH_TOKEN_EXPIRE_MINUTES });
+  const  accessTokenCipherText = await encrypt({ data: accessToken,
+                                              options: { secret: config.accessTokenEncryptionKey } });
 
-  const accessTokenCipherText = await encrypt({
-    data: accessToken,
-    options: { secret: ACCESS_TOKEN_ENCRYPTION_KEY },
-  });
-  const refreshTokenCipherText = await encrypt({
-    data: refreshToken,
-    options: { secret: REFRESH_TOKEN_ENCRYPTION_KEY },
-  });
+  const refreshTokenCipherText = await encrypt({ data: refreshToken,
+                                              options: { secret: config.refreshTokenEncryptionKey } });
   return {
     accessToken,
     accessTokenExpAt,

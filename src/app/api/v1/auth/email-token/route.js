@@ -4,6 +4,7 @@ import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { userModel } from '@/models/auth/User';
 import crypto from 'crypto'; 
 import sendEmail from '@/services/mail/sendEmail';
+import config from '../../../../../../config';
 import { getClientIp } from '@/app/utils/ip';
 import { phoneVerificationLimiter } from '../register/rateLimiter';
 
@@ -43,13 +44,12 @@ export async function POST(request) {
     // ===== 5. Token Generation =====
     const token = crypto.randomBytes(32).toString('hex');
     const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
-    const EMAIL_VERIFICATION_EXPIRY = Number(process.env.EMAIL_VERIFICATION_EXPIRY || 15); // minutes
     
     // ===== 6. Secure Update =====
                                 user.isEmailVerified = false;
                                    user.verification = user.verification || {}; 
             user.verification.emailVerificationToken = verificationToken;
-      user.verification.emailVerificationTokenExpire = new Date( Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60 * 1000) );
+      user.verification.emailVerificationTokenExpire = new Date( Date.now() + (config.emailVerificationExpireMinutes * 60 * 1000) );
       await user.save()
 
 

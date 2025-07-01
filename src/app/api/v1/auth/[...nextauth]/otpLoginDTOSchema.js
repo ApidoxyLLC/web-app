@@ -10,4 +10,5 @@ export const otpLoginDTOSchema = z.object({
   userAgent: z.string().optional(),
   timezone: z.string().optional(),
 });
+
 export default otpLoginDTOSchema;

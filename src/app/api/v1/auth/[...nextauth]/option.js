@@ -2,11 +2,8 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import loginDTOSchema from './loginDTOSchema';
 import otpLoginDTOSchema from './otpLoginDTOSchema';
 import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
 import { encrypt } from '@/lib/encryption/cryptoEncryption';
 import { checkLockout, checkVerification, verifyPassword } from '@/services/auth/user.service';
-// import { cleanInvalidSessions, createLoginSession, getSessionTokenById, updateSessionToken } from '@/services/auth/session.service';
-// import { createLoginHistory } from '@/services/auth/history.service';
 import { loginHistoryModel } from '@/models/auth/LoginHistory';
 import { userModel } from '@/models/auth/User';
 import { sessionModel } from '@/models/auth/Session';
@@ -18,6 +15,7 @@ import cuid from '@bugsnag/cuid';
 import tokenRefresh from '../utils/tokenRefresh';
 import { generateAccessTokenWithEncryption, generateRefreshTokenWithEncryption } from '@/services/auth/user.service';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
+import config from '../../../../../../config';
 
 export const authOptions = {
     providers: [
@@ -44,13 +42,12 @@ export const authOptions = {
                     const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
                     if (!allowed) return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
 
-                    const          auth_db = await authDbConnect();
-                    const        UserModel = userModel(auth_db);
-                    const     LoginHistory = loginHistoryModel(auth_db)
+                    const auth_db = await authDbConnect();                                        
                     const { phone, email } = { [identifierName]: identifier }
                     if (!email && !phone) throw new Error('At least one identifier (email or phone) is required.');
 
                     // Find user
+                    const UserModel = userModel(auth_db);
                     const user = await UserModel.findOne({ $or: [{ email }, { phone }] })
                                                 .select('+_id '                 +
                                                         '+security '            +
@@ -78,16 +75,13 @@ export const authOptions = {
                     // Reset security counters on success
                     const sessionOptions = { readPreference: 'primary',
                                                 readConcern: { level: 'local' },
-                                               writeConcern: { w: 'majority' }      };
+                                               writeConcern: { w: 'majority',j: true }      };
                     const auth_db_session = await auth_db.startSession(sessionOptions);
-                          auth_db_session.startTransaction()
+                          
                     try {
                         
                         const userAgent = req.headers['user-agent'] || '';  
                         const sessionId = new mongoose.Types.ObjectId();
-
-                        const      MAX_SESSIONS_ALLOWED = Math.abs(Number(process.env.MAX_SESSIONS_ALLOWED)) || 5;                    
-                        const IP_ADDRESS_ENCRYPTION_KEY = process.env.IP_ADDRESS_ENCRYPTION_KEY
 
                         const { accessToken,
                                 accessTokenExpAt,
@@ -98,53 +92,53 @@ export const authOptions = {
                                 refreshTokenCipherText }  = generateRefreshTokenWithEncryption()
 
                         const   ipAddressCipherText = await encrypt({    data: ip,
-                                                                    options: { secret: IP_ADDRESS_ENCRYPTION_KEY }     });
-                                                                        
-                        const Session = sessionModel(auth_db)                              
-                        const loggedInSession = await Session.create({
-                                                    _id: sessionId,
-                                                    userId: user._id,
-                                                    provider: 'local-'+identifierName,
-                                                    fingerprint,
-                                                    accessToken: accessTokenCipherText,
-                                                    accessTokenExpiresAt: accessTokenExpAt,
-                                                    refreshToken: refreshTokenCipherText,
-                                                    refreshTokenExpiresAt: refreshTokenExpAt,
-                                                    role: user.role,
-                                                    ip: ipAddressCipherText,
-                                                    userAgent
-                                                }).session(auth_db_session);
+                                                                    options: { secret: config.ipAddressEncryptionKey }     });
+                        
+                        auth_db_session.startTransaction()
+                        const SessionModel = sessionModel(auth_db)
+                        const LoginHistory = loginHistoryModel(auth_db)
 
-                            await UserModel.updateOne( { _id: user._id },
-                                                        {   $set: {
-                                                                    "security.failedAttempts": 0,
-                                                                    "lock.lockUntil": null,
-                                                                    "security.lastLogin": new Date()
-                                                                    },
-                                                            $push: { 
-                                                                    activeSessions: {
-                                                                        $each: [sessionId],
-                                                                        $slice: -MAX_SESSIONS_ALLOWED 
-                                                                    }
-                                                                }
-                                                        },
-                                                        { upsert: true, session: auth_db_session }
-                                        )
+                        await Promise.all([SessionModel.create({ _id: sessionId,
+                                                              userId: user._id,
+                                                            provider: 'local-'+identifierName,
+                                                         fingerprint,
+                                                         accessToken: accessTokenCipherText,
+                                                accessTokenExpiresAt: accessTokenExpAt,
+                                                        refreshToken: refreshTokenCipherText,
+                                               refreshTokenExpiresAt: refreshTokenExpAt,
+                                                                role: user.role,
+                                                                  ip: ipAddressCipherText,
+                                                            userAgent 
+                                                        }).session(auth_db_session),
+
+                                           UserModel.updateOne( { _id: user._id },
+                                                                { $set: { "security.failedAttempts": 0,
+                                                                                   "lock.lockUntil": null,
+                                                                               "security.lastLogin": new Date() },
+                                                                 $push: { activeSessions: {
+                                                                                   $each: [sessionId],
+                                                                                  $slice: -config.maxSessionsAllowed }  }
+                                                                },
+                                                                { upsert: true, session: auth_db_session }),
                                                             
-                            await LoginHistory.create({   userId: user._id,
-                                                                    sessionId,
-                                                                    provider: 'local-'+identifierName,
-                                                                    fingerprint,
-                                                                    ip: ipAddressCipherText,
-                                                                    userAgent       })
+                                           LoginHistory.create({ userId: user._id,
+                                                              sessionId,
+                                                               provider: 'local-'+identifierName,
+                                                            fingerprint,
+                                                                     ip: ipAddressCipherText,
+                                                              userAgent       })])
 
+                        if (config.maxSessionsAllowed && user?.activeSessions?.length) {
+                                // const sessionIds = user?.activeSessions.map(id => id.toString());
+                                // const allSessionIds = [...new Set([...sessionIds, sessionId.toString()])];
+                                // const sessionsToKeep = allSessionIds.slice(-MAX_SESSIONS_ALLOWED);
 
-                        if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
-                                const sessionIds = user?.activeSessions.map(id => id.toString());
-                                const allSessionIds = [...new Set([...sessionIds, loggedInSession._id.toString()])];
-                                const keepIds = allSessionIds.slice(-MAX_SESSIONS_ALLOWED);
-                                const Session = sessionModel(auth_db)  
-                                await Session.deleteMany( { userId: user._id, _id: { $nin: keepIds }, }, { session: auth_db_session });                                                             
+                                const sessionsToKeep = user.activeSessions.slice(-(config.maxSessionsAllowed - 1))
+                                                                          .concat(sessionId);
+                                await SessionModel.deleteMany({ userId: user._id, 
+                                                                    _id: { $nin: sessionsToKeep }, 
+                                                              }, 
+                                                              {  session: auth_db_session });                                                             
                             }
 
                         // if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
@@ -158,18 +152,17 @@ export const authOptions = {
 
                         await auth_db_session.commitTransaction();
 
-                            return {
-                                        email: user.email,
-                                        phone: user.phone,
+                            return {   email: user.email,
+                                       phone: user.phone,
                                     username: user.username,
                                         name: user.name,
                                 loginSession: sessionId,
-                                accessToken: accessToken,
+                                 accessToken: accessToken,
                             accessTokenExpAt: accessTokenExpAt,
                                 refreshToken: refreshToken,
                                     provider: 'local-'+identifierName,
                                         role: user.role,
-                                    isVerified: Boolean( user?.isEmailVerified ||
+                                  isVerified: Boolean( user?.isEmailVerified ||
                                                         user?.isPhoneVerified  )
                                 };
                     } catch (error) {
@@ -242,18 +235,16 @@ export const authOptions = {
                     const valid = user.verification.phoneVerificationOTP === hashedOtp && user.verification.phoneVerificationOTPExpiry > Date.now()
                     
                     if (!valid) {  
-                        const         MAX_OTP_ATTEMPT = parseInt(process.env.MAX_OTP_ATTEMPT, 10) || 5
                         user.verification.otpAttempts = (user.verification.otpAttempts || 0) + 1;
-                        const       USER_LOCK_MINUTES = parseInt(process.env.USER_LOCK_MINUTES, 10) || 15
 
                         const updateOps = { $inc:   { 'verification.otpAttempts'               : 1   }, 
                                             $unset: { 'verification.phoneVerificationOTP'      : "",
                                                       'verification.phoneVerificationOTPExpiry': "", } };                        
 
-                        if (user.verification.otpAttempts && user.verification.otpAttempts >= MAX_OTP_ATTEMPT) 
+                        if (user.verification.otpAttempts && user.verification.otpAttempts >= config.maxOtpAttempt) 
                                 updateOps.$set = {    'lock.isLocked': true,
                                                     'lock.lockReason': 'maximum phone otp exceed',
-                                                     'lock.lockUntil': new Date(Date.now() + USER_LOCK_MINUTES * 60 * 1000)  };
+                                                     'lock.lockUntil': new Date(Date.now() + config.userLockMinutes * 60 * 1000)  };
                         await UserModel.updateOne({ _id: user._id }, updateOps);
                         return NextResponse.json({ error: "Invalid verification code" }, { status: 400 });
                     }
@@ -266,9 +257,7 @@ export const authOptions = {
                           auth_db_session.startTransaction()
                     try {                                        
                         const userAgent = req.headers['user-agent'] || '';
-                        const sessionId = new mongoose.Types.ObjectId();
-
-                        const MAX_SESSIONS_ALLOWED = Math.abs(parseInt(process.env.MAX_SESSIONS_ALLOWED, 10)) || 5;                        
+                        const sessionId = new mongoose.Types.ObjectId();                  
                         
                         const { accessToken,
                                 accessTokenExpAt,
@@ -277,57 +266,55 @@ export const authOptions = {
                         const { refreshToken,
                                 refreshTokenExpAt,
                                 refreshTokenCipherText  }  = generateRefreshTokenWithEncryption()
-                        
 
-                        const Session = sessionModel(auth_db) 
-                        const savedLoginSession = await Session.create({
-                                                _id: sessionId,
-                                                userId: user._id,
-                                                provider: 'local-'+identifierName,
-                                                fingerprint,
-                                                accessToken: accessTokenCipherText,
-                                                accessTokenExpiresAt: accessTokenExpAt,
-                                                refreshToken: refreshTokenCipherText,
-                                                refreshTokenExpiresAt: refreshTokenExpAt,
-                                                role: user.role,
-                                                ip: ipAddressCipherText,
-                                                userAgent
-                                            }).session(auth_db_session);
+                        const   ipAddressCipherText = await encrypt({    data: ip,
+                                                                      options: { secret: config.ipAddressEncryptionKey }     });
 
-                         await UserModel.updateOne( {    _id: user._id },
-                                                    {   $set: {          "isPhoneVerified": true,
-                                                                 "security.failedAttempts": 0,
-                                                                      "security.lastLogin": new Date(),
-                                                                "verification.otpAttempts": 0       },
-                                                        $unset: {   'verification.phoneVerificationOTP': "",
-                                                              'verification.phoneVerificationOTPExpiry': "",
-                                                                                                   lock: "" },
-                                                        $push: { 
-                                                                activeSessions: {
-                                                                    $each: [sessionId],
-                                                                    $slice: -MAX_SESSIONS_ALLOWED 
-                                                                }
-                                                            }
-                                                    },
-                                                    { upsert: true, session: auth_db_session }
-                                    )
-
-                        await LoginHistory.create({   userId: user._id,
-                                                                sessionId,
-                                                                provider: 'local-'+identifierName,
+                        const SessionModel = sessionModel(auth_db) 
+                        await Promise.all([ SessionModel.create({       _id: sessionId,
+                                                                     userId: user._id,
+                                                                   provider: 'local-phone',
                                                                 fingerprint,
-                                                                ip: ipAddressCipherText,
-                                                                userAgent       })
-                        if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
+                                                                accessToken: accessTokenCipherText,
+                                                       accessTokenExpiresAt: accessTokenExpAt,
+                                                               refreshToken: refreshTokenCipherText,
+                                                      refreshTokenExpiresAt: refreshTokenExpAt,
+                                                                       role: user.role,
+                                                                         ip: ipAddressCipherText,
+                                                                  userAgent
+                                                                    }).session(auth_db_session),
+
+                                            UserModel.updateOne({    _id: user._id },
+                                                                {   $set: {                         "isPhoneVerified": true,
+                                                                                            "security.failedAttempts": 0,
+                                                                                                 "security.lastLogin": new Date(),
+                                                                                           "verification.otpAttempts": 0       },
+
+                                                                  $unset: {       "verification.phoneVerificationOTP": "",
+                                                                            "verification.phoneVerificationOTPExpiry": "",
+                                                                                                                 lock: ""   },
+
+                                                                   $push: { activeSessions: { $each: [sessionId],
+                                                                                             $slice: -config.maxSessionsAllowed } }
+                                                                },
+                                                                { upsert: true, session: auth_db_session }
+                                                            ),
+
+                                            LoginHistory.create({   userId: user._id,
+                                                                 sessionId,
+                                                                  provider: 'local-phone',
+                                                               fingerprint,
+                                                                        ip: ipAddressCipherText,
+                                                                 userAgent       })])
+                        if (config.maxSessionsAllowed && user?.activeSessions?.length) {
                             // const sessionsToKeep = user.activeSessions.slice(-MAX_SESSIONS_ALLOWED)
                             //                                           .map(id => id.toString());
                             // if (sessionsToKeep.length >= MAX_SESSIONS_ALLOWED) 
                             //     await Session.deleteMany({ userId: user._id, _id: { $nin: [...sessionsToKeep, sessionId] }});
-                            const sessionIds = user?.activeSessions.map(id => id.toString());
-                            const allSessionIds = [...new Set([...sessionIds, savedLoginSession._id.toString()])];
-                            const keepIds = allSessionIds.slice(-MAX_SESSIONS_ALLOWED);
-                            const Session = sessionModel(auth_db)  
-                            await Session.deleteMany( { userId: user._id, _id: { $nin: keepIds }, }, { session: auth_db_session });                                                             
+                            const    sessionIds = user?.activeSessions.map(id => id.toString());
+                            const allSessionIds = [...new Set([...sessionIds, sessionId.toString()])];
+                            const       keepIds = allSessionIds.slice(-config.maxSessionsAllowed); 
+                            await SessionModel.deleteMany( { userId: user._id, _id: { $nin: keepIds }, }, { session: auth_db_session });                                                             
                         }
 
                         await auth_db_session.commitTransaction();
@@ -340,7 +327,7 @@ export const authOptions = {
                                  accessToken: accessToken,
                             accessTokenExpAt: accessTokenExpAt,
                                 refreshToken: refreshToken,
-                                    provider: 'local-'+identifierName,
+                                    provider: 'local-phone',
                                         role: user.role,
                                   isVerified: Boolean( user?.isEmailVerified ||
                                                        user?.isPhoneVerified  )
@@ -360,8 +347,8 @@ export const authOptions = {
             },
         }),
         GoogleProvider({
-                 clientId: process.env.GOOGLE_CLIENT_ID,
-             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                 clientId: config.googleClientId,
+             clientSecret: config.googleClientSecret,
             authorization: {
                             params: {
                                        prompt: "consent",
@@ -379,8 +366,8 @@ export const authOptions = {
                 }
         }),
         FacebookProvider({
-                 clientId: process.env.FACEBOOK_CLIENT_ID,
-             clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+                 clientId: config.facebookClientId,
+             clientSecret: config.facebookClientSecret,
             authorization: {
                 params: {
                            prompt: "consent",
@@ -420,6 +407,7 @@ export const authOptions = {
 
                 let userId;
                 let userRole = ['user'];
+                const sessionId = new mongoose.Types.ObjectId();
 
                 if (!existingUser) {
                     const newUser = { email: profile.email,
@@ -439,24 +427,10 @@ export const authOptions = {
                     userId = existingUser._id;
                   userRole = existingUser.role;
                 }
-                await UserModel.updateOne( { _id: userId },
-                                           { $set: { 
-                                                    [`oauth.${account.provider}`]: {
-                                                                                      id: profile.id,
-                                                                             accessToken: account.access_token,
-                                                                            refreshToken: account.refresh_token,
-                                                                          tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null }
-                                                    }
-                                            },
-                                            { session: auth_db_session }
-                                        );
+                
 
                 const        ip = req?.headers['x-forwarded-for']?.split(',')[0]?.trim() || req?.headers['x-real-ip'] || req?.socket?.remoteAddress || '';
                 const userAgent = req?.headers['user-agent'] || '';
-                const sessionId = new mongoose.Types.ObjectId();
-
-                const         MAX_SESSIONS_ALLOWED = Math.abs(Number(process.env.MAX_SESSIONS_ALLOWED)) || 5;
-                const    IP_ADDRESS_ENCRYPTION_KEY = process.env.IP_ADDRESS_ENCRYPTION_KEY              || '';
 
                 const { accessToken,
                         accessTokenExpAt,
@@ -468,9 +442,21 @@ export const authOptions = {
 
 
 
-                const ipAddressCipherText = await encrypt({ data: ip, options: { secret: IP_ADDRESS_ENCRYPTION_KEY } });
+                const ipAddressCipherText = await encrypt({ data: ip, options: { secret: config.ipAddressEncryptionKey } });
+                const LoginHistory = loginHistoryModel(auth_db);
 
-                const loginSession = await SessionModel.create([{ _id: sessionId,
+                await Promise.all([ UserModel.updateOne( { _id: userId },
+                                                         { $set: { 
+                                                                    [`oauth.${account.provider}`]: { id: profile.id,
+                                                                                            accessToken: account.access_token,
+                                                                                           refreshToken: account.refresh_token,
+                                                                                         tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null }
+                                                                },
+                                                          $push: { activeSessions: { $each: [sessionId],
+                                                                                    $slice: -config.maxSessionsAllowed } }
+                                                            }, { session: auth_db_session } ),
+
+                                    SessionModel.create([{ _id: sessionId,
                                                                userId,
                                                              provider: account.provider,
                                                           accessToken: accessTokenCipherText,
@@ -486,22 +472,21 @@ export const authOptions = {
                                                                     providerAccessToken: account.access_token,
                                                                    providerRefreshToken: account.refresh_token,
                                                                  providerTokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null    }
-                                                        }], { session: auth_db_session });
+                                                        }], { session: auth_db_session }),
+                                                  
+                                    LoginHistory.create({ userId: user._id,
+                                                       sessionId,
+                                                        provider: account.provider,
+                                                     fingerprint: null,
+                                                              ip: ipAddressCipherText,
+                                                       userAgent       }).session(auth_db_session) ])
 
-                const LoginHistory = loginHistoryModel(auth_db)                                     
-                await LoginHistory.create({   userId:user._id,
-                                            sessionId: loginSession._id,
-                                            provider: account.provider,
-                                            fingerprint: null,
-                                            ip: ipAddressCipherText,
-                                            userAgent       }).session(auth_db_session) 
-
-                if (MAX_SESSIONS_ALLOWED && existingUser?.activeSessions?.length) {
+                if (config.maxSessionsAllowed && existingUser?.activeSessions?.length) {
                     const sessionIds = existingUser?.activeSessions.map(id => id.toString());
                     const allSessionIds = [...new Set([...sessionIds, sessionId.toString()])];
-                    const keepIds = allSessionIds.slice(-MAX_SESSIONS_ALLOWED);
-                    const Session = sessionModel(auth_db)  
-                    await Session.deleteMany( { userId, _id: { $nin: keepIds }, },
+                    const keepIds = allSessionIds.slice(-config.maxSessionsAllowed);
+ 
+                    await SessionModel.deleteMany( { userId, _id: { $nin: keepIds }, },
                         { session: auth_db_session });
                 }
 
@@ -551,20 +536,12 @@ export const authOptions = {
             if(Date.now() < accessTokenExpire_ms)
                 return token;            
 
-            const          ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ;
-            const REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || ''
-            const  ACCESS_TOKEN_EXPIRE_MINUTES = Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || 15);
-            const REFRESH_TOKEN_EXPIRE_MINUTES = Number(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || 86400)  
-            
-            if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_ENCRYPTION_KEY)                 
-                return null;
-
             try {
                 const newTokens  = await tokenRefresh({                    token, 
-                                                               accessTokenSecret: ACCESS_TOKEN_SECRET, 
-                                                                 refreshTokenKey: REFRESH_TOKEN_ENCRYPTION_KEY,
-                                                               accessTokenExpire: ACCESS_TOKEN_EXPIRE_MINUTES,
-                                                              refreshTokenExpire: REFRESH_TOKEN_EXPIRE_MINUTES
+                                                               accessTokenSecret: config.accessTokenSecret, 
+                                                                 refreshTokenKey: config.refreshTokenEncryptionKey,
+                                                               accessTokenExpire: config.accessTokenExpireMinutes,
+                                                              refreshTokenExpire: config.refreshTokenExpireMinutes
                                                             })
                 if(!newTokens) return null
                         
@@ -573,7 +550,8 @@ export const authOptions = {
               token.refreshToken     = newTokens.refreshToken;
               return token 
             } catch (error) {
-              return null
+                console.error("Token refresh failed:", error);
+                return null
             }
         },
         async session(params) {
@@ -616,13 +594,6 @@ export const authOptions = {
         strategy: 'jwt',
     },
     basePath: "/api/v1/auth",
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: config.nextAuthSecret,
     debug: process.env.NODE_ENV !== 'production'
 };
-
-
-
-
-
-
-

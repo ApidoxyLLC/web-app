@@ -16,6 +16,7 @@ import rateLimit from "./rateLimit";
 import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
 import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
 import addMinutesToISO from "@/app/utils/addMinutesToISO";
+import config from "../../../../../../../config";
 
 function applyHeaders(response, headers) {
   Object.entries(headers).forEach(([key, value]) => {

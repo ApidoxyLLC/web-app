@@ -1,8 +1,9 @@
+import config from "../../../../../../config";
 
 export async function refreshGoogleToken(refreshToken) {
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    client_id: config.googleClientId,
+    client_secret: config.googleClientSecret,
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
   });
