@@ -68,9 +68,7 @@ export async function POST(request, response) {
   const businessName = parsed.data.businessName?.trim();
   const location = parsed.data.location;
 
-  
-
-  // Temporary generate 
+  // Temporary generate
   // this will grab from users sessionId stored into accessToken
   // Need to check the users loggedin session from sessions collection on auth_db
   // const sessionId = new mongoose.Types.ObjectId();

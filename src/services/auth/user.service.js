@@ -388,7 +388,7 @@ export async function generateAccessTokenWithEncryption({
   };
 
   const accessToken = jwt.sign(payload, config.accessTokenSecret, {
-    expiresIn: ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    expiresIn: config.accessTokenExpireMinutes * 60,
   });
   const accessTokenExpAt = new Date(Date.now() + expireMs);
 
