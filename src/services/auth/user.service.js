@@ -393,14 +393,12 @@ export async function generateAccessTokenWithEncryption({
   const accessTokenExpAt = new Date(Date.now() + expireMs);
 
   // Store data to redis memory
-  await setSession({ tokenId: tokenId, data: { ...payload, userId, role } });
+  await setSession({ token: tokenId, data: { ...payload, userId, role } });
 
   let accessTokenCipherText;
   try {
-    accessTokenCipherText = await encrypt({
-      data: accessToken,
-      options: { secret: config.accessTokenEncryptionKey },
-    });
+    accessTokenCipherText = await encrypt({    data: accessToken,
+                                            options: { secret: config.accessTokenEncryptionKey } });
   } catch (err) {
     throw new Error("TOKEN_ENCRYPTION_FAILED");
   }
