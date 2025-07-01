@@ -1,4 +1,8 @@
 
+import config from "../../../config";
+import bcrypt from "bcryptjs";
+import { userModel } from "@/models/auth/User";
+import crypto from 'crypto';
 
 export async function createShopUser({ vendorId }) {
     if (!data || typeof data !== 'object') {
@@ -11,8 +15,6 @@ export async function createShopUser({ vendorId }) {
     const token = crypto.randomBytes(32).toString('hex');
     const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const EMAIL_VERIFICATION_EXPIRY = Number(process.env.EMAIL_VERIFICATION_EXPIRY || 15); // minutes
-    const PHONE_VERIFICATION_EXPIRY = Number(process.env.PHONE_VERIFICATION_EXPIRY || 5); // minutes
 
     const userData = {          name,
                             security: { ...(password 
@@ -20,11 +22,11 @@ export async function createShopUser({ vendorId }) {
                                             salt } ) },
                         verification: { ...(email && {
                                             emailVerificationToken: verificationToken,
-                                            emailVerificationTokenExpiry: new Date( Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60 * 1000) ),                                          
+                                            emailVerificationTokenExpiry: new Date( Date.now() + (config.emailVerificationExpireMinutes * 60 * 1000) ),                                          
                                           }),
                                         ...((phone && !email) && { 
                                             phoneVerificationOTP: Math.floor(100000 + Math.random() * 900000).toString(),
-                                            phoneVerificationOTPExpiry: new Date(Date.now() + (PHONE_VERIFICATION_EXPIRY * 60 * 1000))
+                                            phoneVerificationOTPExpiry: new Date(Date.now() + (config.phoneVerificationExpireMinutes * 60 * 1000))
                                           })
                                       },
                       ...(email && { email }),

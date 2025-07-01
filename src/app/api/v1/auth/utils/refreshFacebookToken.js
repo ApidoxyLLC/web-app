@@ -1,8 +1,10 @@
+import config from "../../../../../../config";
+
 export async function refreshFacebookToken(refreshToken) {
   const params = new URLSearchParams({
     grant_type: "fb_exchange_token",
-    client_id: process.env.FACEBOOK_CLIENT_ID,
-    client_secret: process.env.FACEBOOK_CLIENT_SECRET,
+    client_id: config.facebookClientId,
+    client_secret: config.facebookClientSecret,
     fb_exchange_token: refreshToken,
   });
 

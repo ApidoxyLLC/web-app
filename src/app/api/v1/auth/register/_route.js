@@ -4,6 +4,7 @@ import User from "@/models/auth/User";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import registerSchema from "./registerDTOSchema";
+import config from "../../../../../../config";
 import rateLimiter from "./rateLimiter";
 import { getClientIp } from "@/app/utils/ip";
 import crypto from 'crypto';
@@ -76,7 +77,6 @@ export async function POST(request) {
     const token = crypto.randomBytes(32).toString('hex');
     const verificationToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const EMAIL_VERIFICATION_EXPIRY = Number(process.env.EMAIL_VERIFICATION_EXPIRY || 15); // minutes
     const PHONE_VERIFICATION_EXPIRY = Number(process.env.PHONE_VERIFICATION_EXPIRY || 5); // minutes
 
     const userData = {  name,
@@ -86,7 +86,7 @@ export async function POST(request) {
                                             
                         verification: { ...(email && {
                                             emailVerificationToken: verificationToken,
-                                            emailVerificationTokenExpires: Date.now() + (EMAIL_VERIFICATION_EXPIRY * 60000) //15 minute validation 
+                                            emailVerificationTokenExpires: Date.now() + (config.emailVerificationExpireMinutes * 60000) //15 minute validation 
                                           }),
                                         ...((phone && !email) && { 
                                             phoneVerificationOTP: Math.floor(100000 + Math.random() * 900000).toString(),

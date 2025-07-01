@@ -1,17 +1,39 @@
 
 const config = {
+
+  // Google provider
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  // facebook provider  
+  facebookClientId: process.env.FACEBOOK_CLIENT_ID,
+  facebookClientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+
   // access token 
-  accessTokenExpireMinutes: parseInt(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15', 10),
+
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
   accessTokenEncryptionKey: process.env.ACCESS_TOKEN_ENCRYPTION_KEY,
 
   // refresh token 
-  refreshTokenExpireMinutes: parseInt(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || '1440', 10),
   refreshTokenEncryptionKey: process.env.REFRESH_TOKEN_ENCRYPTION_KEY,
 
   // NEXT AUTH SECRET 
   nextAuthSecret: process.env.NEXTAUTH_SECRET,
-  
+
+  // Limitations
+  maxSessionsAllowed: parseInt(process.env.MAX_SESSIONS_ALLOWED || '3', 10),
+  maxLoginAttempt: parseInt(process.env.MAX_LOGIN_ATTEMPT || '5', 10),
+  maxOtpAttempt: parseInt(process.env.MAX_OTP_ATTEMPT || '5', 10),
+
+  // Encryption keys
+  ipAddressEncryptionKey: process.env.IP_ADDRESS_ENCRYPTION_KEY,
+
+  // time durations limitations
+  accessTokenExpireMinutes: Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15'),
+  refreshTokenExpireMinutes: Number(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || '1440'),
+  userLockMinutes: Number(process.env.USER_LOCK_MINUTES || '15'),
+  emailVerificationExpireMinutes: Number(process.env.EMAIL_VERIFICATION_EXPIRE_MINUTES || '15'),
+  phoneVerificationExpireMinutes: Number(process.env.PHONE_VERIFICATION_EXPIRE_MINUTES || '3')
+
 };
 export default config
 
