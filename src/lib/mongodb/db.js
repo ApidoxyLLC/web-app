@@ -1,15 +1,12 @@
 import   mongoose   from 'mongoose';
 import { LRUCache } from 'lru-cache';
 import   AsyncLock  from 'async-lock';
+import config from '../../../config';
 
-const        MAX_CONNECTIONS = Number(process.env.DB_MAX_CONNECTION);
-const         CONNECTION_TTL = Number(process.env.DB_CONNECTION_TTL_MINUTES   || 15) * 60 * 1000; // 15 min
-const MAX_TENANT_CONNECTIONS = Number(process.env.DB_MAX_TENANT_CONNECTIONS)  || 20; 
-const   MAX_AUTH_CONNECTIONS = Number(process.env.DB_MAX_AUTH_CONNECTIONS)    || 20;
-const                   lock = new AsyncLock();
+const lock = new AsyncLock();
 
-const cache = new LRUCache({ max: MAX_CONNECTIONS,
-                             ttl: CONNECTION_TTL,
+const cache = new LRUCache({ max: config.maxDbConnections,
+                             ttl: config.connectionTtl,
                   updateAgeOnGet: true,
                       allowStale: false,
                          dispose: async (dbKey, connection) => {
@@ -69,8 +66,8 @@ export async function dbConnect({dbKey, dbUri}) {
       try {
         const newConnection = await mongoose.createConnection(dbUri, {  dbName: dbKey,
                                                                    maxPoolSize: (dbKey === 'auth_db') 
-                                                                                  ? MAX_AUTH_CONNECTIONS 
-                                                                                  : MAX_TENANT_CONNECTIONS,
+                                                                                  ? config.maxAuthDbConnections 
+                                                                                  : config.maxTenantConnections,
                                                                socketTimeoutMS: 5000,
                                                       serverSelectionTimeoutMS: 3000    }).asPromise();
 

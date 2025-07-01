@@ -8,16 +8,16 @@ const config = {
   facebookClientId: process.env.FACEBOOK_CLIENT_ID,
   facebookClientSecret: process.env.FACEBOOK_CLIENT_SECRET,
 
-  // access token 
-
+  // token secret 
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
-  accessTokenEncryptionKey: process.env.ACCESS_TOKEN_ENCRYPTION_KEY,
-
-  // refresh token 
-  refreshTokenEncryptionKey: process.env.REFRESH_TOKEN_ENCRYPTION_KEY,
-
-  // NEXT AUTH SECRET 
   nextAuthSecret: process.env.NEXTAUTH_SECRET,
+
+  // Database connection controls
+  maxDbConnections: parseInt(process.env.DB_MAX_CONNECTION || '40', 10),
+  maxAuthDbConnections: parseInt(process.env.DB_MAX_AUTH_CONNECTIONS || '10', 10),
+  // maxShopConnections: parseInt(process.env.DB_MAX_SHOP_CONNECTIONS || '5', 10),
+  maxTenantConnections: parseInt(process.env.DB_MAX_TENANT_CONNECTIONS || '5', 10),
+  connectionTtl: parseInt(process.env.DB_CONNECTION_TTL_MINUTES || '10', 10),
 
   // Limitations
   maxSessionsAllowed: parseInt(process.env.MAX_SESSIONS_ALLOWED || '3', 10),
@@ -25,6 +25,8 @@ const config = {
   maxOtpAttempt: parseInt(process.env.MAX_OTP_ATTEMPT || '5', 10),
 
   // Encryption keys
+  accessTokenEncryptionKey: process.env.ACCESS_TOKEN_ENCRYPTION_KEY,
+  refreshTokenEncryptionKey: process.env.REFRESH_TOKEN_ENCRYPTION_KEY,
   ipAddressEncryptionKey: process.env.IP_ADDRESS_ENCRYPTION_KEY,
 
   // time durations limitations

@@ -1,6 +1,7 @@
 import { sessionModel } from "@/models/auth/Session";
 import { addLoginSession as addUserLoginSession } from "./user.service";
 import { encrypt } from "@/lib/encryption/cryptoEncryption";
+import config from "../../../config";
 
 
 export async function getSessionTokenById({db, sessionId}) {
@@ -82,13 +83,10 @@ export async function cleanInvalidSessions({  activeSessions, userId, currentSes
 }
 
 export async function updateSessionToken({db, sessionId, accessToken, refreshToken}) {
-        const       ACCESS_TOKEN_ENCRYPTION_KEY = process.env.ACCESS_TOKEN_ENCRYPTION_KEY  || ''
-        const      REFRESH_TOKEN_ENCRYPTION_KEY = process.env.REFRESH_TOKEN_ENCRYPTION_KEY || ''
-
         const  accessTokenCipherText = await encrypt({        data: accessToken,
-                                                           options: { secret: ACCESS_TOKEN_ENCRYPTION_KEY }      });
+                                                           options: { secret: config.accessTokenEncryptionKey }      });
         const refreshTokenCipherText = await encrypt({        data: refreshToken,
-                                                           options: { secret: REFRESH_TOKEN_ENCRYPTION_KEY }     });
+                                                           options: { secret: config.refreshTokenEncryptionKey }     });
         
         const Session = sessionModel(db)  
         await Session.updateOne(
