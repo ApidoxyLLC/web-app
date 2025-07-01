@@ -92,7 +92,7 @@ export const authOptions = {
                                 refreshTokenCipherText }  = generateRefreshTokenWithEncryption()
 
                         const   ipAddressCipherText = await encrypt({    data: ip,
-                                                                    options: { secret: config.ipAddressEncryptionKey }     });
+                                                                      options: { secret: config.ipAddressEncryptionKey }     });
                         
                         auth_db_session.startTransaction()
                         const SessionModel = sessionModel(auth_db)
@@ -118,15 +118,14 @@ export const authOptions = {
                                                                  $push: { activeSessions: {
                                                                                    $each: [sessionId],
                                                                                   $slice: -config.maxSessionsAllowed }  }
-                                                                },
-                                                                { upsert: true, session: auth_db_session }),
+                                                                }, { upsert: true, session: auth_db_session }),
                                                             
                                            LoginHistory.create({ userId: user._id,
                                                               sessionId,
                                                                provider: 'local-'+identifierName,
                                                             fingerprint,
                                                                      ip: ipAddressCipherText,
-                                                              userAgent       },  
+                                                              userAgent },  
                                                               { session: auth_db_session })])
 
                         if (config.maxSessionsAllowed && user?.activeSessions?.length) {
@@ -138,8 +137,7 @@ export const authOptions = {
                                                                           .concat(sessionId);
                                 await SessionModel.deleteMany({ userId: user._id, 
                                                                     _id: { $nin: sessionsToKeep }, 
-                                                              }, 
-                                                              {  session: auth_db_session });                                                             
+                                                              },{  session: auth_db_session });                                                             
                             }
 
                         // if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {

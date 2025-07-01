@@ -7,7 +7,8 @@ const SESSION_PREFIX = 'session:';
 const TTL = config.accessTokenExpireMinutes *  60; //default: 15 minute
 
 export async function setSession({ tokenId, data = {}}) {
-    const key = `${SESSION_PREFIX}${crypto.createHash('sha256').update(tokenId).digest('hex')}`;
+    const hashedToken = crypto.createHash('sha256').update(tokenId).digest('hex')
+    const key = `${SESSION_PREFIX}${hashedToken}`;    
     await sessionRedis.setex( key, TTL, JSON.stringify({ ...data, createdAt: new Date().toISOString()}));
     return key;
 }
