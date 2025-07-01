@@ -126,7 +126,8 @@ export const authOptions = {
                                                                provider: 'local-'+identifierName,
                                                             fingerprint,
                                                                      ip: ipAddressCipherText,
-                                                              userAgent       })])
+                                                              userAgent       },  
+                                                              { session: auth_db_session })])
 
                         if (config.maxSessionsAllowed && user?.activeSessions?.length) {
                                 // const sessionIds = user?.activeSessions.map(id => id.toString());
@@ -305,7 +306,7 @@ export const authOptions = {
                                                                   provider: 'local-phone',
                                                                fingerprint,
                                                                         ip: ipAddressCipherText,
-                                                                 userAgent       })])
+                                                                 userAgent       },  { session: auth_db_session })])
                         if (config.maxSessionsAllowed && user?.activeSessions?.length) {
                             // const sessionsToKeep = user.activeSessions.slice(-MAX_SESSIONS_ALLOWED)
                             //                                           .map(id => id.toString());
@@ -479,7 +480,7 @@ export const authOptions = {
                                                         provider: account.provider,
                                                      fingerprint: null,
                                                               ip: ipAddressCipherText,
-                                                       userAgent       }).session(auth_db_session) ])
+                                                       userAgent       },  { session: auth_db_session }) ])
 
                 if (config.maxSessionsAllowed && existingUser?.activeSessions?.length) {
                     const sessionIds = existingUser?.activeSessions.map(id => id.toString());
