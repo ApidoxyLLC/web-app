@@ -109,7 +109,7 @@ export const authOptions = {
                                                                 role: user.role,
                                                                   ip: ipAddressCipherText,
                                                             userAgent 
-                                                        }).session(auth_db_session),
+                                                        }, { session: auth_db_session }),
 
                                            UserModel.updateOne( { _id: user._id },
                                                                 { $set: { "security.failedAttempts": 0,
@@ -282,7 +282,7 @@ export const authOptions = {
                                                                        role: user.role,
                                                                          ip: ipAddressCipherText,
                                                                   userAgent
-                                                                    }).session(auth_db_session),
+                                                                    },{ session: auth_db_session }),
 
                                             UserModel.updateOne({    _id: user._id },
                                                                 {   $set: {                         "isPhoneVerified": true,
