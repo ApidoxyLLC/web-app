@@ -30,11 +30,10 @@ export async function POST(request) {
   let body;
   try { body = await request.json();} 
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
-  const  vendorId = request.headers.get('x-vendor-identifier');
-  const      host = request.headers.get('host'); 
-  const        ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                    request.headers.get('x-real-ip') || 'unknown_ip';
-  const userAgent = request.headers.get('user-agent') || '';
+  const    vendorId = request.headers.get('x-vendor-identifier');
+  const        host = request.headers.get('host'); 
+  const          ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
+  const   userAgent = request.headers.get('user-agent') || '';
   const fingerprint = request.headers.get('x-fingerprint') || null;
 
 

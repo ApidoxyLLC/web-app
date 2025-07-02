@@ -49,19 +49,18 @@ export const authOptions = {
                     // Find user
                     const UserModel = userModel(auth_db);
                     const user = await UserModel.findOne({ $or: [{ email }, { phone }] })
-                                                .select('+_id '                 +
-                                                        '+security '            +
-                                                        '+security.password '   +
-                                                        '+security.failedAttempts '            +
-                                                        '+lock '                +
-                                                        '+lock.isLocked '       +
-                                                        '+lock.lockReason '     +
-                                                        '+lock.lockUntil '      +
-                                                        '+verification '        +
-                                                        '+isEmailVerified '     +                                    
-                                                        '+isPhoneVerified '     +
-                                                        '+role '                )
-                                                .lean();
+                                                .select('+_id '                     +
+                                                        '+security '                +
+                                                        '+security.password '       +
+                                                        '+security.failedAttempts ' +
+                                                        '+lock '                    +
+                                                        '+lock.isLocked '           +
+                                                        '+lock.lockReason '         +
+                                                        '+lock.lockUntil '          +
+                                                        '+verification '            +
+                                                        '+isEmailVerified '         +                                    
+                                                        '+isPhoneVerified '         +
+                                                        '+role ' ).lean();
 
                     if (!user || !user.security?.password) throw new Error("Invalid credentials");
 
@@ -400,12 +399,11 @@ export const authOptions = {
 
             try {
                 const existingUser = await UserModel.findOne({ $or: [ {                            email: profile.email }, 
-                                                                      { [`oauth.${account.provider}.id`]: profile.id } ]})
+                                                                      { [`oauth.${account.provider}.id`]: profile.id } ] })
                                                     .select('+_id +role +activeSessions')                  
                                                     .lean();
-
                 let userId;
-                let userRole = ['user'];
+                let    userRole = ['user'];
                 const sessionId = new mongoose.Types.ObjectId();
 
                 if (!existingUser) {

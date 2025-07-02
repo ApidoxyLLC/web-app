@@ -3,7 +3,7 @@ import config from "../../../../../../config";
 import jwt from "jsonwebtoken";
 import { getSession } from "@/lib/redis/helpers/session";
 
-export async function getAuthenticatedUser(req, res) {
+export async function getAuthenticatedUser(req) {
     const nextAuthtoken = await getToken({ req, secret: config.nextAuthSecret });
     if (!nextAuthtoken?.accessToken) 
         return null;

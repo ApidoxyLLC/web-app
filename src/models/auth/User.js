@@ -94,9 +94,8 @@ const oauthSchema = new mongoose.Schema({
   facebook: { type: OAuthProviderSchema }
 }, { _id: false });
 
-
-
 const userSchema = new mongoose.Schema({
+                userId: { type: String, default:()=> cuid(), select: true },
                   name: { type: String, maxlength: 255, required: true },
                 avatar: { type: String, default: null},
         activeSessions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],

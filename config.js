@@ -34,7 +34,11 @@ const config = {
   refreshTokenExpireMinutes: Number(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || '1440'),
   userLockMinutes: Number(process.env.USER_LOCK_MINUTES || '15'),
   emailVerificationExpireMinutes: Number(process.env.EMAIL_VERIFICATION_EXPIRE_MINUTES || '15'),
-  phoneVerificationExpireMinutes: Number(process.env.PHONE_VERIFICATION_EXPIRE_MINUTES || '3')
+  phoneVerificationExpireMinutes: Number(process.env.PHONE_VERIFICATION_EXPIRE_MINUTES || '3'),
+
+
+  // 
+  defaultVendorDbProvider: process.env.VENDOR_DEFAULT_DB_PROVIDER
 
 };
 export default config

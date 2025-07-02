@@ -77,5 +77,4 @@ const deliveryPartnerSchema = new mongoose.Schema({
   collection: 'delivery_partners'
 });
 
-export const DeliveryPartner = mongoose.models.DeliveryPartner || mongoose.model("DeliveryPartner", deliveryPartnerSchema, 'delivery_partners');
-export default DeliveryPartner;
+export const deliveryPartnerModel = (db) => db.models.DeliveryPartner || db.model('DeliveryPartner', deliveryPartnerSchema);

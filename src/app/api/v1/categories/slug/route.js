@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { shopModel } from '@/models/auth/Shop';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from '../../auth/[...nextauth]/option';
 import { getToken } from 'next-auth/jwt';
 import { userModel } from '@/models/auth/User';
 import { categoryModel } from '@/models/shop/product/_Category';
