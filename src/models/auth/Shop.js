@@ -187,7 +187,7 @@ const shopSchema = new mongoose.Schema({
 
 
 export const shopModel = (db) => db.models.Shop || db.model('Shop', shopSchema);
-export const Shop = mongoose.models.Shop || mongoose.model("Shop", shopSchema, 'shops');
-export default Shop;
+// export const Shop = mongoose.models.Shop || mongoose.model("Shop", shopSchema, 'shops');
+// export default Shop;
 
 

@@ -57,7 +57,7 @@ export async function POST(request) {
           const ShopModel = shopModel(auth_db);
           const shop = await ShopModel.create([{
                                                   _id: shopId,
-                                             vendorId: ()=> cuid(),
+                                            //  vendorId: ()=> cuid(),
                                               ownerId: userSession?.userId,
                                     ownerLoginSession: userSession?.sessionId,
                                               country: country,
