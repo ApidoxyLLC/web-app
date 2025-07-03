@@ -5,9 +5,9 @@ import { dbConnect } from "@/lib/mongodb/db";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { encrypt } from "@/lib/encryption/cryptoEncryption";
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
-import cuid from "@bugsnag/cuid";
 import { shopModel } from "@/models/auth/Shop";
-// import { userModel } from "@/models/auth/User";
+import { userModel } from "@/models/auth/User";
+import crypto from 'crypto'; 
 import config from "../../../../../config";
 
 export async function POST(request) {
@@ -22,62 +22,73 @@ export async function POST(request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
   }
-  const country = parsed.data.country.trim();
-  const industry = parsed.data.industry?.trim();
+
+  const auth_db = await authDbConnect()
+  const UserModel =  userModel(auth_db);
+  const user = await UserModel.findOne({ isDeleted: false,
+                                          $or: [
+                                            { userId: inputUserId },
+                                            { activeSessions: inputSessionId }
+                                          ]
+                                        }).select('+_id +usage');
+
+  const      country = parsed.data.country.trim();
+  const     industry = parsed.data.industry?.trim();
   const businessName = parsed.data.businessName?.trim();
-  const location = parsed.data.location;
+  const     location = parsed.data.location;
   // const _sample_ownerId = new mongoose.Types.ObjectId();
-  const                         ACCESS_TOKEN_SECRET = crypto.randomBytes(32).toString('base64');
-  const END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY
-  const                 accessTokenSecretCipherText = await encrypt({    data: ACCESS_TOKEN_SECRET,
-                                                                      options: { secret: END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY }      });
 
-  const                         REFRESH_TOKEN_SECRET = crypto.randomBytes(64).toString('hex');
-  const END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY = process.env.END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY                                           
-  const                 refreshTokenSecretCipherText = await encrypt({ data: REFRESH_TOKEN_SECRET,
-                                                                    options: { secret: END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY }      });
-  
-  const         shopId = new mongoose.Types.ObjectId();
-  const SHOP_DB_PREFIX = process.env.SHOP_DB_PREFIX
-  const     shopDbName = SHOP_DB_PREFIX + shopId
+  const  accessTokenSecretCipherText = await encrypt({   data: crypto.randomBytes(32).toString('base64'),
+                                                      options: { secret: config.accessTokenSecretEncryptionKey  } });
 
-  const        VENDOR_DB_DEFAULT_URI = process.env.VENDOR_DB_DEFAULT_URI+'/'+shopDbName
-  const VENDOR_DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY
-  const              dbUriCipherText = await encrypt({     data: VENDOR_DB_DEFAULT_URI,
-                                                        options: { secret: VENDOR_DB_URI_ENCRYPTION_KEY }      });
+  const refreshTokenSecretCipherText = await encrypt({   data: crypto.randomBytes(64).toString('hex'),
+                                                      options: { secret: config.refreshTokenSecretEncryptionKey } });
 
-  const       ACCESS_TOKEN_EXPIRE_MINUTES = Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES)  || 30
-  const      REFRESH_TOKEN_EXPIRE_MINUTES = Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES) || 10080
-  const EMAIL_VERIFICATION_EXPIRE_MINUTES = Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRE_MINUTES)    || 10
-  const PHONE_VERIFICATION_EXPIRE_MINUTES = Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRE_MINUTES)    || 3
+  const     nextauthSecretCipherText = await encrypt({   data: crypto.randomBytes(32).toString('base64'),
+                                                      options: { secret: config.nextAuthSecretEncryptionKey     } });
+
+  const     shopId = new mongoose.Types.ObjectId();
+  const shopDbName = config.vendorDbPrefix + shopId
+
+  const dbUriCipherText = await encrypt({ data: config.vendorDbDefaultUri+'/'+ shopDbName,
+                                       options: { secret: config.vendorDbUriEncryptionKey } });
 
     try {
 
-          const auth_db = await authDbConnect()
           const ShopModel = shopModel(auth_db);
+
           const shop = await ShopModel.create([{
                                                   _id: shopId,
-                                             vendorId: ()=> cuid(),
+                                            //  vendorId: ()=> cuid(),
                                               ownerId: userSession?.userId,
                                     ownerLoginSession: userSession?.sessionId,
                                               country: country,
                                              industry: industry,
                                          businessName: businessName,
                                              location: location,
+
                                                dbInfo:  { provider: config.defaultVendorDbProvider,
                                                                uri: dbUriCipherText,
-                                                            prefix: SHOP_DB_PREFIX },
+                                                            prefix: config.vendorDbPrefix },
+
                                                  keys:  {    ACCESS_TOKEN_SECRET: accessTokenSecretCipherText,
                                                             REFRESH_TOKEN_SECRET: refreshTokenSecretCipherText,
+                                                                 NEXTAUTH_SECRET: nextauthSecretCipherText,
                                                       //  EMAIL_VERIFICATION_SECRET: emailVerificationCipherText
                                                         },
-                                      timeLimitations:  {
-                                                            EMAIL_VERIFICATION_EXPIRE_MINUTES,
-                                                            PHONE_VERIFICATION_EXPIRE_MINUTES,
-                                                            ACCESS_TOKEN_EXPIRE_MINUTES,
-                                                            REFRESH_TOKEN_EXPIRE_MINUTES                        
+                                      timeLimitations:  { ACCESS_TOKEN_EXPIRE_MINUTES: config.accessTokenDefaultExpireMinutes,
+                                                          REFRESH_TOKEN_EXPIRE_MINUTES: config.refreshTokenDefaultExpireMinutes,
+                                                          EMAIL_VERIFICATION_EXPIRE_MINUTES: config.emailVerificationDefaultExpireMinutes,
+                                                          PHONE_VERIFICATION_EXPIRE_MINUTES: config.phoneVerificationDefaultExpireMinutes
                                                         }
                                       }]);
+                        await UserModel.updateOne(  { _id: user._id },
+                                                    {
+                                                      $push: { shops: shop._id },
+                                                      $inc: { 'usage.shops': 1 }
+                                                    }
+                                                  );
+
         
       if(shop[0])
         return NextResponse.json({ message: "Shop created successfully", success: true, data: shop[0] }, { status: 201 })

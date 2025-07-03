@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 import { encrypt } from "@/lib/encryption/cryptoEncryption";
 import { setSession } from "@/lib/redis/helpers/session";
 import config from "../../../config";
+import sendSMS from "../mail/sendSMS";
 
 // Funcionality with database
 export async function getUserByIdentifier({ db, session, data }) {
@@ -110,14 +111,28 @@ export async function createUser({ db, session, data }) {
 
   const user = new UserModel(userData);
   const newUser = await user.save(session ? { session } : {});
-  const result = await sendEmail({
-    receiverEmail: email,
-    emailType: "VERIFY",
-    senderEmail: "no-reply@apidoxy.com",
-    token,
-  });
+  if (email) {
+    const result = await sendEmail({
+      receiverEmail: email,
+      emailType: "VERIFY",
+      senderEmail: "no-reply@apidoxy.com",
+      token,
+    });
 
-  console.log("Email sent successfully:", result.messageId);
+    console.log("Email sent successfully:", result.messageId);
+  }
+  if (phone && !email) {
+    const otp = userData.verification.phoneVerificationOTP;
+    const message = `Your Apidoxy verification code is: ${otp}. It will expire in ${config.phoneVerificationExpireMinutes} minutes.`;
+
+    const result = await sendSMS({
+      phone: phone,
+      message,
+    });
+
+    console.log("OTP sent successfully:", result.messageId);
+  }
+
   return newUser;
 }
 
@@ -363,7 +378,8 @@ function calculateLockTime(failedAttempts) {
     );
 
   return new Date(
-    Date.now() + Math.pow(2, failedAttempts - config.maxLoginAttempt) * 60 * 1000
+    Date.now() +
+      Math.pow(2, failedAttempts - config.maxLoginAttempt) * 60 * 1000
   );
 }
 
@@ -393,12 +409,17 @@ export async function generateAccessTokenWithEncryption({
   const accessTokenExpAt = new Date(Date.now() + expireMs);
 
   // Store data to redis memory
-  await setSession({ token: tokenId, data: { ...payload, userId, sessionId, role } });
+  await setSession({
+    token: tokenId,
+    data: { ...payload, userId, sessionId, role },
+  });
 
   let accessTokenCipherText;
   try {
-    accessTokenCipherText = await encrypt({    data: accessToken,
-                                            options: { secret: config.accessTokenEncryptionKey } });
+    accessTokenCipherText = await encrypt({
+      data: accessToken,
+      options: { secret: config.accessTokenEncryptionKey },
+    });
   } catch (err) {
     throw new Error("TOKEN_ENCRYPTION_FAILED");
   }
@@ -411,13 +432,15 @@ export async function generateAccessTokenWithEncryption({
 }
 
 export async function generateRefreshTokenWithEncryption() {
-  const          expireMs = config.refreshTokenExpireMinutes * 60 * 1000;
-  const      refreshToken = crypto.randomBytes(128).toString("hex");
+  const expireMs = config.refreshTokenExpireMinutes * 60 * 1000;
+  const refreshToken = crypto.randomBytes(128).toString("hex");
   const refreshTokenExpAt = new Date(Date.now() + expireMs).toISOString();
   let refreshTokenCipherText;
   try {
-    refreshTokenCipherText = await encrypt({ data: refreshToken,
-                                          options: { secret: config.refreshTokenEncryptionKey } });
+    refreshTokenCipherText = await encrypt({
+      data: refreshToken,
+      options: { secret: config.refreshTokenEncryptionKey },
+    });
   } catch (err) {
     throw new Error("REFRESH_TOKEN_ENCRYPTION_FAILED");
   }
@@ -430,19 +453,25 @@ export async function generateRefreshTokenWithEncryption() {
 }
 
 export async function generateTokenWithEncryption({ user, sessionId }) {
-  const { token: accessToken, expireAt: accessTokenExpAt } = createAccessToken({  user,
-                                                                                  sessionId,
-                                                                                  secret: config.accessTokenSecret,
-                                                                                  expire: config.accessTokenExpireMinutes,
-                                                                                });
+  const { token: accessToken, expireAt: accessTokenExpAt } = createAccessToken({
+    user,
+    sessionId,
+    secret: config.accessTokenSecret,
+    expire: config.accessTokenExpireMinutes,
+  });
 
-  const { token: refreshToken, expireAt: refreshTokenExpAt } = createRefreshToken({ expire: config.refreshTokenExpireMinutes });
+  const { token: refreshToken, expireAt: refreshTokenExpAt } =
+    createRefreshToken({ expire: config.refreshTokenExpireMinutes });
 
-  const  accessTokenCipherText = await encrypt({ data: accessToken,
-                                              options: { secret: config.accessTokenEncryptionKey } });
+  const accessTokenCipherText = await encrypt({
+    data: accessToken,
+    options: { secret: config.accessTokenEncryptionKey },
+  });
 
-  const refreshTokenCipherText = await encrypt({ data: refreshToken,
-                                              options: { secret: config.refreshTokenEncryptionKey } });
+  const refreshTokenCipherText = await encrypt({
+    data: refreshToken,
+    options: { secret: config.refreshTokenEncryptionKey },
+  });
   return {
     accessToken,
     accessTokenExpAt,
