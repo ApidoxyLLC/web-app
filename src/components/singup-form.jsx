@@ -262,7 +262,7 @@ export function SignUp({ className, ...props }) {
     const result = await signIn("otp-login", {
       redirect: false,
       phone: number, 
-      otp: otp,
+      otp: parseInt(otp, 10),
       fingerprint: fingerprint?.fingerprintId ,
       userAgent: fingerprint?.userAgent || "",
       timezone: fingerprint?.timezone || "",

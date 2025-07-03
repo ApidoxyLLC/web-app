@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import registerDTOSchema from "./registerDTOSchema";
 import { createUser, getUserByIdentifier } from "@/services/auth/user.service";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import { userModel } from "@/models/auth/User";
 
 export async function POST(request) {
   let body;
@@ -48,20 +49,54 @@ export async function POST(request) {
   const auth_db = await authDbConnect();
   const session = await auth_db.startSession();
 
+  console.log("Current Input phonenumber is :"+ phone)
   try {
-    session.startTransaction();
-    const existingUser = await getUserByIdentifier({
-      db: auth_db,
-      session,
-      data: { phone, email },
-    });
 
-    if (existingUser)
+const UserModel = await userModel(auth_db);
+let existingUser; 
+if(email){
+  existingUser = await UserModel.findOne({ email })
+                          .select( "+_id " +
+                                    "+security " +
+                                    "+security.password " +
+                                    "+security.failedAttempts " +
+                                    "+lock " +
+                                    "+lock.isLocked " +
+                                    "+lock.lockReason " +
+                                    "+lock.lockUntil " +
+                                    "+verification " +
+                                    "+isEmailVerified " +
+                                    "+isPhoneVerified " +
+                                    "+role "
+                                ) .lean();
+}
+if(phone){
+  existingUser = await UserModel.findOne({ phone })
+                        .select( "+_id " +
+                                  "+security " +
+                                  "+security.password " +
+                                  "+security.failedAttempts " +
+                                  "+lock " +
+                                  "+lock.isLocked " +
+                                  "+lock.lockReason " +
+                                  "+lock.lockUntil " +
+                                  "+verification " +
+                                  "+isEmailVerified " +
+                                  "+isPhoneVerified " +
+                                  "+role "
+                              ) .lean();
+}
+
+    console.log(existingUser)
+    if (existingUser){
+     
       return NextResponse.json(
         { error: "User already Exist" },
         { status: 409 }
       );
 
+    }
+    session.startTransaction();
     const user = await createUser({
       db: auth_db,
       session,
