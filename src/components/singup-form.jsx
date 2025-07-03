@@ -18,9 +18,23 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { FaFacebookF } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Label } from "./ui/label";
+import useFingerprint from "@/hooks/useFingerprint";
+import {  useState } from "react";
+import { signIn } from "next-auth/react";
 export function SignUp({ className, ...props }) {
   const router = useRouter();
+  const [showModal, setShowModal] = useState(false);
+  const [otp,setOtp] = useState('')
+  const [number,setNumber] = useState('')
+  const fingerprint = useFingerprint();
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -49,7 +63,8 @@ export function SignUp({ className, ...props }) {
       if (res.ok) {
         if (formData.email === "") {
           toast.success("OTP sent to your phone. Verify to continue.");
-          router.push(`/verify-phone?phone=${formData.phone}`);
+          setShowModal(true);
+          setNumber(phone)
         } else {
           toast.success(
             "Registration successful! Check your email to verify your account."
@@ -169,7 +184,7 @@ export function SignUp({ className, ...props }) {
                   </ControlGroup>
                 </div>
               </div>
-              <Button type="submit" className="w-full">
+              <Button  type="submit" className="w-full">
                 Sing Up
               </Button>
             </form>
@@ -226,6 +241,73 @@ export function SignUp({ className, ...props }) {
         <Link href="https://apidoxy.com/tos">Terms of Service</Link> and{" "}
         <Link href="https://apidoxy.com/privacy">Privacy Policy</Link>.
       </div>
+      <Dialog open={showModal}>
+        <DialogContent className="sm:max-w-[425px]">
+  <DialogHeader>
+    <DialogTitle>Phone Verification</DialogTitle>
+    <DialogDescription>
+      Please enter the 6-digit OTP sent to your phone number.
+    </DialogDescription>
+  </DialogHeader>
+
+  <form
+    onSubmit={ async (e) => {
+      e.preventDefault();
+      setShowModal(false);
+    if (!otp || otp.length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    const result = await signIn("otp-login", {
+      redirect: false,
+      phone: number, 
+      otp: otp,
+      fingerprint: fingerprint?.fingerprintId ,
+      userAgent: fingerprint?.userAgent || "",
+      timezone: fingerprint?.timezone || "",
+    });
+
+    if (result?.error) {
+      toast.error(`Login failed: ${result.error}`);
+    } else {
+      toast.success("Phone verified & login successful!");
+      // router.push("/dashboard"); 
+    }
+    }}
+    className="space-y-6"
+  >
+    <div className="grid gap-4">
+      <div className="grid gap-2">
+        <Label htmlFor="otp" className="text-sm font-medium">
+          OTP Code
+        </Label>
+        <InputOTP onChange={setOtp} maxLength={6} id="otp" name="otp">
+          <InputOTPGroup>
+            <InputOTPSlot index={0} />
+            <InputOTPSlot index={1} />
+            <InputOTPSlot index={2} />
+          </InputOTPGroup>
+          <InputOTPSeparator />
+          <InputOTPGroup>
+            <InputOTPSlot index={3} />
+            <InputOTPSlot index={4} />
+            <InputOTPSlot index={5} />
+          </InputOTPGroup>
+        </InputOTP>
+      </div>
+    </div>
+
+    <DialogFooter>
+      <DialogClose asChild>
+       
+      <Button type="submit">Verify</Button>
+      </DialogClose>
+    </DialogFooter>
+  </form>
+      </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

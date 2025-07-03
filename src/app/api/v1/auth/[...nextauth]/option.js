@@ -188,7 +188,9 @@ export const authOptions = {
                   userAgent: { label: 'user-agent',           type: 'text',     placeholder: 'Browser' },
                    timezone: { label: 'timezone',             type: 'text',     placeholder: 'Timezone' },
                 },
+                
             async authorize(credentials, req) {
+                console.log(credentials)
                 try {
                     // Input validations
                     const parsed = otpLoginDTOSchema.safeParse(credentials);

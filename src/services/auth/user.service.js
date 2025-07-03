@@ -85,6 +85,7 @@ export async function createUser({ db, session, data }) {
   const          token = crypto.randomBytes(32).toString("hex");
   const    hashedToken = crypto.createHash("sha256").update(token).digest("hex");
   const            otp = crypto.randomInt(100000, 999999).toString();
+  console.log("otp otp", otp)
   const      hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
   const userData = {
