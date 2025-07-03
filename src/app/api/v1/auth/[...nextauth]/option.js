@@ -196,7 +196,7 @@ export const authOptions = {
                     
                     // Rate Limit
                     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
-                    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
+                    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'otp-login' });
                     if (!allowed) return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
 
                     // Database connection 

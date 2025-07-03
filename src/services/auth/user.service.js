@@ -79,11 +79,13 @@ export async function createUser({ db, session, data }) {
   if (!data || typeof data !== "object") throw new Error("Invalid data format");
 
   const { name, email, phone, password } = data || {};
-  const UserModel = userModel(db);
-  const salt = await bcrypt.genSalt(14);
+  const      UserModel = userModel(db);
+  const           salt = await bcrypt.genSalt(14);
   const hashedPassword = await bcrypt.hash(password, salt);
-  const token = crypto.randomBytes(32).toString("hex");
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const          token = crypto.randomBytes(32).toString("hex");
+  const    hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const            otp = crypto.randomInt(100000, 999999).toString();
+  const      hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
   const userData = {
     name,
@@ -97,9 +99,7 @@ export async function createUser({ db, session, data }) {
       }),
       ...(phone &&
         !email && {
-          phoneVerificationOTP: Math.floor(
-            100000 + Math.random() * 900000
-          ).toString(),
+          phoneVerificationOTP: hashedOtp,
           phoneVerificationOTPExpiry: new Date(
             Date.now() + config.phoneVerificationExpireMinutes * 60 * 1000
           ).getTime(),
@@ -122,7 +122,6 @@ export async function createUser({ db, session, data }) {
     console.log("Email sent successfully:", result.messageId);
   }
   if (phone && !email) {
-    const otp = userData.verification.phoneVerificationOTP;
     const message = `Your Apidoxy verification code is: ${otp}. It will expire in ${config.phoneVerificationExpireMinutes} minutes.`;
 
     const result = await sendSMS({

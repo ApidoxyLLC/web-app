@@ -13,7 +13,7 @@ const VerificationSchema = new mongoose.Schema({
   emailVerificationTokenExpiry: { type: Number, default: undefined, select: false  },
   // isPhoneVerified: { type: Boolean, default: undefined },
   phoneVerificationOTP: { type: String, default: undefined, select: false  },
-  phoneVerificationOTPExpiry: { type: Date, default: undefined, select: false  },
+  phoneVerificationOTPExpiry: { type: Number, default: undefined, select: false  },
   otpAttempts: { type: Number, default: 0 },
 }, { _id: false });
 
