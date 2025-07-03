@@ -336,7 +336,7 @@ export const authOptions = {
                                 };
                     } catch (error) {
                         console.log(error)
-                        await auth_db_session.abortTransaction()                    
+                        await auth_db_session.abortTransaction()
                         console.error("Login failed:", error);
                         throw new Error("Authentication failed")
                     }finally {
