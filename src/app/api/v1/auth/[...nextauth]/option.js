@@ -84,7 +84,7 @@ export const authOptions = {
 
                         const { accessToken,
                                 accessTokenExpAt,
-                                accessTokenCipherText  }  = await generateAccessTokenWithEncryption({ user, sessionId, userId: user._id, role: user.role})
+                                accessTokenCipherText  }  = await generateAccessTokenWithEncryption({ user, sessionId, userId: user.userId, role: user.role})
 
                         const { refreshToken,
                                 refreshTokenExpAt,
@@ -152,6 +152,7 @@ export const authOptions = {
 
                             return {   email: user.email,
                                        phone: user.phone,
+                                      userId: user.userId, 
                                     username: user.username,
                                         name: user.name,
                                 loginSession: sessionId,
@@ -261,7 +262,7 @@ export const authOptions = {
                         
                         const { accessToken,
                                 accessTokenExpAt,
-                                accessTokenCipherText   }  = await generateAccessTokenWithEncryption({ user, sessionId})
+                                accessTokenCipherText   }  = await generateAccessTokenWithEncryption({ user, sessionId, userId: user.userId })
 
                         const { refreshToken,
                                 refreshTokenExpAt,
@@ -321,6 +322,7 @@ export const authOptions = {
 
                         return {       email: user.email,
                                        phone: user.phone,
+                                      userId: user.userId,
                                     username: user.username,
                                         name: user.name,
                                 loginSession: sessionId,
@@ -333,6 +335,7 @@ export const authOptions = {
                                                        user?.isPhoneVerified  )
                                 };
                     } catch (error) {
+                        console.log(error)
                         await auth_db_session.abortTransaction()                    
                         console.error("Login failed:", error);
                         throw new Error("Authentication failed")
@@ -404,6 +407,7 @@ export const authOptions = {
                                                                       { [`oauth.${account.provider}.id`]: profile.id } ] })
                                                     .select('+_id +role +activeSessions')                  
                                                     .lean();
+                let userPrimaryId;                                                    
                 let userId;
                 let    userRole = ['user'];
                 const sessionId = new mongoose.Types.ObjectId();
@@ -421,9 +425,14 @@ export const authOptions = {
                                    security: { password: null } };
 
                     const createdUser = await UserModel.create([newUser], { session: auth_db_session });
-                               userId = createdUser[0]._id;
+                            if(createdUser[0]._id) {
+                                userPrimaryId = createdUser[0]._id;
+                                userId = createdUser[0].userId;                                
+                            }
+                            
                 } else {
-                    userId = existingUser._id;
+                    userPrimaryId = existingUser._id;
+                    userId = existingUser.userId;
                   userRole = existingUser.role;
                 }
                 
@@ -433,7 +442,7 @@ export const authOptions = {
 
                 const { accessToken,
                         accessTokenExpAt,
-                        accessTokenCipherText   }  = await generateAccessTokenWithEncryption({ user, sessionId})
+                        accessTokenCipherText   }  = await generateAccessTokenWithEncryption({ user, sessionId, userId })
 
                 const { refreshToken,
                         refreshTokenExpAt,
@@ -444,7 +453,7 @@ export const authOptions = {
                 const ipAddressCipherText = await encrypt({ data: ip, options: { secret: config.ipAddressEncryptionKey } });
                 const LoginHistory = loginHistoryModel(auth_db);
 
-                await Promise.all([ UserModel.updateOne( { _id: userId },
+                await Promise.all([ UserModel.updateOne( { _id: userPrimaryId },
                                                          { $set: { 
                                                                     [`oauth.${account.provider}`]: { id: profile.id,
                                                                                             accessToken: account.access_token,
@@ -456,7 +465,7 @@ export const authOptions = {
                                                             }, { session: auth_db_session } ),
 
                                     SessionModel.create([{ _id: sessionId,
-                                                               userId,
+                                                               userId: userPrimaryId,
                                                              provider: account.provider,
                                                           accessToken: accessTokenCipherText,
                                                  accessTokenExpiresAt: accessTokenExpAt,
@@ -473,7 +482,7 @@ export const authOptions = {
                                                                  providerTokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null    }
                                                         }], { session: auth_db_session }),
                                                   
-                                    LoginHistory.create([{ userId: user._id,
+                                    LoginHistory.create([{ userId: userPrimaryId,
                                                        sessionId,
                                                         provider: account.provider,
                                                      fingerprint: null,
@@ -485,12 +494,13 @@ export const authOptions = {
                     const allSessionIds = [...new Set([...sessionIds, sessionId.toString()])];
                     const keepIds = allSessionIds.slice(-config.maxSessionsAllowed);
  
-                    await SessionModel.deleteMany( { userId, _id: { $nin: keepIds }, },
+                    await SessionModel.deleteMany( { userId: userPrimaryId, _id: { $nin: keepIds }, },
                         { session: auth_db_session });
                 }
 
                 await auth_db_session.commitTransaction();
                     user.loginSession = sessionId;
+                          user.userId = userId;
                         user.provider = account.provider;
                      user.accessToken = accessToken;
                 user.accessTokenExpAt = accessTokenExpAt;
@@ -517,6 +527,7 @@ export const authOptions = {
             const { token, user, account, profile } = params
             // console.log(token)
             if (user) {
+                token.userId            = user.userId
                 token.accessToken       = user.accessToken;
                 token.accessTokenExpAt  = user.accessTokenExpAt;
                 token.refreshToken      = user.refreshToken;
