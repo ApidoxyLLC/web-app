@@ -8,7 +8,6 @@ import crypto from 'crypto';
 const schema = z.object({ token: z.string(),
                     fingerprint: z.string().length(32, 'Invalid fingerprint ID length').optional()
                   });
-
 export async function POST(request) {  
   let body;
   try { body = await request.json(); } 
