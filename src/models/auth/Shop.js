@@ -117,7 +117,8 @@ const dbSchema = new mongoose.Schema({
 const keySchema = new mongoose.Schema({
            ACCESS_TOKEN_SECRET: { type: String, required: true },
           REFRESH_TOKEN_SECRET: { type: String, required: true }, 
-     EMAIL_VERIFICATION_SECRET: { type: String, required: true },
+               NEXTAUTH_SECRET: { type: String, required: true },
+    //  EMAIL_VERIFICATION_SECRET: { type: String, required: true },
   //  ACCESS_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || 15 ) }, 
   // REFRESH_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || 10080) }, 
 

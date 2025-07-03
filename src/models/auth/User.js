@@ -64,6 +64,11 @@ const shopSchema = new mongoose.Schema({
   dbNamePrefix: { type: String, default: process.env.APP_DB_PREFIX || 'app_db_' }
 }, { _id: false });
 
+const oauthSchema = new mongoose.Schema({
+    google: { type: OAuthProviderSchema },
+  facebook: { type: OAuthProviderSchema }
+}, { _id: false });
+
 const usageSchema = new mongoose.Schema({
          customDomains: { type: Number, default: 0 },
             subDomains: { type: Number, default: 0 },
@@ -87,11 +92,6 @@ const usageSchema = new mongoose.Schema({
             staffUsers: { type: Number, default: 0 },
               products: { type: Number, default: 0 },
          monthlyOrders: { type: Number, default: 0 },
-}, { _id: false });
-
-const oauthSchema = new mongoose.Schema({
-    google: { type: OAuthProviderSchema },
-  facebook: { type: OAuthProviderSchema }
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({

@@ -7,7 +7,7 @@ import { subscriptionPlanModel } from "@/models/subscription/SubscriptionPlan";
 
 // Pagination constants
 const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 20;
+const DEFAULT_LIMIT = 8;
 const MAX_LIMIT = 100;
 
 export async function POST(request, response) {  
@@ -16,7 +16,6 @@ export async function POST(request, response) {
     // pls.. put authentication logic to nextjs middleware 
 
     // 2. Check Authorization
-
     // 3. validate input 
     let body;
     try     { body = await request.json(); } 

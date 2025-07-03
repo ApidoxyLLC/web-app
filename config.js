@@ -28,6 +28,10 @@ const config = {
   accessTokenEncryptionKey: process.env.ACCESS_TOKEN_ENCRYPTION_KEY,
   refreshTokenEncryptionKey: process.env.REFRESH_TOKEN_ENCRYPTION_KEY,
   ipAddressEncryptionKey: process.env.IP_ADDRESS_ENCRYPTION_KEY,
+    // end user keys
+  accessTokenSecretEncryptionKey: process.env.ACCESS_TOKEN_SECRET_ENCRYPTION_KEY,
+  refreshTokenSecretEncryptionKey: process.env.REFRESH_TOKEN_SECRET_ENCRYPTION_KEY,
+  nextAuthSecretEncryptionKey: process.env.NEXTAUTH_SECRET_SECRET_ENCRYPTION_KEY,
 
   // time durations limitations
   accessTokenExpireMinutes: Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15'),
@@ -36,9 +40,18 @@ const config = {
   emailVerificationExpireMinutes: Number(process.env.EMAIL_VERIFICATION_EXPIRE_MINUTES || '15'),
   phoneVerificationExpireMinutes: Number(process.env.PHONE_VERIFICATION_EXPIRE_MINUTES || '3'),
 
+  // end user default durations limitations
+  accessTokenDefaultExpireMinutes: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || '30'),
+  refreshTokenDefaultExpireMinutes: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || '10080'),
+  emailVerificationDefaultExpireMinutes: Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRE_MINUTES || '10'),
+  phoneVerificationDefaultExpireMinutes: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRE_MINUTES || '3'),
 
   // 
-  defaultVendorDbProvider: process.env.VENDOR_DEFAULT_DB_PROVIDER
+  defaultVendorDbProvider: process.env.VENDOR_DEFAULT_DB_PROVIDER,
+  vendorDbDefaultUri: process.env.VENDOR_DB_DEFAULT_URI,
+  vendorDbUriEncryptionKey: process.env.VENDOR_DB_URI_ENCRYPTION_KEY,
+  vendorDbPrefix: process.env.VENDOR_DB_PREFIX
+
 
 };
 export default config
