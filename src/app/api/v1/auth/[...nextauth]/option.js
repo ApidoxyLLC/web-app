@@ -3,7 +3,7 @@ import loginDTOSchema from './loginDTOSchema';
 import otpLoginDTOSchema from './otpLoginDTOSchema';
 import mongoose from 'mongoose';
 import { encrypt } from '@/lib/encryption/cryptoEncryption';
-import { checkLockout, checkVerification } from '@/services/auth/user.service';
+// import { checkLockout, checkVerification } from '@/services/auth/user.service';
 import { loginHistoryModel } from '@/models/auth/LoginHistory';
 import { userModel } from '@/models/auth/User';
 import { sessionModel } from '@/models/auth/Session';
@@ -13,7 +13,7 @@ import authDbConnect from '@/lib/mongodb/authDbConnect';
 import crypto from 'crypto'; 
 import cuid from '@bugsnag/cuid';
 import tokenRefresh from '../utils/tokenRefresh';
-import { generateAccessTokenWithEncryption, generateRefreshTokenWithEncryption } from '@/services/auth/user.service';
+// import { generateAccessTokenWithEncryption, generateRefreshTokenWithEncryption } from '@/services/auth/user.service';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import config from '../../../../../../config';
 import getUserByIdentifier from '@/services/user/getUserByIdentifier';
@@ -23,6 +23,8 @@ import { setSession } from '@/lib/redis/helpers/session';
 import moment from 'moment-timezone';
 import getUserByPhone from '@/services/user/getUserByPhone';
 import getUserByEmail from '@/services/user/getUserByEmail';
+import handleSuccessfulLogin from '@/services/user/handleSuccessfulLogin';
+
 
 
 export const authOptions = {
@@ -47,7 +49,7 @@ export const authOptions = {
                     // Rate Limit
                     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
                     const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
-                    if (!allowed) return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
+                    if (!allowed) return null;                    
 
                     if (!['email', 'phone', 'username'].includes(identifierName)) 
                             throw new Error("Unsupported identifier type");
@@ -69,10 +71,10 @@ export const authOptions = {
                     const passwordVerification = await verifyPassword({ payload:{ user, password } })
                     if(!passwordVerification?.status) return null
                     
-                    if( (identifier === user.email && !user.isEmailVerified) || 
-                        (identifier === user.phone && !user.isPhoneVerified) || 
-                        (identifier === user.username && !(user.isEmailVerified  || user.isPhoneVerified))) 
-                        return null;
+                    const notVerified = (identifierName === 'email' && !user.isEmailVerified) ||
+                                        (identifierName === 'phone' && !user.isPhoneVerified) ||
+                                        (identifierName === 'username' && !(user.isEmailVerified || user.isPhoneVerified));
+                    if (notVerified) return null;
 
 
                         const        auth_db = await authDbConnect();
@@ -82,94 +84,38 @@ export const authOptions = {
                         const auth_db_session = await auth_db.startSession(sessionOptions);
                               auth_db_session.startTransaction()
                     try {
-                        const      sessionId = new mongoose.Types.ObjectId();
-                        const        Session = sessionModel(auth_db)
-                        const   LoginHistory = loginHistoryModel(auth_db)
-                        const           User = userModel(auth_db)
-
                         const { accessToken,
                                 refreshToken,
-                                tokenId,
+                                sessionId,
                                 accessTokenExpiry,
-                                refreshTokenExpiry,
-                                refreshTokenCipherText } = await generateToken({ user, sessionId });
-
-                        const   ipAddressCipherText = await encrypt({    data: ip,
-                                                                      options: { secret: config.ipAddressEncryptionKey }});
-                        const userUpdate = { $set: { "security.failedAttempts": 0,
-                                                     "lock.lockUntil": null,
-                                                     "security.lastLogin": new Date(),
-                                                     ...(timezone && !user.timezone && (moment.tz.zone(timezone) !== null) && { timezone })
-                                                },
-                                             $push: {
-                                                    activeSessions: {
-                                                                        $each: [sessionId],
-                                                                        $slice: -config.maxSessionsAllowed
-                                                                    }
-                                                }
-                                        };
-
-                        const sessionPayload = {      _id: sessionId,
-                                                   userId: user._id,
-                                                 provider: 'local-'+identifierName,
-                                              fingerprint,
-                                                  tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
-                                        accessTokenExpiry,
-                                             refreshToken: refreshTokenCipherText,
-                                       refreshTokenExpiry,
-                                                     role: user.role,
-                                                       ip: ipAddressCipherText,
-                                                 userAgent,
-                                                  timezone,               }
-                                                        
-                        const loginHistoryPayload = { userId: user._id,
-                                                   sessionId,
-                                                    provider: 'local-'+identifierName,
-                                                 fingerprint,
-                                                          ip: ipAddressCipherText,
-                                                    userAgent }
-
-                        const promiseArray = [  setSession({ sessionId,
-                                                               tokenId,
-                                                               payload: { sub: user.referenceId, 
-                                                                         role: user.role         }}),
-
-                                                Session.create([sessionPayload], 
-                                                          { session: auth_db_session }),
-
-                                                   User.updateOne({ _id: user._id },
-                                                             userUpdate,
-                                                              { session: auth_db_session }),
-
-                                           LoginHistory.create([loginHistoryPayload],  
-                                                               { session: auth_db_session })]
-                        await Promise.all(promiseArray);
-
-                        /** *********************Temporary Execution of function********************* **/
-                        /**   This operation need transfer into corn job/ this will done in future    **/
-                        const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
-                        await Session.deleteMany({ userId: user._id,
-                                                    _id: { $nin: updatedUser.activeSessions }
-                                                }, { session: auth_db_session });
-                        /** ########################################################################## **/
-
+                                user: updateUser } = await handleSuccessfulLogin({       user, 
+                                                                                    loginType: 'password', 
+                                                                                     provider: 'local-'+identifierName, 
+                                                                               identifierName, 
+                                                                                           ip, 
+                                                                                    userAgent, 
+                                                                                     timezone, 
+                                                                                  fingerprint,
+                                                                                      session: auth_db_session,
+                                                                                 oauthProfile: null })
                         await auth_db_session.commitTransaction();
-                        return { ...(updatedUser.email     && {    email: updatedUser.email     }),
-                                 ...(updatedUser.phone     && {    phone: updatedUser.phone     }),
-                                 ...(updatedUser.name      && {     name: updatedUser.name      }),                                     
-                                 ...(updatedUser.avatar    && {   avatar: updatedUser.avatar    }),                                    
-                                     sub: updatedUser.referenceId,
+                        return { ...(user.email     && {    email: user.email     }),
+                                 ...(user.phone     && {    phone: user.phone     }),
+                                 ...(user.name      && {     name: user.name      }),                                     
+                                 ...(user.avatar    && {   avatar: user.avatar    }),                                    
+                                     sub: user.referenceId,
                                  session: sessionId,
                              accessToken: accessToken,
+                       accessTokenExpiry,
                             refreshToken: refreshToken,
                                 provider: 'local-'+identifierName,
                                     role: user.role,
                               isVerified: Boolean(user?.isEmailVerified ||
                                                     user?.isPhoneVerified),
-                                  locals: { ...(updatedUser.timezone  && { timezone: updatedUser.timezone  }),
-                                            ...(updatedUser.theme     && {    theme: updatedUser.theme     }),
-                                            ...(updatedUser.language  && { language: updatedUser.language  }),
-                                            ...(updatedUser.currency  && { currency: updatedUser.currency  })   }
+                                  locals: { ...(updateUser.timezone  && { timezone: updateUser.timezone  }),
+                                            ...(user.theme           && {    theme: user.theme     }),
+                                            ...(user.language        && { language: user.language  }),
+                                            ...(user.currency        && { currency: user.currency  })   }
                             };
                     } catch (error) {
                         await auth_db_session.abortTransaction()                    
@@ -205,8 +151,7 @@ export const authOptions = {
                     // Rate Limit
                     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
                     const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'otp-login' });
-                    if (!allowed) return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
-
+                    if (!allowed) return null;
                     // Database connection 
                     
                     
@@ -251,95 +196,40 @@ export const authOptions = {
                     const auth_db_session = await auth_db.startSession(sessionOptions);
                           auth_db_session.startTransaction()
                     try {                                        
-                        const    sessionId = new mongoose.Types.ObjectId();                  
-                        const LoginHistory = loginHistoryModel(auth_db)
-                        const      Session = sessionModel(auth_db)
 
                         const { accessToken,
                                 refreshToken,
-                                tokenId,
+                                sessionId,
                                 accessTokenExpiry,
-                                refreshTokenExpiry,
-                                refreshTokenCipherText } = await generateToken({ user, sessionId });
-
-                        const   ipAddressCipherText = await encrypt({    data: ip,
-                                                                      options: { secret: config.ipAddressEncryptionKey }     });
-
-                        const userUpdate = { $set: {
-                                                    "security.failedAttempts": 0,
-                                                             "lock.lockUntil": null,
-                                                         "security.lastLogin": new Date(),
-                                                            "isPhoneVerified": true,
-                                                    ...(timezone && !user.timezone && (moment.tz.zone(timezone) !== null) && { timezone })
-                                                },
-                                             $push: {
-                                                    activeSessions: {
-                                                                        $each: [sessionId],
-                                                                        $slice: -config.maxSessionsAllowed
-                                                                    }
-                                                }
-                                            };
-                        const sessionPayload = {      _id: sessionId,
-                                                   userId: user._id,
-                                                 provider: 'local-phone',
-                                              fingerprint,
-                                                  tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
-                                        accessTokenExpiry,
-                                             refreshToken: refreshTokenCipherText,
-                                       refreshTokenExpiry,
-                                                     role: user.role,
-                                                       ip: ipAddressCipherText,
-                                                 userAgent,
-                                                  timezone               }
-                                    
-                        const loginHistoryPayload = { userId: user._id,
-                                                   sessionId,
-                                                    provider: 'local-phone',
-                                                 fingerprint,
-                                                          ip: ipAddressCipherText,
-                                                    userAgent }
-                        const promiseArray = [  setSession({ sessionId,
-                                                               tokenId,
-                                                               payload: { sub: user.referenceId, 
-                                                                         role: user.role         }}),
-
-                                                Session.create([sessionPayload], 
-                                                          { session: auth_db_session }),
-
-                                                   User.updateOne({ _id: user._id },
-                                                             userUpdate,
-                                                              { session: auth_db_session }),
-
-                                           LoginHistory.create([loginHistoryPayload],  
-                                                               { session: auth_db_session })]                                                       
-                        await Promise.all(promiseArray);
-
-                        /** *********************Temporary Execution of function********************* **/
-                        /**   This operation need transfer into corn job/ this will done in future    **/
-                        const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
-                        await Session.deleteMany({ userId: user._id,
-                                                    _id: { $nin: updatedUser.activeSessions }
-                                                }, { session: auth_db_session });
-                        /** ########################################################################## **/
-
+                                user: updateUser } = await handleSuccessfulLogin({       user, 
+                                                                                    loginType: 'otp', 
+                                                                                     provider: 'local-phone', 
+                                                                               identifierName: 'phone', 
+                                                                                           ip, 
+                                                                                    userAgent, 
+                                                                                     timezone, 
+                                                                                  fingerprint,
+                                                                                      session: auth_db_session,
+                                                                                 oauthProfile: null })
                         await auth_db_session.commitTransaction();
 
 
-                        return { ...(updatedUser.email     && {    email: updatedUser.email     }),
-                                 ...(updatedUser.phone     && {    phone: updatedUser.phone     }),
-                                 ...(updatedUser.name      && {     name: updatedUser.name      }),                                     
-                                 ...(updatedUser.avatar    && {   avatar: updatedUser.avatar    }),                                    
-                                     sub: updatedUser.referenceId,
+                        return { ...(user.email     && {    email: user.email     }),
+                                 ...(user.phone     && {    phone: user.phone     }),
+                                 ...(user.name      && {     name: user.name      }),                                     
+                                 ...(user.avatar    && {   avatar: user.avatar    }),                                    
+                                     sub: user.referenceId,
                                  session: sessionId,
                              accessToken: accessToken,
+                       accessTokenExpiry,
                             refreshToken: refreshToken,
                                 provider: 'local-phone',
                                     role: user.role,
                               isVerified: true,
-                                  locals: { ...(updatedUser.timezone  && { timezone: updatedUser.timezone  }),
-                                            ...(updatedUser.theme     && {    theme: updatedUser.theme     }),
-                                            ...(updatedUser.language  && { language: updatedUser.language  }),
-                                            ...(updatedUser.currency  && { currency: updatedUser.currency  })   }
+                                  locals: { ...(updateUser.timezone && { timezone: updateUser.timezone  }),
+                                            ...(user.theme          && {    theme: user.theme           }),
+                                            ...(user.language       && { language: user.language        }),
+                                            ...(user.currency       && { currency: user.currency        })   }
                             };
                     } catch (error) {
                         await auth_db_session.abortTransaction()                    
@@ -401,15 +291,16 @@ export const authOptions = {
     // signIn({ user, account, profile, email, credentials }, req)
 
     callbacks: {
+        async signIn({ user, account, profile }, req) {
 
-        async signIn({ account, profile }, req) {
+            const timezone = req?.headers['x-timezone'] || null;
+            const fingerprint = req?.headers['x-fingerprint'] || null;
             if (account.provider === 'google' || account.provider === 'facebook') {
                 // Rate Limit
                 const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
                 const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
-                if (!allowed) return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
+                if (!allowed) return null;                
                 const userAgent = req?.headers['user-agent'] || '';
-
 
                 const sessionOptions = { readPreference: 'primary',
                                             readConcern: { level: 'local' },
@@ -421,21 +312,21 @@ export const authOptions = {
                 await auth_db_session.startTransaction();
 
                 try {
-                    let user = null;
-                        user = await getUserByEmail({ email: profile.email, 
+                    let _user = null;
+                        _user = await getUserByEmail({ email: profile.email, 
                                                     fields: ['lock', 'verification', 'oauth', '+activeSessions', '+email', '+name', '+phone', '+username', '+avatar', 'role', '+theme', '+language', '+currency'] })
 
-                    if (!user) {
+                    if (!_user) {
                         // create a new user
                         const payload = { email: profile.email,
-                                        name: profile.name || '',
-                                        avatar: account.provider === 'google' 
+                                           name: profile.name || '',
+                                         avatar: account.provider === 'google' 
                                                             ? profile.picture 
                                                             : account.provider === 'facebook' 
                                                                 ? profile.picture.data.url
                                                                 : null,
-                                    username: profile.email?.split('@')[0] || cuid(),
-                                       oauth: { [account.provider]: { id: account.provider === 'google' ? profile.sub : profile.id,
+                                       username: profile.email?.split('@')[0] || cuid(),
+                                          oauth: { [account.provider]: { id: account.provider === 'google' ? profile.sub : profile.id,
                                                                 accessToken: account.access_token,
                                                                refreshToken: account.refresh_token,
                                                              tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null }  },
@@ -443,111 +334,54 @@ export const authOptions = {
                                         role: ['user'] };
 
                         const query = new User(payload);
-                        user = await query.save({ session: auth_db_session });
+                        _user = await query.save({ session: auth_db_session });
                     } 
-                    if(!user) throw new Error('Something went wrong...');
-                    if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
-                            const retryAfter = Math.ceil((user.lock.lockUntil - Date.now()) / 1000);
+                    if(!_user) throw new Error('Something went wrong...');
+                    if (_user.lock?.lockUntil && _user.lock.lockUntil > Date.now()) {
+                            const retryAfter = Math.ceil((_user.lock.lockUntil - Date.now()) / 1000);
                             throw new Error(`Account temporarily locked, try again in ${retryAfter}`);
                         }
 
                     // check unmatch with previous same provider login
                     // not for new user only for user previously login with same provider 
                     if((account.provider === 'google'
-                            && user.oauth.google.id 
-                                && user.oauth.google.id != profile.sub) ||
+                            && _user.oauth.google.id 
+                                && _user.oauth.google.id != profile.sub) ||
                         (account.provider === 'facebook' 
-                            && user.oauth.facebook.id 
-                                && user.oauth.facebook.id != profile.id)) return null 
-
-
-                    const sessionId = new mongoose.Types.ObjectId();
-                    const        Session = sessionModel(auth_db)
-                    const   LoginHistory = loginHistoryModel(auth_db)
+                            && _user.oauth.facebook.id 
+                                && _user.oauth.facebook.id != profile.id)){ console.log(`OAuth ID mismatch for user ${user._id}`); return false};
 
                     const { accessToken,
-                            refreshToken,
-                            tokenId,
-                            accessTokenExpiry,
-                            refreshTokenExpiry,
-                            refreshTokenCipherText } = await generateToken({ user, sessionId });
-                    const   ipAddressCipherText = await encrypt({    data: ip,
-                                                                options: { secret: config.ipAddressEncryptionKey }});
+                           refreshToken,
+                              sessionId,
+                      accessTokenExpiry,
+                                   user: updateUser } = await handleSuccessfulLogin({    user: _user, 
+                                                                                    loginType: 'oauth', 
+                                                                                     provider: account.provider, 
+                                                                               identifierName: 'email', 
+                                                                                           ip, 
+                                                                                    userAgent, 
+                                                                                     timezone, 
+                                                                                  fingerprint,
+                                                                                      session: auth_db_session,
+                                                                                 oauthProfile: account })
 
-                    const userUpdate = { $set: { "security.failedAttempts": 0,
-                                                     "lock.lockUntil"     : null,
-                                                 "security.lastLogin"     : new Date(),
-                                                ...(account.provider && ((account.provider === 'google' && !user.oauth.google) || (account.provider === 'facebook' && !user.oauth.facebook))
-                                                                        ({
-                                                                            [`oauth.${account.provider}`]: {
-                                                                                                                            id: account.provider === 'google' ? profile.sub : profile.id,
-                                                                                                                   accessToken: account.access_token,
-                                                                                                                  refreshToken: account.refresh_token,
-                                                                                                                tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null
-                                                                                                            }
-                                                                        }))
-                                                },
-                                        $push: { activeSessions: {
-                                                                    $each: [sessionId],
-                                                                   $slice: -config.maxSessionsAllowed
-                                                                }
-                                                }
-                                        };
 
-                    const sessionPayload = {   _id: sessionId,
-                                            userId: user._id,
-                                          provider: 'local-'+identifierName,
-                                           tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
-                                 accessTokenExpiry,
-                                      refreshToken: refreshTokenCipherText,
-                                refreshTokenExpiry,
-                                              role: user.role,
-                                                ip: ipAddressCipherText,
-                                         userAgent,
-                                          timezone,               }
 
-                    const loginHistoryPayload = { userId: user._id,
-                                               sessionId,
-                                                provider: 'local-'+identifierName,
-                                                      ip: ipAddressCipherText,
-                                               userAgent                        }
 
-                    const promiseArray = [  setSession({ sessionId,
-                                                                tokenId,
-                                                                payload: { sub: user.referenceId, 
-                                                                            role: user.role         }}),
-
-                                            Session.create([sessionPayload], 
-                                                            { session: auth_db_session }),
-
-                                            User.updateOne({ _id: user._id },
-                                                                userUpdate,
-                                                            { session: auth_db_session }),
-
-                                    LoginHistory.create([loginHistoryPayload],  
-                                                        { session: auth_db_session })]
-                                            await Promise.all(promiseArray);
-
-                    /** *********************Temporary Execution of function********************* **/
-                    /**   This operation need transfer into corn job/ this will done in future    **/
-                    const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
-                    await Session.deleteMany({ userId: user._id,
-                                                _id: { $nin: updatedUser.activeSessions }
-                                            }, { session: auth_db_session });
-                    /** ########################################################################## **/
                     await auth_db_session.commitTransaction();
-
-
-                        user.loginSession = sessionId;
+                                 user.sub = _user.referenceId;
+                             user.session = sessionId;
                             user.provider = account.provider;
-                        user.accessToken = accessToken;
-                user.accessTokenExpiry = accessTokenExpiry;
+                         user.accessToken = accessToken;
+                   user.accessTokenExpiry = accessTokenExpiry;
                         user.refreshToken = refreshToken;
-                                user.role = updatedUser.role;
-                                user.name = profile.name;
+                                user.role = updateUser.role;
+                                user.name = profile.name || '';
                             user.username = profile.email?.split('@')[0] || profile.id;
-                            user.email = profile.email;
-                        user.isVerified = true;
+                               user.email = profile.email;
+                               user.phone = _user.phone || '';
+                          user.isVerified = true;
 
                     return true;
                 } catch (err) {
@@ -559,17 +393,17 @@ export const authOptions = {
                 }
             }
 
-            if (account.provider === 'credentials') return true;
-            else return false 
+            return account.provider === 'credentials';
         },
         async jwt(params) {
             const { token, user, account, profile } = params
             // console.log(token)
             if (user) {
+                token.sub               = user.sub;
                 token.accessToken       = user.accessToken;
-                token.accessTokenExpAt  = user.accessTokenExpAt;
+                token.accessTokenExpiry = user.accessTokenExpiry;
                 token.refreshToken      = user.refreshToken;
-                token.loginSession      = user.loginSession;
+                token.session           = user.session;
                 token.username          = user?.username        || ''; /* optional fields */
                 token.name              = user?.name            || '';
                 token.email             = user?.email           || '';
@@ -577,26 +411,22 @@ export const authOptions = {
                 token.role              = user.role             || '';
                 token.isVerified        = user.isVerified       || false;
                 token.provider          = user.provider;
+                token.locals            = user.locals || {};
             }
 
             const accessTokenExpire_ms  = new Date(token.accessTokenExpAt).getTime()
 
-            if(Date.now() < accessTokenExpire_ms)
-                return token;            
+            if(Date.now() < token.accessTokenExpiry)
+                return token;   
+                 
 
             try {
-                const newTokens  = await tokenRefresh({                    token, 
-                                                               accessTokenSecret: config.accessTokenSecret, 
-                                                                 refreshTokenKey: config.refreshTokenEncryptionKey,
-                                                               accessTokenExpire: config.accessTokenExpireMinutes,
-                                                              refreshTokenExpire: config.refreshTokenExpireMinutes
-                                                            })
+                const newTokens  = await tokenRefresh({ token })
                 if(!newTokens) return null
-                        
-              token.accessToken      = newTokens.accessToken;
-              token.accessTokenExpAt = newTokens.accessTokenExpAt;
-              token.refreshToken     = newTokens.refreshToken;
-              return token 
+                token.accessToken      = newTokens.accessToken;
+                token.accessTokenExpiry = newTokens.accessTokenExpiry;
+                token.refreshToken     = newTokens.refreshToken;
+                return token 
             } catch (error) {
                 console.error("Token refresh failed:", error);
                 return null
@@ -604,9 +434,6 @@ export const authOptions = {
         },
         async session(params) {
             const { session, token } = params
-            // console.log(session)
-            // session.user.id = token.id;
-            // session.user.isVerified = token.isVerified;
 
             if (token) {
                 session.user = {        
@@ -617,10 +444,8 @@ export const authOptions = {
                       role: token.role,
                 isVerified: token.isVerified,
                   provider: token.provider,
+                     local: token.local || {}
                 };                
-                // session.accessToken = token.accessToken;
-                // session.accessTokenExpAt = token.accessTokenExpAt;
-                // session.refreshToken = token.refreshToken;
             }
             return session;            
         }
@@ -645,6 +470,315 @@ export const authOptions = {
     secret: config.nextAuthSecret,
     debug: process.env.NODE_ENV !== 'production'
 };
+
+
+
+
+// code from facebook/google provider login 
+// const    sessionId = new mongoose.Types.ObjectId();                  
+// const LoginHistory = loginHistoryModel(auth_db)
+// const      Session = sessionModel(auth_db)
+
+// const { accessToken,
+//         refreshToken,
+//         tokenId,
+//         accessTokenExpiry,
+//         refreshTokenExpiry,
+//         refreshTokenCipherText } = await generateToken({ user, sessionId });
+
+// const   ipAddressCipherText = await encrypt({    data: ip,
+//                                               options: { secret: config.ipAddressEncryptionKey }     });
+
+// const userUpdate = { $set: {
+//                             "security.failedAttempts": 0,
+//                                      "lock.lockUntil": null,
+//                                  "security.lastLogin": new Date(),
+//                                     "isPhoneVerified": true,
+//                             ...(timezone && !user.timezone && (moment.tz.zone(timezone) !== null) && { timezone })
+//                         },
+//                      $push: {
+//                             activeSessions: {
+//                                                 $each: [sessionId],
+//                                                 $slice: -config.maxSessionsAllowed
+//                                             }
+//                         }
+//                     };
+// const sessionPayload = {      _id: sessionId,
+//                            userId: user._id,
+//                          provider: 'local-phone',
+//                       fingerprint,
+//                           tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
+//                 accessTokenExpiry,
+//                      refreshToken: refreshTokenCipherText,
+//                refreshTokenExpiry,
+//                              role: user.role,
+//                                ip: ipAddressCipherText,
+//                          userAgent,
+//                           timezone               }
+            
+// const loginHistoryPayload = { userId: user._id,
+//                            sessionId,
+//                             provider: 'local-phone',
+//                          fingerprint,
+//                                   ip: ipAddressCipherText,
+//                             userAgent }
+// const promiseArray = [  setSession({ sessionId,
+//                                        tokenId,
+//                                        payload: { sub: user.referenceId, 
+//                                                  role: user.role         }}),
+
+//                         Session.create([sessionPayload], 
+//                                   { session: auth_db_session }),
+
+//                            User.updateOne({ _id: user._id },
+//                                      userUpdate,
+//                                       { session: auth_db_session }),
+
+//                    LoginHistory.create([loginHistoryPayload],  
+//                                        { session: auth_db_session })]                                                       
+// await Promise.all(promiseArray);
+
+// /** *********************Temporary Execution of function********************* **/
+// /**   This operation need transfer into corn job/ this will done in future    **/
+// const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
+// await Session.deleteMany({ userId: user._id,
+//                             _id: { $nin: updatedUser.activeSessions }
+//                         }, { session: auth_db_session });
+// /** ########################################################################## **/
+
+
+
+
+
+
+
+
+                    // code from facebook/google provider login 
+                    // const sessionId = new mongoose.Types.ObjectId();
+                    // const        Session = sessionModel(auth_db)
+                    // const   LoginHistory = loginHistoryModel(auth_db)
+                    // const { accessToken,
+                    //         refreshToken,
+                    //         tokenId,
+                    //         accessTokenExpiry,
+                    //         refreshTokenExpiry,
+                    //         refreshTokenCipherText } = await generateToken({ user, sessionId });
+                    // const   ipAddressCipherText = await encrypt({    data: ip,
+                    //                                             options: { secret: config.ipAddressEncryptionKey }});
+
+                    // const userUpdate = { $set: { "security.failedAttempts": 0,
+                    //                                  "lock.lockUntil"     : null,
+                    //                              "security.lastLogin"     : new Date(),
+                    //                             ...(account.provider && ((account.provider === 'google' && !_user.oauth.google) || (account.provider === 'facebook' && !_user.oauth.facebook))
+                    //                                                     ({
+                    //                                                         [`oauth.${account.provider}`]: {
+                    //                                                                                                         id: account.provider === 'google' ? profile.sub : profile.id,
+                    //                                                                                                accessToken: account.access_token,
+                    //                                                                                               refreshToken: account.refresh_token,
+                    //                                                                                             tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null
+                    //                                                                                         }
+                    //                                                     }))
+                    //                             },
+                    //                     $push: { activeSessions: {
+                    //                                                 $each: [sessionId],
+                    //                                                $slice: -config.maxSessionsAllowed
+                    //                                             }
+                    //                             }
+                    //                     };
+
+                    // const sessionPayload = {   _id: sessionId,
+                    //                         userId: _user._id,
+                    //                       provider: account.provider,
+                    //                        tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
+                    //              accessTokenExpiry,
+                    //                   refreshToken: refreshTokenCipherText,
+                    //             refreshTokenExpiry,
+                    //                           role: _user.role,
+                    //                             ip: ipAddressCipherText,
+                    //                      userAgent,
+                    //                       timezone,               }
+
+                    // const loginHistoryPayload = { userId: _user._id,
+                    //                            sessionId,
+                    //                             provider: account.provider,
+                    //                                   ip: ipAddressCipherText,
+                    //                            userAgent                        }
+
+                    // const promiseArray = [  setSession({ sessionId,
+                    //                                        tokenId,
+                    //                                             payload: { sub: _user.referenceId, 
+                    //                                                       role: _user.role         }}),
+
+                    //                         Session.create([sessionPayload], 
+                    //                                         { session: auth_db_session }),
+
+                    //                         User.updateOne({ _id: _user._id },
+                    //                                             userUpdate,
+                    //                                         { session: auth_db_session }),
+
+                    //                 LoginHistory.create([loginHistoryPayload],  
+                    //                                     { session: auth_db_session })]
+                    //                         await Promise.all(promiseArray);
+
+                    // /** *********************Temporary Execution of function********************* **/
+                    // /**   This operation need transfer into corn job/ this will done in future    **/
+                    // const updatedUser = await User.findOne({ _id: _user._id }, { activeSessions: 1 });
+                    // await Session.deleteMany({ userId: _user._id,
+                    //                             _id: { $nin: updatedUser.activeSessions }
+                    //                         }, { session: auth_db_session });
+                    // /** ########################################################################## **/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Code from credential login 
+// const      sessionId = new mongoose.Types.ObjectId();
+// const        Session = sessionModel(auth_db)
+// const   LoginHistory = loginHistoryModel(auth_db)
+// const           User = userModel(auth_db)
+
+// const { accessToken,
+//         refreshToken,
+//         tokenId,
+//         accessTokenExpiry,
+//         refreshTokenExpiry,
+//         refreshTokenCipherText } = await generateToken({ user, sessionId });
+
+// const   ipAddressCipherText = await encrypt({    data: ip,
+//                                               options: { secret: config.ipAddressEncryptionKey }});
+// const userUpdate = { $set: { "security.failedAttempts": 0,
+//                              "lock.lockUntil": null,
+//                              "security.lastLogin": new Date(),
+//                              ...(timezone && !user.timezone && (moment.tz.zone(timezone) !== null) && { timezone })
+//                         },
+//                      $push: {
+//                             activeSessions: {
+//                                                 $each: [sessionId],
+//                                                 $slice: -config.maxSessionsAllowed
+//                                             }
+//                         }
+//                 };
+
+// const sessionPayload = {      _id: sessionId,
+//                            userId: user._id,
+//                          provider: 'local-'+identifierName,
+//                       fingerprint,
+//                           tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
+//                 accessTokenExpiry,
+//                      refreshToken: refreshTokenCipherText,
+//                refreshTokenExpiry,
+//                              role: user.role,
+//                                ip: ipAddressCipherText,
+//                          userAgent,
+//                           timezone,               }
+                                
+// const loginHistoryPayload = { userId: user._id,
+//                            sessionId,
+//                             provider: 'local-'+identifierName,
+//                          fingerprint,
+//                                   ip: ipAddressCipherText,
+//                             userAgent }
+
+// const promiseArray = [  setSession({ sessionId,
+//                                        tokenId,
+//                                        payload: { sub: user.referenceId, 
+//                                                  role: user.role         }}),
+
+//                         Session.create([sessionPayload], 
+//                                   { session: auth_db_session }),
+
+//                            User.updateOne({ _id: user._id },
+//                                      userUpdate,
+//                                       { session: auth_db_session }),
+
+//                    LoginHistory.create([loginHistoryPayload],  
+//                                        { session: auth_db_session })]
+// await Promise.all(promiseArray);
+
+// /** *********************Temporary Execution of function********************* **/
+// /**   This operation need transfer into corn job/ this will done in future    **/
+// const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
+// await Session.deleteMany({ userId: user._id,
+//                             _id: { $nin: updatedUser.activeSessions }
+//                         }, { session: auth_db_session });
+// /** ########################################################################## **/
+
+// accessToken: string;
+// refreshToken: string;
+// sessionId: mongoose.Types.ObjectId;
+// user: any;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

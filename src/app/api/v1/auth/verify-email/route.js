@@ -27,11 +27,10 @@ export async function POST(request) {
     const UserModel = userModel(db);
     const      user = await UserModel.findOneAndUpdate( {                 "verification.token": hashedToken,
                                                                     "verification.tokenExpiry": { $gt: Date.now() }  },
-                                                        { $set: { isEmailVerified: true },
+                                                        { $set:   { isEmailVerified: true },
                                                           $unset: {       "verification.token": "",
                                                                     "verification.tokenExpiry": "" } },
                                                         { new: true, select: "email isEmailVerified" } );
-
     if (!user) 
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
     return NextResponse.json({ valid: true, email: user.email });

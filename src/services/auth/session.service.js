@@ -2,6 +2,8 @@ import { sessionModel } from "@/models/auth/Session";
 import { addLoginSession as addUserLoginSession } from "./user.service";
 import { encrypt } from "@/lib/encryption/cryptoEncryption";
 import config from "../../../config";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
+import crypto from 'crypto'; 
 
 
 export async function getSessionTokenById({db, sessionId}) {
@@ -82,18 +84,17 @@ export async function cleanInvalidSessions({  activeSessions, userId, currentSes
     );
 }
 
-export async function updateSessionToken({db, sessionId, accessToken, refreshToken}) {
-        const  accessTokenCipherText = await encrypt({        data: accessToken,
-                                                           options: { secret: config.accessTokenEncryptionKey }      });
-        const refreshTokenCipherText = await encrypt({        data: refreshToken,
-                                                           options: { secret: config.refreshTokenEncryptionKey }     });
-        
-        const Session = sessionModel(db)  
+export async function updateSessionToken({ sessionId, data }) {
+        const { tokenId, accessTokenExpiry, refreshToken, refreshTokenExpiry } = data
+        const db = authDbConnect()
+        const Session = sessionModel(db)
         await Session.updateOne(
                             { _id: sessionId },
                             {
-                                $set: {  "accessToken": accessTokenCipherText,
-                                        "refreshToken": refreshTokenCipherText        }
+                                $set: {           "tokenId": crypto.createHash('sha256').update(tokenId).digest('hex'),
+                                        "accessTokenExpiry": accessTokenExpiry,
+                                             "refreshToken": refreshToken,
+                                       "refreshTokenExpiry": refreshTokenExpiry       }
                             }
                         );
 }

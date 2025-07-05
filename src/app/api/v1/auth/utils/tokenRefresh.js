@@ -1,48 +1,55 @@
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { sessionModel } from "@/models/auth/Session";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
-import { createAccessToken, createRefreshToken } from "@/services/auth/user.service";
-import { updateSessionToken } from "@/services/auth/session.service";
+import updateToken from "@/services/auth/updateToken";
+import jwt from "jsonwebtoken";
+import generateToken from "@/lib/generateToken";
+import crypto from 'crypto'; 
+import config from "../../../../../../config";
 
-export async function tokenRefresh({token, accessTokenSecret, refreshTokenKey, accessTokenExpire, refreshTokenExpire}) {
-  if (!token) {
-      console.error("No refresh token available.");
-      return null;
-    }
-  try {
-    if (token.provider === 'google' || token.provider === 'facebook' || token.provider === "local-email" || token.provider === "local-phone") {
-        const data = jwt.decode(token.accessToken, accessTokenSecret)
-        const { sessionId } = data
-        if ( !sessionId ) return null 
+export async function tokenRefresh({ token }) {
+if (!token?.accessToken || !token?.refreshToken) 
+            return null;
+        
+  try { 
+      const { sessionId } = jwt.decode(token.accessToken, config.accessTokenSecret)
+      if (!sessionId) 
+        return null
+      const       auth_db = await authDbConnect();
+      const       Session = sessionModel(auth_db)  
+      const session = await Session.findOne({ _id: sessionId })
+                                    .select('+refreshToken +revoked +refreshTokenExpiry' ).lean();
+      if(!session )  return null;
 
-        const        auth_db = await authDbConnect();
-        const        Session = sessionModel(auth_db)  
-        const expiredSession = await Session.findOneAndDelete({ _id: sessionId,
-                                              refreshTokenExpiresAt: { $lt: new Date() } });
-        if (expiredSession) return null;
+      if(Date.now() > session.refreshTokenExpiry || session.revoked == true ){
+          await Session.deleteOne({  _id: sessionId  });
+          return null;
+      }
 
-        const session = await Session.findOne({ _id: sessionId })
-                                     .select('+refreshToken +revoked' ).lean();
-        if(!session || session.revoked)  return null
+      const oldRefreshToken = await decrypt({  cipherText: session.refreshToken, 
+                                                  options: { secret: config.refreshTokenEncryptionKey } })
 
-        const oldRefreshToken = await decrypt({  cipherText: session.refreshToken, 
-                                                    options: { secret: refreshTokenKey } })
-                                                  
-        if( oldRefreshToken !== token.refreshToken ) return null
+      const isMatch = crypto.timingSafeEqual( Buffer.from(oldRefreshToken),
+                                              Buffer.from(token.refreshToken) );
+      if (!isMatch) return null;
 
-        const {    token: accessToken, 
-                expireAt: accessTokenExpAt  } = createAccessToken({user: { ...data}, sessionId, secret: accessTokenSecret, expire: accessTokenExpire })
+      const { accessToken,
+              refreshToken,
+              tokenId,
+              accessTokenExpiry,
+              refreshTokenExpiry,
+              refreshTokenCipherText } = await generateToken({     user: {        email: token.email || '',
+                                                                                  phone: token.phone || '',
+                                                                            referenceId: token.sub }, 
+                                                                sessionId });
 
-        const {    token: refreshToken,
-                expireAt: refreshTokenExpAt  } = createRefreshToken({ expire: refreshTokenExpire })
+      await updateToken({ sessionId, 
+                                data: {          tokenId, 
+                                      accessTokenExpiry, 
+                                            refreshToken: refreshTokenCipherText, 
+                                      refreshTokenExpiry  }})
 
-        await updateSessionToken({db: auth_db, sessionId, accessToken, refreshToken})
-
-        return {    accessToken, accessTokenExpAt,
-                   refreshToken, refreshTokenExpAt  }
-    } 
-
-    throw new Error("Unsupported provider or missing refresh token");
+      return { accessToken, accessTokenExpiry, refreshToken  }
   } catch (error) {
     console.error("Error refreshing access token:", error);
     return null
