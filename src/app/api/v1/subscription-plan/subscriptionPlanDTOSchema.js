@@ -56,7 +56,7 @@ const subscriptionPlanDTOSchema = z.object({
         title: z.string().min(1, "Title is required").max(100).regex(/^[a-zA-Z0-9\s-]+$/, "Only alphanumeric, spaces and hyphens allowed"),
   description: z.string().min(1, "Description is required").max(500),
          slug: z.string().min(1, "Slug is required"),
-         tier: z.enum(['starter', 'growth', 'professional', 'enterprise']).default('starter'),
+         tier: z.enum(['free-starter', 'basic', 'growth', 'professional', 'enterprise']).default('free-starter'),
      isActive: z.boolean().default(true),
        prices: pricingSchema,
        limits: maxLimitSchema.optional(),

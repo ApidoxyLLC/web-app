@@ -7,14 +7,25 @@ const ConsentSchema = new mongoose.Schema({
   dataProcessingConsent: { type: Boolean, default: false }
 }, { _id: false });
 
+// previous version 
+// const VerificationSchema = new mongoose.Schema({
+//   // isEmailVerified: { type: Boolean, default: undefined },
+//   emailVerificationToken: { type: String, default: undefined, select: false },
+//   emailVerificationTokenExpiry: { type: Number, default: undefined, select: false  },
+//   // isPhoneVerified: { type: Boolean, default: undefined },
+//   phoneVerificationOTP: { type: String, default: undefined, select: false  },
+//   phoneVerificationOTPExpiry: { type: Number, default: undefined, select: false  },
+//   otpAttempts: { type: Number, default: 0, select: false },
+// }, { _id: false });
+
 const VerificationSchema = new mongoose.Schema({
   // isEmailVerified: { type: Boolean, default: undefined },
-  emailVerificationToken: { type: String, default: undefined, select: false },
-  emailVerificationTokenExpiry: { type: Number, default: undefined, select: false  },
+  token: { type: String, default: undefined, select: false },
+  tokenExpiry: { type: Number, default: undefined, select: false  },
   // isPhoneVerified: { type: Boolean, default: undefined },
-  phoneVerificationOTP: { type: String, default: undefined, select: false  },
-  phoneVerificationOTPExpiry: { type: Number, default: undefined, select: false  },
-  otpAttempts: { type: Number, default: 0 },
+  otp: { type: String, default: undefined, select: false  },
+  otpExpiry: { type: Number, default: undefined, select: false  },
+  otpAttempts: { type: Number, default: 0, select: false },
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
@@ -95,8 +106,9 @@ const usageSchema = new mongoose.Schema({
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
-                userId: { type: String, default:()=> cuid(), select: true },
+           referenceId: { type: String, default:()=>cuid(), select: true },
                   name: { type: String, maxlength: 255, required: true },
+              username: { type: String, unique: true, sparse: true},
                 avatar: { type: String, default: null},
         activeSessions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],
                  shops: { type: [mongoose.Schema.Types.ObjectId], select: false, default: [] },
@@ -111,7 +123,7 @@ const userSchema = new mongoose.Schema({
                   lock: { type: LockSchema, default: () => ({}), select: false },
              twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
     activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref:'Subscription', default: undefined  },
-                 usage: { type:usageSchema },
+                 usage: { type: usageSchema },
                  oauth: { type: oauthSchema, default: undefined, select: false},
     // Profile Delete informationf
 

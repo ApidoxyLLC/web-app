@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import cuid from "@bugsnag/cuid";
 
 const maxLimitSchema = new mongoose.Schema({
          customDomains: { type: Number, default: 0 },
@@ -62,8 +63,8 @@ const basePlanSchema = new mongoose.Schema({
         title: { type: String, required: true, maxlength: 100, minlength: 3, match: /^[a-zA-Z0-9\s-]+$/  },
          slug: { type: String, unique: true, required: true, match: /^[a-z0-9-]+$/ },
   description: { type: String, required: true, maxlength: 500 },                    
-         tier: { type: String, enum: ['free-trial', 'starter', 'growth', 'professional', 'enterprise'], default: 'starter',  validate: { validator: function(v) { return v !== 'free-trial' || this.trialPeriod?.days > 0; }, message: 'Free trial plans must have trial days > 0' } },
-       prices: { type: pricingSchema, default:()=>({}), validate: { validator: function(prices) { return this.tier === 'free-trial' || prices.monthly > 0 || prices.yearly > 0 || prices.quarterly > 0; }, message: 'At least one pricing option required for paid plans'} },
+         tier: { type: String, unique: true, enum: ['free-starter', 'basic', 'growth', 'professional', 'enterprise'], default: 'free-starter',  validate: { validator: function(v) { return v !== 'free-trial' || this.trialPeriod?.days > 0; }, message: 'Free trial plans must have trial days > 0' } },
+       prices: { type: pricingSchema, default: undefined, validate: { validator: function(prices) { return this.tier === 'free-starter' || prices.monthly > 0 || prices.yearly > 0 || prices.quarterly > 0; }, message: 'At least one pricing option required for paid plans'} },
        limits: { type: maxLimitSchema, default: ()=>({}) },
      features: { type: featuresSchema, default: ()=>({}) },
       version: { type: Number, default: 1, select: false },
@@ -83,10 +84,11 @@ export const metadataSchema = new mongoose.Schema({
   highlightFeatures: { type: [String], default: [] } // For marketing display
 }, { _id: false });
       
-const subscriptionPlanSchema = new mongoose.Schema({
+const planSchema = new mongoose.Schema({
+          planId: { type: String, default: ()=> cuid(), select: true},
   ...basePlanSchema.obj,
-  isActive: { type: Boolean, default: true },
-   history: { type: [planHistorySchema], default: [], select: false },
-  metadata: { type: metadataSchema, default: undefined }
+        isActive: { type: Boolean, default: true },
+         history: { type: [planHistorySchema], default: undefined, select: false },
+        metadata: { type: metadataSchema, default: undefined }
 }, { timestamps: true, collection: 'subscription_plans' });
-export const subscriptionPlanModel = (db) => db.models.SubscriptionPlan || db.model('SubscriptionPlan', subscriptionPlanSchema);
+export const planModel = (db) => db.models.Plan || db.model('Plan', planSchema);

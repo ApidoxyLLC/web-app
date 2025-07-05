@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import subscriptionPlanDTOSchema from "./subscriptionPlanDTOSchema";
-import { createSubscriptionPlan } from "@/services/subscription/plan.service";
-import { subscriptionPlanModel } from "@/models/subscription/SubscriptionPlan";
-// import { subscriptionPlanModel } from '@/models/subscriptionPlanModel';
+// import { createSubscriptionPlan } from "@/services/subscription/plan.service";
+import { planModel } from "@/models/subscription/Plan";
+
+// import { planModel } from '@/models/planModel';
 
 // Pagination constants
 const DEFAULT_PAGE = 1;
@@ -21,38 +22,28 @@ export async function POST(request, response) {
     try     { body = await request.json(); } 
     catch   { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
     
-    
     const parsed = subscriptionPlanDTOSchema.safeParse(body);
-      if (!parsed.success) {
+      if (!parsed.success) 
         return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
-      }
-
     // 4. Send Request to Database 
-    try {
-        const auth_db = await authDbConnect();
-        const result = await createSubscriptionPlan({db: auth_db, data: parsed.data })
-
-        // 5. return the success result
-        if(result)
-            return NextResponse.json({ message: "Subscription plan created successfully... ", success: true, data: result }, { status: 201 })
-    } catch (error) {
-        // or failed response
-
-        if (error.code === 11000) {
-          return NextResponse.json(
-            { error: "Plan slug must be unique" },
-            { status: 409 }
-          );
-        }
-        if (error.name === 'ValidationError') {
-          return NextResponse.json(
-            { error: error.message },
-            { status: 400 }
-          );
-        }
-
-        return NextResponse.json({ error: "Plan Creation failed for a unknown reason" }, { status: 500 });
-    }
+      try {
+          const      auth_db = await authDbConnect();
+          const    planModel = await planModel(auth_db);
+          const existingPlan = await planModel.findOne({ tier: parsed.data.tier });
+          if (existingPlan) 
+            return NextResponse.json( { error: "This Tier plan already exist, Add different one. " }, { status: 400 } );
+          const result = await planModel.create([parsed.data])
+          if(result)
+              return NextResponse.json({ message: "Subscription plan created successfully... ", success: true, data: result }, { status: 201 })
+      } catch (error) {
+          //  failed response
+          console.log(error)
+          if (error.code === 11000) {
+            return NextResponse.json({ error: "Plan slug must be unique" },{ status: 409 })}
+          if (error.name === 'ValidationError') {
+            return NextResponse.json({ error: error.message },{ status: 400 })}
+          return NextResponse.json({ error: "Plan Creation failed for a unknown reason" }, { status: 500 });
+      }
 }
 
 export async function GET(request) {
@@ -66,7 +57,7 @@ export async function GET(request) {
 
     // 2. Database connection
     const db = await authDbConnect();
-    const Plan = subscriptionPlanModel(db);
+    const Plan = planModel(db);
 
     // 3. Build query with filters
     const query = { isActive: true };

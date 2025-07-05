@@ -45,6 +45,7 @@ export async function getUserByIdentifier({ db, session, data }) {
   }
 }
 
+
 export async function getUserBySessionId({ db, session, data }) {
   if (!data || typeof data !== "object") {
     throw new Error("Invalid data format");
@@ -91,19 +92,12 @@ export async function createUser({ db, session, data }) {
     name,
     security: { ...(password && { password: hashedPassword, salt }) },
     verification: {
-      ...(email && {
-        emailVerificationToken: hashedToken,
-        emailVerificationTokenExpiry: new Date(
-          Date.now() + config.emailVerificationExpireMinutes * 60 * 1000
-        ).getTime(),
-      }),
-      ...(phone &&
-        !email && {
-          phoneVerificationOTP: hashedOtp,
-          phoneVerificationOTPExpiry: new Date(
-            Date.now() + config.phoneVerificationExpireMinutes * 60 * 1000
-          ).getTime(),
-        }),
+                    ...(email && {    token: hashedToken,
+                                tokenExpiry: new Date( Date.now() + config.emailVerificationExpireMinutes * 60 * 1000).getTime() }),
+                    
+                    ...(phone && !email && {
+                              otp: hashedOtp,
+                        otpExpiry: new Date(Date.now() + config.phoneVerificationExpireMinutes * 60 * 1000).getTime()}),
     },
     ...(email && { email }),
     ...(phone && { phone }),
@@ -174,10 +168,6 @@ export async function verifyPassword({ db, session, data }) {
     throw new Error("Invalid data format");
   }
   const { user, password } = data || {};
-  // if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
-  //     return { status: false, reason: 'locked', message: 'Account is temporarily locked. Try again later.' };
-  // }
-
   if (!user?.security?.password) {
     return {
       status: false,
@@ -212,15 +202,15 @@ export default async function verifyEmailToken({ token }) {
     const db = await authDbConnect();
     const User = userModel(db);
     const user = await User.findOne({
-      "verification.emailVerificationToken": token,
-      "verification.emailVerificationTokenExpire": { $gt: Date.now() },
-    });
+                                            "verification.token": token,
+                                      "verification.emailVerificationTokenExpire": { $gt: Date.now() },
+                                    });
     if (user) {
       const updatedUser = await User.findByIdAndUpdate(user._id, {
         $set: { isEmailVerified: true },
         $unset: {
-          "verification.emailVerificationToken": 1,
-          "verification.emailVerificationTokenExpiry": 1,
+          "verification.token": 1,
+          "verification.tokenExpiry": 1,
         },
       });
       if (updatedUser) {
@@ -382,25 +372,19 @@ function calculateLockTime(failedAttempts) {
   );
 }
 
-export async function generateAccessTokenWithEncryption({
-  user,
-  sessionId,
-  userId,
-  role = [],
-}) {
+export async function generateAccessTokenWithEncryption({ user, sessionId, userId, role = []}) {
   if (!user || !sessionId || !userId)
     throw new Error("MISSING_REQUIRED_PARAMS");
   // ✅ Token generation
   const tokenId = crypto.randomBytes(16).toString("hex");
   const expireMs = config.accessTokenExpireMinutes * 60 * 1000;
-  const payload = {
-    sessionId,
-    ...(user.email && { email: user.email }),
-    ...(user.phone && { phone: user.phone }),
-    tokenId,
-    tokenType: "access",
-    iat: Math.floor(Date.now() / 1000),
-  };
+  const payload = { sessionId,
+                    ...(user.email && { email: user.email }),
+                    ...(user.phone && { phone: user.phone }),
+                      tokenId,
+                    tokenType: "access",
+                    iat: Math.floor(Date.now() / 1000),
+                  };
 
   const accessToken = jwt.sign(payload, config.accessTokenSecret, {
     expiresIn: config.accessTokenExpireMinutes * 60,

@@ -25,11 +25,11 @@ export async function POST(request) {
   try {
     const        db = await authDbConnect();
     const UserModel = userModel(db);
-    const      user = await UserModel.findOneAndUpdate( {                 "verification.emailVerificationToken": hashedToken,
-                                                                    "verification.emailVerificationTokenExpiry": { $gt: Date.now() }  },
+    const      user = await UserModel.findOneAndUpdate( {                 "verification.token": hashedToken,
+                                                                    "verification.tokenExpiry": { $gt: Date.now() }  },
                                                         { $set: { isEmailVerified: true },
-                                                          $unset: {       "verification.emailVerificationToken": "",
-                                                                    "verification.emailVerificationTokenExpiry": "" } },
+                                                          $unset: {       "verification.token": "",
+                                                                    "verification.tokenExpiry": "" } },
                                                         { new: true, select: "email isEmailVerified" } );
 
     if (!user) 

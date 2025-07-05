@@ -1,4 +1,4 @@
-import { subscriptionPlanModel } from "@/models/subscription/SubscriptionPlan";
+import { subscriptionPlanModel } from "@/models/subscription/Plan";
 
 export async function createSubscriptionPlan({ db, session, data }) {
     if (!data || typeof data !== 'object') {

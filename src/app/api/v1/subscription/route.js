@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import subscriptionDTOSchema from './schema/subscriptionDTOSchema';
-import { subscriptionPlanModel } from '@/models/subscription/SubscriptionPlan';
+import { planModel } from '@/models/subscription/Plan';
 import { subscriptionModel } from '@/models/subscription/Subscription';
 import { userModel } from '@/models/auth/User';
 import { getServerSession } from "next-auth/next";
@@ -59,9 +59,9 @@ export async function POST(request) {
 
 
     // 3. Verify Subscription plan 
-    const SubscriptionPlanModel = subscriptionPlanModel(db);
-    const subscriptionPlan = await SubscriptionPlanModel.findOne({ _id: planId, isActive: true  }); //isDeleted: false
-    if (!subscriptionPlan) return NextResponse.json( { error: "Subscription plan not available" }, { status: 400 } );
+    const planModel = planModel(db);
+    const plan = await planModel.findOne({ _id: planId, isActive: true  }); //isDeleted: false
+    if (!plan) return NextResponse.json( { error: "Subscription plan not available" }, { status: 400 } );
     
     // 4. Check for existing active subscriptions
     const Subscription = subscriptionModel(db);
@@ -69,16 +69,14 @@ export async function POST(request) {
                                                               status: { $in: ['active', 'trialing', 'past_due', 'user-default'] },
                                                               $or: [ { endDate: null }, { endDate: { $gt: new Date() } }]});
     if (existingSubscription) return NextResponse.json( { error: "Already subscribed..." }, { status: 409 });
-
-    
-    const { startDate, endDate }  = calculateBillingCycle({billingCycle, trialPeriod: subscriptionPlan?.trialPeriod.days || 0 } )
+    const { startDate, endDate }  = calculateBillingCycle({billingCycle, trialPeriod: plan?.trialPeriod.days || 0 } )
 
     // 8. Determine amount
     let amount = 0;
     switch(billingCycle) {
-      case 'monthly': amount = subscriptionPlan.prices.monthly; break;
-      case 'quarterly': amount = subscriptionPlan.prices.quarterly; break;
-      case 'yearly': amount = subscriptionPlan.prices.yearly; break;
+      case 'monthly': amount = plan.prices.monthly; break;
+      case 'quarterly': amount = plan.prices.quarterly; break;
+      case 'yearly': amount = plan.prices.yearly; break;
     }
 
 
@@ -86,20 +84,20 @@ export async function POST(request) {
 // Need to calculate this payment History
 // const paymentHistory = [];
 
-console.log(subscriptionPlan.prices)
+console.log(plan.prices)
     const payload = {
              userId: userId,
              planId: planId,
-       planSnapshot: { ...subscriptionPlan,
-            //         name: subscriptionPlan.name,
-            //  description: subscriptionPlan.description,
-            //         slug: subscriptionPlan.slug,
-            //         tier: subscriptionPlan.tier,
-            //       prices: subscriptionPlan.prices,
-            //       limits: subscriptionPlan.limits,
-            //     features: subscriptionPlan.features,
-            //      version: subscriptionPlan.version,
-            //  trialPeriod: subscriptionPlan.trialPeriod   
+       planSnapshot: { ...plan,
+            //         name: plan.name,
+            //  description: plan.description,
+            //         slug: plan.slug,
+            //         tier: plan.tier,
+            //       prices: plan.prices,
+            //       limits: plan.limits,
+            //     features: plan.features,
+            //      version: plan.version,
+            //  trialPeriod: plan.trialPeriod   
             },
           startDate: startDate,
             endDate: endDate,
