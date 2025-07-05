@@ -11,23 +11,7 @@ export async function getUserByPhone({ phone, fields = [] }) {
 
         const selectFields = [ '+_id',
                                '+referenceId',
-                                ...(fields.includes('security') ? [ '+security',
-                                                                    '+security.password',
-                                                                    '+security.failedAttempts' ] : []),
-
-                                ...(fields.includes('lock') ? [ '+lock',
-                                                                '+lock.isLocked',
-                                                                '+lock.lockReason',
-                                                                '+lock.lockUntil' ] : []),
-
-                                ...(fields.includes('verification') ? [ '+isPhoneVerified',
-                                                                        '+verification',
-                                                                        '+verification.otp ',
-                                                                        '+verification.otpExpiry ',
-                                                                        '+verification.otpAttempts ',  ] : []),
-
-            ...fields.filter(field => field && !['security', 'lock', 'verification'].includes(field))
-        ].join(' ');
+                                ...fields       ].join(' ');
 
         return await UserModel.findOne({ phone: phone.trim() })
                               .select(selectFields)

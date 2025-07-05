@@ -58,10 +58,25 @@ export const authOptions = {
                     const { phone, email, username } = { [identifierName]: identifier }
                     if (!email && !phone && !username) 
                         throw new Error('At least one identifier (email or phone) is required.');
+                            // '+verification', 
+                            // '+verification.otp', 
+                            // '+verification.otpExpiry', 
+                            // '+verification.otpAttempts',
+                    const requiredFields = ['+security', 
+                                            '+security.password', 
+                                            '+security.failedAttempts',
+                                            
+                                            '+lock', 
+                                            '+lock.isLocked', 
+                                            '+lock.lockReason', 
+                                            '+lock.lockUntil',
+
+                                            '+isEmailVerified', '+isPhoneVerified',
+                                            '+timezone', '+activeSessions', '+email', '+name', '+phone', '+username', '+avatar', 'role', '+theme', '+language', '+currency']
 
                     // Find user
                     const user = await getUserByIdentifier({ identifiers:{ [identifierName]: identifier }, 
-                                                                  fields: ['security', 'lock', 'verification', '+timezone', '+activeSessions', '+email', '+name', '+phone', '+username', '+avatar', 'role', '+theme', '+language', '+currency'] })
+                                                                  fields:  requiredFields })
                     if (!user || !user.security?.password) 
                         throw new Error("Invalid credentials");
 
@@ -157,7 +172,23 @@ export const authOptions = {
                     
                     
                     const { phone, otp, fingerprint, userAgent, timezone } = parsed.data;
-                    const user = await getUserByPhone({ phone, fields: ['lock', 'verification', '+timezone', '+activeSessions', '+email', '+name', '+phone', '+username', '+avatar', 'role', '+theme', '+language', '+currency']})
+                    const requiredFields = ['+security', 
+                                            '+security.password', 
+                                            '+security.failedAttempts',
+                                            
+                                            '+lock', 
+                                            '+lock.isLocked', 
+                                            '+lock.lockReason', 
+                                            '+lock.lockUntil',
+                                            
+                                            '+verification', 
+                                            '+verification.otp', 
+                                            '+verification.otpExpiry', 
+                                            '+verification.otpAttempts',
+                                            
+                                            '+isEmailVerified', '+isPhoneVerified',
+                                            '+timezone', '+activeSessions', '+email', '+name', '+phone', '+username', '+avatar', 'role', '+theme', '+language', '+currency']
+                    const user = await getUserByPhone({ phone, fields: requiredFields })
 
                     if (!user || !user.verification?.phoneVerificationOTP || !user.verification?.phoneVerificationOTPExpiry) 
                         throw new Error("Invalid credentials");

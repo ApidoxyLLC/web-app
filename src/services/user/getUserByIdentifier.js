@@ -34,15 +34,7 @@ export async function getUserByIdentifier({ identifiers, fields=[] }) {
 
         const selectFields = [ '+_id', 
                                '+referenceId',
-                                '+security.password',
-                                '+security.failedAttempts',
-                               '+lock.isLocked',
-                                '+lock.lockReason',
-                                '+lock.lockUntil',
-                                '+verification',
-                                '+isEmailVerified',
-                                '+isPhoneVerified',
-                                ...fields
+                               ...fields
                             ].join(' ');
         return await User.findOne(query) 
                                     .select(selectFields)
