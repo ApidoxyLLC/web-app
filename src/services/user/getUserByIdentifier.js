@@ -18,19 +18,32 @@ export async function getUserByIdentifier({ identifiers, fields=[] }) {
         const   db = await authDbConnect();
         const User = userModel(db);
 
+        // const selectFields = [ '+_id', 
+        //                        '+referenceId',
+        //                        ...(fields.includes('security') ? [ '+security.password',
+        //                                                            '+security.failedAttempts'   ] : []),
+
+        //                        ...(fields.includes('lock') ? [ '+lock.isLocked',
+        //                                                        '+lock.lockReason',
+        //                                                        '+lock.lockUntil'    ] : []),
+        //                        ...(fields.includes('verification') ? [ '+verification',
+        //                                                                '+isEmailVerified',
+        //                                                                '+isPhoneVerified'  ] : []),
+        //                         ...fields.filter(field => field && !['security', 'lock', 'verification'].includes(field))
+        //                     ].join(' '); 
+
         const selectFields = [ '+_id', 
                                '+referenceId',
-                               ...(fields.includes('security') ? [ '+security.password',
-                                                                   '+security.failedAttempts'   ] : []),
-
-                               ...(fields.includes('lock') ? [ '+lock.isLocked',
-                                                               '+lock.lockReason',
-                                                               '+lock.lockUntil'    ] : []),
-                               ...(fields.includes('verification') ? [ '+verification',
-                                                                       '+isEmailVerified',
-                                                                       '+isPhoneVerified'  ] : []),
-                                ...fields.filter(field => field && !['security', 'lock', 'verification'].includes(field))
-                            ].join(' '); 
+                                '+security.password',
+                                '+security.failedAttempts',
+                               '+lock.isLocked',
+                                '+lock.lockReason',
+                                '+lock.lockUntil',
+                                '+verification',
+                                '+isEmailVerified',
+                                '+isPhoneVerified',
+                                ...fields
+                            ].join(' ');
         return await User.findOne(query) 
                                     .select(selectFields)
                                     .lean()
