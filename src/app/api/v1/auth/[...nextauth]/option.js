@@ -48,14 +48,16 @@ export const authOptions = {
                     
                     // Rate Limit
                     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
-                    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
-                    if (!allowed) return null;                    
+                    const { allowed, retryAfter, remaining } = await applyRateLimit({ key: ip, 
+                                                                         scope: 'login' });
+                    if (!allowed) throw new Error("Invalid request");
 
                     if (!['email', 'phone', 'username'].includes(identifierName)) 
-                            throw new Error("Unsupported identifier type");
+                        throw new Error("Unsupported identifier type");
 
                     const { phone, email, username } = { [identifierName]: identifier }
-                    if (!email && !phone && !username) throw new Error('At least one identifier (email or phone) is required.');
+                    if (!email && !phone && !username) 
+                        throw new Error('At least one identifier (email or phone) is required.');
 
                     // Find user
                     const user = await getUserByIdentifier({ identifiers:{ [identifierName]: identifier }, 
@@ -74,15 +76,14 @@ export const authOptions = {
                     const notVerified = (identifierName === 'email' && !user.isEmailVerified) ||
                                         (identifierName === 'phone' && !user.isPhoneVerified) ||
                                         (identifierName === 'username' && !(user.isEmailVerified || user.isPhoneVerified));
-                    if (notVerified) return null;
+                    if (notVerified) throw new Error("Not verified...");
 
-
-                        const        auth_db = await authDbConnect();
-                        const sessionOptions = { readPreference: 'primary',
-                                                    readConcern: { level: 'local' },
-                                                   writeConcern: { w: 'majority',j: true }};
-                        const auth_db_session = await auth_db.startSession(sessionOptions);
-                              auth_db_session.startTransaction()
+                    const        auth_db = await authDbConnect();
+                    const sessionOptions = { readPreference: 'primary',
+                                                readConcern: { level: 'local' },
+                                                writeConcern: { w: 'majority',j: true }};
+                    const auth_db_session = await auth_db.startSession(sessionOptions);
+                          auth_db_session.startTransaction()
                     try {
                         const { accessToken,
                                 refreshToken,

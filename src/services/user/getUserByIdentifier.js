@@ -15,17 +15,15 @@ export async function getUserByIdentifier({ identifiers, fields=[] }) {
     if (username) query.$or.push({ username: username.trim() });
          
     try {
-        const        db = await authDbConnect();
-        const UserModel = userModel(db);
+        const   db = await authDbConnect();
+        const User = userModel(db);
 
         const selectFields = [ '+_id', 
                                '+referenceId',
-                               ...(fields.includes('security') ? [ '+security',
-                                                                   '+security.password',
+                               ...(fields.includes('security') ? [ '+security.password',
                                                                    '+security.failedAttempts'   ] : []),
 
-                               ...(fields.includes('lock') ? [ '+lock',
-                                                               '+lock.isLocked',
+                               ...(fields.includes('lock') ? [ '+lock.isLocked',
                                                                '+lock.lockReason',
                                                                '+lock.lockUntil'    ] : []),
                                ...(fields.includes('verification') ? [ '+verification',
@@ -33,7 +31,7 @@ export async function getUserByIdentifier({ identifiers, fields=[] }) {
                                                                        '+isPhoneVerified'  ] : []),
                                 ...fields.filter(field => field && !['security', 'lock', 'verification'].includes(field))
                             ].join(' '); 
-        return await UserModel.findOne(query) 
+        return await User.findOne(query) 
                                     .select(selectFields)
                                     .lean()
                                     .exec()
