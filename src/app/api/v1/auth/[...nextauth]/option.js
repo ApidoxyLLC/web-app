@@ -62,11 +62,12 @@ export const authOptions = {
                             // '+verification.otp', 
                             // '+verification.otpExpiry', 
                             // '+verification.otpAttempts',
-                    const requiredFields = ['+security', 
+                    const requiredFields = ['+_id', 
+                                            '+referenceId',
+                                            
                                             '+security.password', 
                                             '+security.failedAttempts',
                                             
-                                            '+lock', 
                                             '+lock.isLocked', 
                                             '+lock.lockReason', 
                                             '+lock.lockUntil',
@@ -172,16 +173,16 @@ export const authOptions = {
                     
                     
                     const { phone, otp, fingerprint, userAgent, timezone } = parsed.data;
-                    const requiredFields = ['+security', 
+                    const requiredFields = [
+                                            '_id',
+                                            '+referenceId',
                                             '+security.password', 
                                             '+security.failedAttempts',
                                             
-                                            '+lock', 
                                             '+lock.isLocked', 
                                             '+lock.lockReason', 
                                             '+lock.lockUntil',
-                                            
-                                            '+verification', 
+
                                             '+verification.otp', 
                                             '+verification.otpExpiry', 
                                             '+verification.otpAttempts',

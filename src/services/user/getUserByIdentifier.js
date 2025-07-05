@@ -37,7 +37,7 @@ export async function getUserByIdentifier({ identifiers, fields=[] }) {
                                ...fields
                             ].join(' ');
         return await User.findOne(query) 
-                                    .select(selectFields)
+                                    .select(fields.join(' '))
                                     .lean()
                                     .exec()
     } catch (error) {
