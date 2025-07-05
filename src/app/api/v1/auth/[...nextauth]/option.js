@@ -344,13 +344,11 @@ export const authOptions = {
 
                     // check unmatch with previous same provider login
                     // not for new user only for user previously login with same provider 
-                    if((account.provider === 'google'
-                            && _user.oauth.google.id 
-                                && _user.oauth.google.id != profile.sub) ||
-                        (account.provider === 'facebook' 
-                            && _user.oauth.facebook.id 
-                                && _user.oauth.facebook.id != profile.id)){ console.log(`OAuth ID mismatch for user ${user._id}`); return false};
-
+                    if ((account.provider === 'google' && _user.oauth?.google?.id && _user.oauth.google.id !== profile.sub) ||
+                        (account.provider === 'facebook' && _user.oauth?.facebook?.id && _user.oauth.facebook.id !== profile.id)) {
+                    console.log(`OAuth ID mismatch for user ${_user._id}`);
+                    return false;
+                    }
                     const { accessToken,
                            refreshToken,
                               sessionId,
