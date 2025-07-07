@@ -20,12 +20,12 @@ const ConsentSchema = new mongoose.Schema({
 
 const VerificationSchema = new mongoose.Schema({
   // isEmailVerified: { type: Boolean, default: undefined },
-  token: { type: String, default: undefined, select: false },
-  tokenExpiry: { type: Number, default: undefined, select: false  },
+  token: { type: String, default: undefined },
+  tokenExpiry: { type: Number, default: undefined  },
   // isPhoneVerified: { type: Boolean, default: undefined },
-  otp: { type: String, default: undefined, select: false  },
-  otpExpiry: { type: Number, default: undefined, select: false  },
-  otpAttempts: { type: Number, default: 0, select: false },
+  otp: { type: String, default: undefined  },
+  otpExpiry: { type: Number, default: undefined },
+  otpAttempts: { type: Number, default: 0 },
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
