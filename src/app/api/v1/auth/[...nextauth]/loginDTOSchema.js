@@ -12,7 +12,6 @@ function resolveIdentifierType(identifier) {
 export const loginDTOSchema = z.object({
  fingerprint: z.string().length(32, 'Invalid fingerprint ID length')
                 .regex(/^[a-f0-9]{32}$/, 'Invalid fingerprint ID format'),
-   userAgent: z.string().optional(),
     timezone: z.string().optional(),
   identifier: z.string(),
     password: z.string()
@@ -35,7 +34,6 @@ export const loginDTOSchema = z.object({
           password: data.password,
     identifierName: type,
        fingerprint: data.fingerprint,
-         userAgent: data.userAgent,
           timezone: data.timezone
   };
 })

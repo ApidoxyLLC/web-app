@@ -4,6 +4,8 @@ import   AsyncLock  from 'async-lock';
 import config from '../../../config';
 
 const lock = new AsyncLock();
+const MAX_WAIT_MS = 3000; // Maximum wait time for existing connection to become ready
+const WAIT_INTERVAL_MS = 100; // Check interval during waiting period
 
 const cache = new LRUCache({ max: config.maxDbConnections,
                              ttl: config.connectionTtl,
@@ -50,7 +52,10 @@ export async function dbConnect({dbKey, dbUri}) {
   
 
   const cachedConnection = cache.get(dbKey);
-  if (cachedConnection?.readyState ===    1   ) return cachedConnection;
+  if (cachedConnection?.readyState ===    1   ){ 
+    console.log(`[CACHE HIT] Returning existing connection for: ${dbKey}`);
+    return cachedConnection;
+  }
   if (cachedConnection?.status     === "error"){
     const isExpired = Date.now() - cachedConnection.timestamp > 10_000;
     if (!isExpired) throw new Error(`❌ Recent connection failure for ${dbKey}`);
@@ -60,19 +65,62 @@ export async function dbConnect({dbKey, dbUri}) {
   try {
     return await lock.acquire(dbKey, async ()=> {
       const lockedConnection = cache.get(dbKey);
-      if (lockedConnection?.readyState ===    1    ) return lockedConnection; // Valid connection
-      if (lockedConnection?.status     === "error" ) throw new Error("❌ Recent connection failure");
+      // if (lockedConnection?.readyState === 1){ 
+      //   console.log(`Reusing existing connection (locked check) for ${dbKey}`);
+      //   return lockedConnection;
+      // } // Valid connection
+      if (lockedConnection) {
+        // Connection is already ready
+        if (lockedConnection.readyState === 1) {
+          console.log(`♻️ Reusing existing connection for ${dbKey}`);
+          return lockedConnection;
+        }
+
+        // Connection is in connecting state - wait with timeout
+        if (lockedConnection.readyState === 2) { // 2 = connecting
+          console.log(`⏳ Waiting for existing connection (${dbKey}) to become ready...`);
+          
+          const startTime = Date.now();
+          try {
+            await new Promise((resolve, reject) => {
+              const checkReady = () => {
+                if (lockedConnection.readyState === 1) {
+                  resolve();
+                } else if (lockedConnection.readyState === 0 || // 0 = disconnected
+                         Date.now() - startTime > MAX_WAIT_MS) {
+                  reject(new Error('Connection not ready within timeout'));
+                } else {
+                  setTimeout(checkReady, WAIT_INTERVAL_MS);
+                }
+              };
+              checkReady();
+            });
+            
+            console.log(`✅ Existing connection became ready for ${dbKey}`);
+            return lockedConnection;
+          } catch (waitError) {
+            console.log(`⌛ Timeout waiting for connection (${dbKey}), creating new one...`);
+            cache.delete(dbKey);
+            try {
+              await lockedConnection.close();
+            } catch (closeError) {
+              console.log(`⚠️ Error closing stale connection: ${closeError.message}`);
+            }
+          }
+        }
+      }
 
       try {
+        if (lockedConnection?.status === "error" ) throw new Error("❌ Recent connection failure");
         const newConnection = await mongoose.createConnection(dbUri, {  dbName: dbKey,
-                                                                   maxPoolSize: (dbKey === 'auth_db') 
-                                                                                  ? config.maxAuthDbConnections 
-                                                                                  : config.maxTenantConnections,
-                                                               socketTimeoutMS: 5000,
-                                                      serverSelectionTimeoutMS: 3000    }).asPromise();
-
-        newConnection.createdAt = Date.now(); 
+                                                             maxPoolSize: (dbKey === 'auth_db') 
+                                                                            ? config.maxAuthDbConnections 
+                                                                            : config.maxTenantConnections,
+                                                         socketTimeoutMS: 5000,
+                                                serverSelectionTimeoutMS: 3000    }).asPromise();
+        newConnection.createdAt = Date.now();
         cache.set(dbKey, newConnection);
+        
         console.log(`✅ Connected: ${dbKey}`);
         return newConnection;
 

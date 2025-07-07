@@ -31,7 +31,7 @@ const VerificationSchema = new mongoose.Schema({
 const SecuritySchema = new mongoose.Schema({
   password: { type: String, select: false, default: null },
   // salt: { type: String, select: false, default: null },
-  failedAttempts: { type: Number, default: null },
+  failedAttempts: { type: Number, default: 0 },
   lastLogin: { type: Date, default: null },
   forgotPasswordToken: { type: String, default: undefined },
   forgotPasswordTokenExpiry: { type: Number, default: undefined }
@@ -45,9 +45,9 @@ const StatusSchema = new mongoose.Schema({
 }, { _id: false });
 
 const LockSchema = new mongoose.Schema({
-  isLocked: { type: Boolean, default: null },
-  lockReason: { type: String, default: null },
-  lockUntil: { type: Date, default: null  },
+  isLocked: { type: Boolean, default: false },
+  lockReason: { type: String, default: undefined },
+  lockUntil: { type: Date, default: undefined  },
 }, { _id: false });
 
 const OAuthProviderSchema = new mongoose.Schema({
@@ -129,7 +129,7 @@ const userSchema = new mongoose.Schema({
 
              isDeleted: { type: Boolean, default: false, select: false  },
              deletedAt: { type: Date, default: null, select: false  },
-                  role: {type: [String], default: ['user']},
+                  role: { type: [String], default: ['user'], select: true},
                  theme: { type: String, enum: ['light', 'dark', 'os'], default: 'os' },
               language: { type: String, default: 'english', enum: ['english', 'bangla'] },
               timezone: { type: String, default: null },

@@ -21,6 +21,7 @@ const config = {
 
   // Limitations
   maxSessionsAllowed: parseInt(process.env.MAX_SESSIONS_ALLOWED || '3', 10),
+  maxConcurrentSession: parseInt(process.env.MAX_CONCURRENT_SESSIONS_ALLOWED || '3', 10),
   maxLoginAttempt: parseInt(process.env.MAX_LOGIN_ATTEMPT || '5', 10),
   maxOtpAttempt: parseInt(process.env.MAX_OTP_ATTEMPT || '5', 10),
 

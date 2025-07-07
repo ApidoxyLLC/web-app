@@ -12,19 +12,41 @@ export async function setSession({ sessionId, tokenId, payload ={}}) {
     if (!sessionId || !tokenId || !sub) throw new Error('Missing required session data');
     const hashedTokenId = crypto.createHash('sha256').update(tokenId).digest('hex')
     const key = `${SESSION_PREFIX}${sessionId}`;
-    await sessionRedis.setex( key, TTL, JSON.stringify({ sub, role, tokenId: hashedTokenId, createdAt: new Date().toISOString()}));
-    await sessionRedis.sadd(`${USER_SESSIONS_PREFIX}${sub}`, sessionId);
+    const now = Date.now();
+    const userSessionsKey = `${USER_SESSIONS_PREFIX}${sub}`;
+
+    const pipeline = sessionRedis.pipeline();
+    // Set session data with TTL
+    pipeline.setex( key, TTL, JSON.stringify({ sub, role,
+                                                tokenId: hashedTokenId,
+                                                createdAt: new Date().toISOString() }) );
+    // Add to user sessions set with same TTL
+    pipeline.zadd( userSessionsKey, now, sessionId );
+    pipeline.expire(userSessionsKey, TTL);
+    pipeline.zcard(userSessionsKey);
+
+    const results = await pipeline.exec();
+    const sessionCount = results[results.length - 1][1]; // last result = zcard count
+
+    if (sessionCount > config.maxConcurrentSession) {
+        const sessionsToRemove = await sessionRedis.zrange(userSessionsKey, 0, sessionCount - config.maxConcurrentSession - 1);
+        if (sessionsToRemove.length > 0) {
+        const deletePipeline = sessionRedis.pipeline();
+        for (const oldId of sessionsToRemove) {
+            deletePipeline.del(`${SESSION_PREFIX}${oldId}`);
+            deletePipeline.zrem(userSessionsKey, oldId);
+        }
+        await deletePipeline.exec();
+        }
+    }
     return key;
 }
 
 export async function validateSession({ sessionId, tokenId }) {
     if (!sessionId || !tokenId) return null;
-
     const key = `${SESSION_PREFIX}${sessionId}`;
     const raw = await sessionRedis.get(key);
-
     if (!raw) return null;
-
     try {
         const data = JSON.parse(raw);
         const hashedTokenId = crypto.createHash('sha256').update(tokenId).digest('hex');
@@ -37,11 +59,38 @@ export async function validateSession({ sessionId, tokenId }) {
 }
 
 export async function revokeAllSessions(userId) {
-    const sessionIds = await sessionRedis.smembers(`${USER_SESSIONS_PREFIX}${userId}`);
-    if (!sessionIds.length) return;
-    const keys = sessionIds.map(id => `session:${id}`);
-    await sessionRedis.del(...keys);
-    await sessionRedis.del(`${USER_SESSIONS_PREFIX}${userId}`);
+  if (!userId) throw new Error("Missing userId");
+
+  const userSessionsKey = `${USER_SESSIONS_PREFIX}${userId}`;
+
+  // 1. Get all sessionIds from ZSET
+  const sessionIds = await sessionRedis.zrange(userSessionsKey, 0, -1);
+  if (!sessionIds.length) return;
+
+  // 2. Build full session keys
+  const keys = sessionIds.map(id => `${SESSION_PREFIX}${id}`);
+
+  // 3. Pipeline delete all session keys + the ZSET
+  const pipeline = sessionRedis.pipeline();
+  pipeline.del(...keys);
+  pipeline.del(userSessionsKey);
+  await pipeline.exec();
+}
+
+export async function revokeSession({ sessionId, userId }) {
+    if (!sessionId || !userId) 
+        throw new Error('Missing sessionId or userId');
+    // Delete the session data
+    const sessionKey = `${SESSION_PREFIX}${sessionId}`;
+    const userSessionKey = `${USER_SESSIONS_PREFIX}${userId}`;
+    
+    const pipeline = sessionRedis.pipeline();
+    pipeline.del(sessionKey);
+    pipeline.zrem(userSessionKey, sessionId);
+    const results = await pipeline.exec();
+    const [delSessionRes, zremRes] = results.map(r => r[1]); // extract [error, result]
+    const success = delSessionRes > 0 || zremRes > 0;
+    return success;
 }
 
 

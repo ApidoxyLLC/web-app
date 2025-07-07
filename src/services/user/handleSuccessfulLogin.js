@@ -11,27 +11,25 @@ import { encrypt }           from "@/lib/encryption/cryptoEncryption";
 import { setSession }        from "@/lib/redis/helpers/session";
 import generateToken         from "@/lib/generateToken";
 import moment                from 'moment-timezone';
+import bcrypt                from "bcryptjs";
 
 
 // login type --> 'oauth' | 'password' | 'otp'
 // provider --> 'google', 'facebook', 'local-email', 'local-phone', etc.
-export async function handleSuccessfulLogin({ user, loginType, provider, identifierName, ip, userAgent, timezone, fingerprint, account,
-    session,
-    oauthProfile = null // Only for OAuth (contains profile/account data)
-}) {
-    const           db = authDbConnect()
+export async function handleSuccessfulLogin({ auth_db, session, user, loginType, provider, identifierName, ip, userAgent, timezone, fingerprint,  oauthProfile = null }) {
     const    sessionId = new mongoose.Types.ObjectId();
-    const         User = userModel(db);
-    const      Session = sessionModel(db);
-    const LoginHistory = loginHistoryModel(db);
+    console.log(`inside handleSuccessfulLogin() function session: ${sessionId}`)
+    // const           db = await authDbConnect()
+    const         User = userModel(auth_db);
+    const      Session = sessionModel(auth_db);
+    const LoginHistory = loginHistoryModel(auth_db);
 
     // 1. Token Generation (Common for all login types)
     const { accessToken,
             refreshToken,
             tokenId,
             accessTokenExpiry,
-            refreshTokenExpiry,
-            refreshTokenCipherText } = await generateToken({ user, sessionId });
+            refreshTokenExpiry } = await generateToken({ user, sessionId });
 
     // 2. Encrypt IP (Common)
     const ipAddressCipherText = await encrypt({    data: ip, 
@@ -82,9 +80,9 @@ export async function handleSuccessfulLogin({ user, loginType, provider, identif
                                         ? 'local-phone' 
                                         : provider,
                         
-                         tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
+                         tokenId: await bcrypt.hash(tokenId, 10),
                accessTokenExpiry,
-                    refreshToken: refreshTokenCipherText,
+                    refreshToken: await bcrypt.hash(refreshToken, 10),
               refreshTokenExpiry,
                             role: user.role,
                               ip: ipAddressCipherText,
@@ -101,21 +99,43 @@ export async function handleSuccessfulLogin({ user, loginType, provider, identif
                             ...(fingerprint && { fingerprint }) };
 
     // 5. Execute All DB Operations
-    const promiseArray = [ 
-                            setSession({    sessionId, tokenId,
-                                            payload: { sub: user.referenceId, role: user.role } }),
-                            Session.create([sessionPayload], { session }),
-                               User.updateOne({ _id: user._id }, userUpdate, { session }),
-                       LoginHistory.create([loginHistoryPayload], { session })
-                        ];
+        const redisSessionResult = await setSession({ sessionId, tokenId,
+                             payload: { sub: user.referenceId, role: user.role } })
+        const dbSessionResult = await Session.create([sessionPayload], { session });
+        const updatedUser = await User.findOneAndUpdate( { _id: user._id }, userUpdate, { new: true, session }).select('activeSessions ');
+        const historyResult = await LoginHistory.create([loginHistoryPayload], { session })
+
+    // const [ redisSessionResult, 
+    //         dbSessionResult, 
+    //         updatedUser, 
+    //         historyResult ] = await Promise.all([ setSession({ sessionId, tokenId, payload: { sub: user.referenceId, role: user.role } }),
+    //                                               Session.create([sessionPayload], { session }),
+    //                                                  User.findOneAndUpdate( { _id: user._id }, userUpdate, { new: true, session }).select('activeSessions'),
+    //                                          LoginHistory.create([loginHistoryPayload], { session }) ]);
     
 
     // 6. Session Cleanup (Temporary)
-    const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
-    await Session.deleteMany({  userId: user._id,
-                                   _id: { $nin: updatedUser.activeSessions }
-                             }, { session: session });
-    return { accessToken, accessTokenExpiry, refreshToken, sessionId, user: updatedUser };
+    // const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
+    // console.log(updatedUser.activeSessions)
+    // let existingSessions = [];
+    // if (updatedUser.activeSessions) {
+    //     existingSessions = Array.isArray(updatedUser.activeSessions)
+    //                             ? updatedUser.activeSessions
+    //                             : [updatedUser.activeSessions];
+    // }
+
+    // const activeSessions = new Set([...existingSessions, sessionId]);
+    const activeSessions = new Set([...updatedUser.activeSessions, sessionId].map(id => id.toString()))
+
+    // 2. Delete orphaned sessions in bulk
+    const deleteResult = await Session.deleteMany( { 
+                                                        userId: user._id,
+                                                        _id: { $nin: [...activeSessions] } // MongoDB compares ObjectIds natively
+                                                    },
+                                                    { session });
+    console.log(deleteResult)  
+    // throw new Error("something went wrong...")
+    return { accessToken, accessTokenExpiry, refreshToken, sessionId };
 }
 
 export default handleSuccessfulLogin;

@@ -1,0 +1,28 @@
+{
+  "token": {
+    "name": "two",
+    "email": "two@test.com",
+    "sub": "cmcr5pq4r0000h4llwx91hmje",
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWNyNXBxNHIwMDAwaDRsbHd4OTFobWplIiwic2Vzc2lvbklkIjoiNjg2YjI5MWRhMDkxN2VmNzc3N2QwMjZmIiwidG9rZW5JZCI6IjQ1OTQyYTgzZmU0ZTE2ZDNhZjE2OTUyYjFkNzJkNDBjNGZkZjJlM2E0ODJmNGRjZGFkY2NmYTY0ZTdkMjU0MGEiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTE4NTMzNDEsImVtYWlsIjoidHdvQHRlc3QuY29tIiwicGhvbmUiOiIrMjM0NTY3ODkyNiIsImV4cCI6MTc1MTg1NDI0MX0.rNh-RmmN-u8n1DgnisDFldRCemHfrs3J7ZvFoAXVwB4",
+    "accessTokenExpiry": 1751854241958,
+    "refreshToken": "037b56fcffee81dee57e653aa18ec840de7e8b2a0729139f6dc69143bf67b79fa813c6b87b41b5f2358e8a159f67530c68afe0f77c028eb46de862d3cdeaf235",
+    "sessionId": "686b291da0917ef7777d026f",
+    "provider": "local-email",
+    "user": {
+      "id": "cmcr5pq4r0000h4llwx91hmje",
+      "name": "two",
+      "email": "two@test.com",
+      "phone": "+2345678926",
+      "role": [],
+      "isVerified": true,
+      "timezone": "Asia/Dhaka",
+      "theme": "os",
+      "language": "english",
+      "currency": null
+    },
+    "iat": 1751854368,
+    "exp": 1754446368,
+    "jti": "0ff86194-acb2-491c-8974-2c0d53ff4df3"
+  },
+  "session": null
+}

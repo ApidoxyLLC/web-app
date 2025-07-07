@@ -24,7 +24,7 @@ export async function POST(request) {
   const parsed = registerDTOSchema.safeParse(body);
   if (!parsed.success)
     return NextResponse.json({ error: "Invalid data..." }, { status: 422 });
-
+  console.log(parsed.data)
   const { name, email, phone, password } = parsed?.data;
   if (!email && !phone)
     return NextResponse.json({ error: "Missing data ..." }, { status: 422 });
@@ -36,7 +36,7 @@ export async function POST(request) {
   //   if (commonPasswords.includes(password.toLowerCase())) return NextResponse.json({ error: "Common password provided, change the password" }, { status: 422 });
   // }
 
-  const existingUser = await getUserByIdentifier({ identifiers: { email, phone } });
+  const existingUser = await getUserByIdentifier({ payload: { email, phone } });
   if (existingUser)
         return NextResponse.json({ error: "User already Exist" }, { status: 409 });
       

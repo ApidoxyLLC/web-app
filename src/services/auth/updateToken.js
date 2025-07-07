@@ -1,23 +1,24 @@
-import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { sessionModel } from "@/models/auth/Session";
-import crypto from 'crypto'
+import bcrypt from "bcryptjs";
 
-export async function updateToken({ sessionId, data }) {
+export async function updateToken({ db, sessionId, data }) {
     try {
-        if (!sessionId || !data) 
+        if (!db || !sessionId || !data) 
                 throw new Error('Missing required parameters');
         const { tokenId, accessTokenExpiry, refreshToken, refreshTokenExpiry } = data
         if (!tokenId || !accessTokenExpiry || !refreshToken || !refreshTokenExpiry) 
             throw new Error('Missing required token data');
+
+        const [hashedTokenId, hashedRefreshToken] = await Promise.all([ bcrypt.hash(tokenId, 10),
+                                                                        bcrypt.hash(refreshToken, 10) ]);
         
-        const      db = authDbConnect()
         const Session = sessionModel(db)
         const  result = await Session.updateOne(
                             { _id: sessionId },
                             {
-                                $set: {           "tokenId": crypto.createHash('sha256').update(tokenId).digest('hex'),
+                                $set: {           "tokenId": hashedTokenId,
                                         "accessTokenExpiry": accessTokenExpiry,
-                                             "refreshToken": refreshToken,
+                                             "refreshToken": hashedRefreshToken,
                                        "refreshTokenExpiry": refreshTokenExpiry       }
                             }
                         );
