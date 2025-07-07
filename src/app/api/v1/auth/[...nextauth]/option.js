@@ -292,11 +292,6 @@ export const authOptions = {
             }
         }),
     ],
-
-
-    // sample signIn 
-    // signIn({ user, account, profile, email, credentials }, req)
-
     callbacks: {
         async signIn({ user, account, profile }, req) {
 

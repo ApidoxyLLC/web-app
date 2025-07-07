@@ -35,12 +35,12 @@ export async function POST(request) {
   //   const commonPasswords = ['password', '12345678', 'qwerty123'];
   //   if (commonPasswords.includes(password.toLowerCase())) return NextResponse.json({ error: "Common password provided, change the password" }, { status: 422 });
   // }
-
-  const existingUser = await getUserByIdentifier({ payload: { email, phone } });
+  const db = await authDbConnect();
+  const existingUser = await getUserByIdentifier({ auth_db: db, payload: { email, phone } });
   if (existingUser)
         return NextResponse.json({ error: "User already Exist" }, { status: 409 });
       
-  const db = await authDbConnect();
+  
   const session = await db.startSession();
 
   try {
