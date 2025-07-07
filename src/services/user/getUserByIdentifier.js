@@ -38,7 +38,7 @@ export async function getUserByIdentifier({ auth_db, payload, fields=[] }) {
                                ...(fields.includes('isVerified') ? [ 'isEmailVerified',
                                                                      'isPhoneVerified'  ] : []),                                                                       
 
-                                ...fields.filter(field => field && !['security', 'lock', 'verification'].includes(field))
+                                ...fields.filter(field => field && !['security', 'lock', 'otp-verification', 'email-verification'].includes(field))
                             ].join(' ');
 
         console.log(selectFields)
