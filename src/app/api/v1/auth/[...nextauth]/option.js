@@ -35,25 +35,17 @@ export const authOptions = {
                 try {
                     // Input validation
                     const parsed = loginDTOSchema.safeParse(credentials);
-                    if (!parsed.success) { 
-                        return null;
-                        // throw new Error("Invalid input") 
-                    }
+                    if (!parsed.success) 
+                        return null;                    
                     const { identifier, password, identifierName, fingerprint, timezone } = parsed.data;
-                     /** validation test -ok */
 
                     // Rate Limit
                     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
                     const { allowed, remaining, retryAfter } = await applyRateLimit({ key: `login:${ip}`, scope: 'login'      });
                     if (!allowed) return null
-                        // throw new Error("Can't accept this request...");
-                    /** rate limit test -ok */
-
                     if (!['email', 'phone', 'username'].includes(identifierName)) return null
-                        // throw new Error("Unsupported identifier type");
                     const { phone, email, username } = { [identifierName]: identifier }
                     if (!email && !phone && !username) return null
-                        // throw new Error('At least one identifier (email or phone) is required.');
 
                     // Find user
                     const        auth_db = await authDbConnect();
@@ -66,8 +58,7 @@ export const authOptions = {
                         // throw new Error(`Too Many login atttempt`);
                     
                     if ((user.lock?.lockUntil && user.lock.lockUntil > Date.now())) {
-                        const retryAfter = Math.ceil((user.lock.lockUntil - Date.now()) / 1000);
-                        // throw new Error(`Account temporarily locked, try again in ${retryAfter}`);
+                        const retryAfter = Math.ceil((user.lock.lockUntil - Date.now()) / 1000);                        
                         return null
                     }
                     
@@ -142,7 +133,6 @@ export const authOptions = {
                       phone: { label: 'phone',                type: 'text',     placeholder: 'Phone' },
                         otp: { label: 'otp',                  type: 'password', placeholder: 'otp' },
                 fingerprint: { label: 'fingureprint-id',      type: 'text',     placeholder: 'Fingureprint' },
-                  userAgent: { label: 'user-agent',           type: 'text',     placeholder: 'Browser' },
                    timezone: { label: 'timezone',             type: 'text',     placeholder: 'Timezone' },
                 },
             async authorize(credentials, req) {
@@ -161,7 +151,7 @@ export const authOptions = {
                     // Database connection 
                     
                     
-                    const { phone, otp, fingerprint, userAgent, timezone } = parsed.data;
+                    const { phone, otp, fingerprint, timezone } = parsed.data;
                     // Find user
                     const auth_db = await authDbConnect();
                     const fields = ['security', 'lock', 'otp-verification', 'isVerified', 'timezone', 'activeSessions', 'email', 'name', 'phone', 'username', '+avatar', 'role', 'theme', 'language', 'currency']
