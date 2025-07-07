@@ -26,22 +26,13 @@ export async function getUserByIdentifier({ auth_db, payload, fields=[] }) {
                                ...(fields.includes('lock') ? [ 'lock.isLocked',
                                                                'lock.lockReason',
                                                                'lock.lockUntil'    ] : []),
-                               ...(fields.includes('otp-verification') ? [ 'verification',
-                                                                           'verification.otp',
-                                                                           'verification.otpExpiry',
-                                                                           'verification.otpAttempts' ] : []),               
-
-                               ...(fields.includes('email-verification') ? [ 'verification',
-                                                                             'verification.token',
-                                                                             'verification.tokenExpiry'] : []),
 
                                ...(fields.includes('isVerified') ? [ 'isEmailVerified',
                                                                      'isPhoneVerified'  ] : []),                                                                       
 
-                                ...fields.filter(field => field && !['security', 'lock', 'otp-verification', 'email-verification', 'isVerified'].includes(field))
+                                ...fields.filter(field => field && !['security', 'lock', 'isVerified'].includes(field))
                             ].join(' ');
 
-        console.log(selectFields)
         return await User.findOne(query)
                          .select(selectFields)
                          .lean().exec();

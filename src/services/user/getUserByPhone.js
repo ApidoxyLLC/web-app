@@ -7,29 +7,28 @@ export async function getUserByPhone({ db, phone, fields = [] }) {
 
     try {
         // const db = await authDbConnect();
-        const UserModel = userModel(db);
+        const User = userModel(db);
 
-        const selectFields = [ '+_id',
+        const selectFields = [ '+_id', 
                                '+referenceId',
-                                ...fields       ].join(' ');
+                               ...(fields.includes('security') ? [ 'security.password',
+                                                                   'security.failedAttempts'   ] : []),
 
-        return await UserModel.findOne({ phone: phone.trim() })
-                              .select(
-                                '_id ' +
-                                'referenceId ' +
-                                'security.password ' +
-                                'security.failedAttempts ' +
-                                'lock.isLocked ' +
-                                'lock.lockReason ' +
-                                'lock.lockUntil ' +
-                                'verification ' +
-                                'verification.otp ' +
-                                'verification.otpExpiry ' +
-                                'verification.otpAttempts ' +
-                                'isEmailVerified ' +
-                                'isPhoneVerified ')
-                              .lean()
-                              .exec();
+                               ...(fields.includes('lock') ? [ 'lock.isLocked',
+                                                               'lock.lockReason',
+                                                               'lock.lockUntil'    ] : []),
+
+                               ...(fields.includes('isVerified') ? [ 'isEmailVerified',
+                                                                     'isPhoneVerified'  ] : []),                                                                       
+
+                                ...fields.filter(field => field && !['security', 'lock', 'isVerified'].includes(field))
+                            ].join(' ');
+
+        return await User.findOne({ phone: phone.trim() })
+                               .select(selectFields)
+                               .lean()
+                               .exec();
+
     } catch (error) {
         console.error("Error in getUserByPhone:", error);
         throw new Error("Failed to retrieve user by phone");

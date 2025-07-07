@@ -154,9 +154,11 @@ export const authOptions = {
                     const { phone, otp, fingerprint, timezone } = parsed.data;
                     // Find user
                     const auth_db = await authDbConnect();
-                    const fields = ['security', 'lock', 'otp-verification', 'isVerified', 'timezone', 'activeSessions', 'email', 'name', 'phone', 'username', '+avatar', 'role', 'theme', 'language', 'currency']
+                    const fields = [ 'lock',  'isVerified', 'verification', 'timezone', 'activeSessions', 'email', 'name', 'phone', 'username', '+avatar', 'role', 'theme', 'language', 'currency']
                     const user = await getUserByPhone({ db: auth_db, phone, fields })
-       
+                    // const user = await getUserByIdentifier({ auth_db, payload:{ phone }, fields })
+                    console.log(user)
+                    
                     if (!user || !user.verification?.otp || !user.verification?.otpExpiry) 
                         throw new Error("Invalid credentials");
 
