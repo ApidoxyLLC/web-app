@@ -15,22 +15,19 @@ export async function getUserByPhone({ db, phone, fields = [] }) {
 
         return await UserModel.findOne({ phone: phone.trim() })
                               .select(
-                                '_id' +
-                                'referenceId' +
-                                'security.password' +
-                                'security.failedAttempts' +
-                                'lock.isLocked' +
-                                'lock.lockReason' +
-                                'lock.lockUntil' +
-                                'verification' +
-                                'verification.otp' +
-                                'verification.otpExpiry' +
-                                'verification.otpAttempts' +
-                                'verification' +
-                                'verification.token' +
-                                'verification.tokenExpiry' +
-                                'isEmailVerified' +
-                                'isPhoneVerified')
+                                '_id ' +
+                                'referenceId ' +
+                                'security.password ' +
+                                'security.failedAttempts ' +
+                                'lock.isLocked ' +
+                                'lock.lockReason ' +
+                                'lock.lockUntil ' +
+                                'verification ' +
+                                'verification.otp ' +
+                                'verification.otpExpiry ' +
+                                'verification.otpAttempts ' +
+                                'isEmailVerified ' +
+                                'isPhoneVerified ')
                               .lean()
                               .exec();
     } catch (error) {
