@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:8.0.2-alpine
+    container_name: dev-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --requirepass secure_password --save 60 1 --databases 6
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "secure_password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # RedisInsight
+  redis-insight:
+    image: redislabs/redisinsight:2.68.0
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+    volumes:
+      - redis-insight-data:/db
+
+  # redis-commander:
+  #   image: rediscommander/redis-commander:latest
+  #   container_name: redis-ui
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     - REDIS_HOST=dev-redis
+  #     - REDIS_PORT=6379
+  #     - REDIS_PASSWORD=secure_password
+  #   depends_on:
+  #     - redis
+
+volumes:
+  redis_data:
+  redis-insight-data:
