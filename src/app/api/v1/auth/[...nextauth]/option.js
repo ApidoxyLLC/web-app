@@ -18,6 +18,7 @@ import getUserByEmail from '@/services/user/getUserByEmail';
 import handleSuccessfulLogin from '@/services/user/handleSuccessfulLogin';
 import { validateSession } from '@/lib/redis/helpers/session';
 import jwt from "jsonwebtoken";
+import getUserByProviderId from '@/services/user/getUserByProviderId';
 
 
 export const authOptions = {
@@ -49,7 +50,8 @@ export const authOptions = {
 
                     // Find user
                     const        auth_db = await authDbConnect();
-                    const fields = ['security', 'lock', 'isVerified', 'timezone', 'activeSessions', 'email', 'name', 'phone', 'username', '+avatar', 'role', 'theme', 'language', 'currency']
+                    
+                    const fields = ['security', 'lock', 'isEmailVerified', 'isPhoneVerified', 'timezone', 'activeSessions', 'email', 'name', 'phone', 'username', '+avatar', 'role', 'theme', 'language', 'currency']
                     const user = await getUserByIdentifier({ auth_db, payload:{ [identifierName]: identifier }, fields })
        
                     if (!user || !user.security?.password) return null
@@ -158,7 +160,7 @@ export const authOptions = {
                     const user = await getUserByPhone({ db: auth_db, phone, fields })
                     // const user = await getUserByIdentifier({ auth_db, payload:{ phone }, fields })
                     console.log(user)
-                    
+
                     if (!user || !user.verification?.otp || !user.verification?.otpExpiry) 
                         throw new Error("Invalid credentials");
 
@@ -171,7 +173,7 @@ export const authOptions = {
                     const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
                     const valid = (user.verification.otp === hashedOtp) && (user.verification.otpExpiry > Date.now())
                     
-                    const User = userModel(auth_db);
+                    
 
                     if (!valid) {  
                         user.verification.otpAttempts = (user.verification.otpAttempts || 0) + 1;
@@ -184,7 +186,7 @@ export const authOptions = {
                                 updateOps.$set = {    'lock.isLocked': true,
                                                     'lock.lockReason': 'maximum phone otp exceed',
                                                      'lock.lockUntil': new Date(Date.now() + config.userLockMinutes * 60 * 1000)  };
-
+                        const User = userModel(auth_db);
                         await User.updateOne({ _id: user._id }, updateOps);
                         return null;
                     }
@@ -285,13 +287,13 @@ export const authOptions = {
         }),
     ],
     callbacks: {
-        async signIn({ user, account, profile }, req) {
-
+        async signIn(params, req) {
+            console.log(params)
+            const { user, account, profile } = params
             const timezone = req?.headers['x-timezone'] || null;
             const fingerprint = req?.headers['x-fingerprint'] || null;
             if (account.provider === 'google' || account.provider === 'facebook') {
 
-                console.log("inside provider signIn")
                 // Rate Limit
                 const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
                 const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
@@ -309,25 +311,32 @@ export const authOptions = {
 
                 try {
                     let _user = null;
+                    if (!profile.email) {
+                        _user = await getUserByProviderId({ db: auth_db, provider: account.provider, providerId: account.provider === 'google' ? profile.sub : profile.id })
+                    }else {
                         _user = await getUserByEmail({ email: profile.email, 
-                                                    fields: ['lock', 'verification', 'oauth', '+activeSessions', '+email', '+name', '+phone', '+username', '+avatar', 'role', '+theme', '+language', '+currency'] })
+                                                    fields: ['lock', 'oauth', 'activeSessions', 'email', 'name', 'phone', 'username', 'avatar', 'role', 'theme', 'language', 'currency'] })
+                    }
 
                     if (!_user) {
                         // create a new user
-                        const payload = { email: profile.email,
+                        const payload = { email: profile.email || '',
                                            name: profile.name || '',
                                          avatar: account.provider === 'google' 
                                                             ? profile.picture 
                                                             : account.provider === 'facebook' 
-                                                                ? profile.picture.data.url
+                                                                ? profile.picture.data.url ?? null
                                                                 : null,
                                        username: profile.email?.split('@')[0] || cuid(),
+                                     
                                           oauth: { [account.provider]: { id: account.provider === 'google' ? profile.sub : profile.id,
                                                                 accessToken: account.access_token,
                                                                refreshToken: account.refresh_token,
                                                              tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null }  },
-                             isEmailVerified: true,
-                                        role: ['user'] };
+
+                                     isVerified: true,
+                                isEmailVerified: profile.email ? true : false,
+                                           role: ['user'] };
 
                         const query = new User(payload);
                         _user = await query.save({ session: auth_db_session });
@@ -359,9 +368,6 @@ export const authOptions = {
                                                                                   fingerprint,
                                                                                       session: auth_db_session,
                                                                                  oauthProfile: account })
-
-
-
 
                     await auth_db_session.commitTransaction();
                                  user.sub = _user.referenceId;
@@ -449,20 +455,20 @@ export const authOptions = {
             const { session, token } = params;
             if (token && token.user) {
                 session.user = {
-                    name: token.user.name,
-                    email: token.user.email,
-                    username: token.user.username,
-                    phone: token.user.phone,
-                    role: token.user.role,
-                    isVerified: token.user.isVerified,
-                    provider: token.provider,
-                    local: {
-                        timezone: token.user.timezone,
-                        theme: token.user.theme,
-                        language: token.user.language,
-                        currency: token.user.currency
-                    }
-                };
+                                    name: token.user.name,
+                                    email: token.user.email,
+                                    username: token.user.username,
+                                    phone: token.user.phone,
+                                    role: token.user.role,
+                                    isVerified: token.user.isVerified,
+                                    provider: token.provider,
+                                    local: {
+                                                timezone: token.user.timezone,
+                                                theme: token.user.theme,
+                                                language: token.user.language,
+                                                currency: token.user.currency
+                                            }
+                                };
             }
             return session;
         },
@@ -661,85 +667,6 @@ export const authOptions = {
 
 
 
-
-
-
-// Code from credential login 
-// const      sessionId = new mongoose.Types.ObjectId();
-// const        Session = sessionModel(auth_db)
-// const   LoginHistory = loginHistoryModel(auth_db)
-// const           User = userModel(auth_db)
-
-// const { accessToken,
-//         refreshToken,
-//         tokenId,
-//         accessTokenExpiry,
-//         refreshTokenExpiry,
-//         refreshTokenCipherText } = await generateToken({ user, sessionId });
-
-// const   ipAddressCipherText = await encrypt({    data: ip,
-//                                               options: { secret: config.ipAddressEncryptionKey }});
-// const userUpdate = { $set: { "security.failedAttempts": 0,
-//                              "lock.lockUntil": null,
-//                              "security.lastLogin": new Date(),
-//                              ...(timezone && !user.timezone && (moment.tz.zone(timezone) !== null) && { timezone })
-//                         },
-//                      $push: {
-//                             activeSessions: {
-//                                                 $each: [sessionId],
-//                                                 $slice: -config.maxSessionsAllowed
-//                                             }
-//                         }
-//                 };
-
-// const sessionPayload = {      _id: sessionId,
-//                            userId: user._id,
-//                          provider: 'local-'+identifierName,
-//                       fingerprint,
-//                           tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
-//                 accessTokenExpiry,
-//                      refreshToken: refreshTokenCipherText,
-//                refreshTokenExpiry,
-//                              role: user.role,
-//                                ip: ipAddressCipherText,
-//                          userAgent,
-//                           timezone,               }
-                                
-// const loginHistoryPayload = { userId: user._id,
-//                            sessionId,
-//                             provider: 'local-'+identifierName,
-//                          fingerprint,
-//                                   ip: ipAddressCipherText,
-//                             userAgent }
-
-// const promiseArray = [  setSession({ sessionId,
-//                                        tokenId,
-//                                        payload: { sub: user.referenceId, 
-//                                                  role: user.role         }}),
-
-//                         Session.create([sessionPayload], 
-//                                   { session: auth_db_session }),
-
-//                            User.updateOne({ _id: user._id },
-//                                      userUpdate,
-//                                       { session: auth_db_session }),
-
-//                    LoginHistory.create([loginHistoryPayload],  
-//                                        { session: auth_db_session })]
-// await Promise.all(promiseArray);
-
-// /** *********************Temporary Execution of function********************* **/
-// /**   This operation need transfer into corn job/ this will done in future    **/
-// const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
-// await Session.deleteMany({ userId: user._id,
-//                             _id: { $nin: updatedUser.activeSessions }
-//                         }, { session: auth_db_session });
-// /** ########################################################################## **/
-
-// accessToken: string;
-// refreshToken: string;
-// sessionId: mongoose.Types.ObjectId;
-// user: any;
 
 
 

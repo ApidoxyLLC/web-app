@@ -1,6 +1,5 @@
 
 const config = {
-
   // Google provider
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -11,13 +10,6 @@ const config = {
   // token secret 
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
   nextAuthSecret: process.env.NEXTAUTH_SECRET,
-
-  // Database connection controls
-  maxDbConnections: parseInt(process.env.DB_MAX_CONNECTION || '40', 10),
-  maxAuthDbConnections: parseInt(process.env.DB_MAX_AUTH_CONNECTIONS || '10', 10),
-  // maxShopConnections: parseInt(process.env.DB_MAX_SHOP_CONNECTIONS || '5', 10),
-  maxTenantConnections: parseInt(process.env.DB_MAX_TENANT_CONNECTIONS || '5', 10),
-  connectionTtl: parseInt(process.env.DB_CONNECTION_TTL_MINUTES || '10', 10),
 
   // Limitations
   maxSessionsAllowed: parseInt(process.env.MAX_SESSIONS_ALLOWED || '3', 10),

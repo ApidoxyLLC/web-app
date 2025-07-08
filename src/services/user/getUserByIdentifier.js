@@ -20,17 +20,7 @@ export async function getUserByIdentifier({ auth_db, payload, fields=[] }) {
         const User = userModel(auth_db);
         const selectFields = [ '+_id', 
                                '+referenceId',
-                               ...(fields.includes('security') ? [ 'security.password',
-                                                                   'security.failedAttempts'   ] : []),
-
-                               ...(fields.includes('lock') ? [ 'lock.isLocked',
-                                                               'lock.lockReason',
-                                                               'lock.lockUntil'    ] : []),
-
-                               ...(fields.includes('isVerified') ? [ 'isEmailVerified',
-                                                                     'isPhoneVerified'  ] : []),                                                                       
-
-                                ...fields.filter(field => field && !['security', 'lock', 'isVerified'].includes(field))
+                               ...fields
                             ].join(' ');
 
         return await User.findOne(query)

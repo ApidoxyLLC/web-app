@@ -52,9 +52,9 @@ const LockSchema = new mongoose.Schema({
 
 const OAuthProviderSchema = new mongoose.Schema({
   id: { type: String, required: true },
-  accessToken: { type: String, required: true, select: false },
-  refreshToken: { type: String, select: false }, // For token refresh
-  tokenExpiresAt: { type: Date, select: false }, // When the token expires
+  accessToken: { type: String, required: true },
+  refreshToken: { type: String }, // For token refresh
+  tokenExpiresAt: { type: Date }, // When the token expires
   picture: { type: String }, // Profile picture URL from provider
   scope: { type: String }, // Granted permissions scope
   tokenType: { type: String }, // e.g., "Bearer"
@@ -79,6 +79,11 @@ const oauthSchema = new mongoose.Schema({
     google: { type: OAuthProviderSchema },
   facebook: { type: OAuthProviderSchema }
 }, { _id: false });
+
+// const verifyStatusSchema = new mongoose.Schema({
+//   isVerified: { type: Boolean, default: null },
+//        types: { type: [String], enum: ['oauth-google', 'oauth-facebook', 'email', 'phone'], default: [] },  
+// }, { _id: false });
 
 const usageSchema = new mongoose.Schema({
          customDomains: { type: Number, default: 0 },
@@ -114,6 +119,7 @@ const userSchema = new mongoose.Schema({
                  shops: { type: [mongoose.Schema.Types.ObjectId], select: false, default: [] },
                  email: { type: String, trim: true, unique: true, index: true, sparse: true  },
                  phone: { type: String, trim: true, unique: true, sparse: true },
+            isVerified: { type: Boolean,  default: undefined },
        isEmailVerified: { type: Boolean, default: false, select: false  },
        isPhoneVerified: { type: Boolean, default: false, select: false  },
           verification: { type: VerificationSchema, default: () => ({}), select: false },
