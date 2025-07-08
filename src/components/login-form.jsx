@@ -27,6 +27,14 @@ export function LoginForm({ className, ...props }) {
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email")?.toString() ?? "";
     const password = formData.get("password")?.toString() ?? "";
+    if(!email){
+          return toast.error("Email/Phone is required");
+    
+        }
+    if(!password){
+          return toast.error("Password is required");
+    
+        }
     const result = await signIn("login", {
       redirect: false,
       identifier: email,
@@ -38,7 +46,7 @@ export function LoginForm({ className, ...props }) {
 
     if (result?.error) {
       // Handle error
-      toast.error(` ${result.error}`);
+      toast.error(` Login failed`);
       console.log("Login failed", result.error);
     } else {
       // Redirect to a protected route
