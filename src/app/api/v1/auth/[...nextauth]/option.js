@@ -20,8 +20,9 @@ import { validateSession } from '@/lib/redis/helpers/session';
 import jwt from "jsonwebtoken";
 import getUserByProviderId from '@/services/user/getUserByProviderId';
 
-
 export const authOptions = {
+    session: { strategy: "jwt", maxAge:  24 * 60 * 60, updateAge: 60 * 60   },
+    jwt: { maxAge: 24 * 60 * 60 },
     providers: [
         CredentialsProvider({
             name: 'login',
@@ -397,9 +398,20 @@ export const authOptions = {
             return true
         },
         async jwt(params) {
-            // console.log(params)
+            
+            console.log("from jwt callback")
             const { token, user, account, profile } = params
-            // console.log(token)
+
+            console.log("************************token************************")
+            console.log(token)
+            console.log("************************user************************")
+            console.log(user)
+            console.log("************************account************************")
+            console.log(account)
+            console.log("************************profile************************")
+            console.log(profile)
+
+
             if (user && account) {
                 return {
                     ...token,
@@ -424,72 +436,101 @@ export const authOptions = {
                     }
                 };
             }
-
             
             try {
                 const accessTokenData = jwt.verify(token.accessToken, config.accessTokenSecret);
-                console.log(accessTokenData)
                 if(accessTokenData){
-                    const validSession = await validateSession({sessionId: token.sessionId, tokenId: accessTokenData.tokenId });
-                    if(validSession){
-                        // token.user.role = validSession.role
-                        return token
+                    const validSession = await validateSession({ sessionId: token.sessionId, tokenId: accessTokenData.tokenId });
+                    if (!validSession) {
+                        console.log("SESSION VALIDATION FAILED .......")
+                        return { ...token, error: 'InvalidSession' };
                     }
-                    return null
+
+                    return token;
                 }
-            } catch (err) {}
-            
+            } catch (err) {
+                console.log("ACCESS TOKEN ERROR .......")
+            }
+
             try {
                 const newTokens  = await tokenRefresh({ token })
-                if(!newTokens) return null
-                token.accessToken      = newTokens.accessToken;
-                token.accessTokenExpiry = newTokens.accessTokenExpiry;
-                token.refreshToken     = newTokens.refreshToken;
-                return token 
-            } catch (error) {
-                console.error("Token refresh failed:", error);
-                return null
-            }
+                console.log("OLD TOKEN .......")
+                console.log(token)
+
+
+                console.log("new TOKEN .......")
+                console.log(newTokens)
+                    if(!newTokens) {
+                        console.log("TOKEN REFRESH FAILED .......")
+                        return {}
+                    }
+                    console.log("TOKEN REFRESH SUCCESS .......")
+                    return {
+                                ...token,
+                                accessToken: newTokens.accessToken,
+                                accessTokenExpiry: newTokens.accessTokenExpiry,
+                                refreshToken: newTokens.refreshToken,
+                            };
+                } catch (error) {
+                    console.log("GET ERROR ON TOKEN REFRESH .......")
+                    // console.error("Token refresh failed:", error);
+                    return null
+                }
+
+            return token
+            
+            
         },
         async session(params) {
+            console.log("from session callback");
             const { session, token } = params;
-            if (token && token.user) {
+            if (token?.user && typeof token.user === 'object') {
                 session.user = {
-                                    name: token.user.name,
-                                    email: token.user.email,
-                                    username: token.user.username,
-                                    phone: token.user.phone,
-                                    role: token.user.role,
-                                    isVerified: token.user.isVerified,
-                                    provider: token.provider,
-                                    local: {
-                                                timezone: token.user.timezone,
-                                                theme: token.user.theme,
-                                                language: token.user.language,
-                                                currency: token.user.currency
-                                            }
-                                };
+                    name: token.user.name,
+                    email: token.user.email,
+                    username: token.user.username,
+                    phone: token.user.phone,
+                    role: token.user.role,
+                    isVerified: token.user.isVerified,
+                    provider: token.provider,
+                    local: {
+                        timezone: token.user.timezone,
+                        theme: token.user.theme,
+                        language: token.user.language,
+                        currency: token.user.currency
+                    }
+                };
             }
-            return session;
-        },
 
+            return session;
+
+            // console.log("from session callback")
+            // const { session, token } = params;
+            // if (token && token.user) {
+            //     session.user = {
+            //                         name: token.user.name,
+            //                         email: token.user.email,
+            //                         username: token.user.username,
+            //                         phone: token.user.phone,
+            //                         role: token.user.role,
+            //                         isVerified: token.user.isVerified,
+            //                         provider: token.provider,
+            //                         local: {
+            //                                     timezone: token.user.timezone,
+            //                                     theme: token.user.theme,
+            //                                     language: token.user.language,
+            //                                     currency: token.user.currency
+            //                                 }
+            //                     };
+                
+            // }
+            // return session;
+        },
     },
-    pages: {
-        signIn: '/login',
-        error: '/auth/error'
-    },
-    headers: [
-        { key: "Access-Control-Allow-Origin", value: "*" },
-        { key: "Access-Control-Allow-Credentials", value: "true" }
-    ],
-    logger:{
-        error(code, metadata){
-            console.log(code, metadata)
-        }
-    },    
-    session: {
-        strategy: 'jwt',
-    },
+    pages: { signIn: '/login', error: '/auth/error'},
+    headers: [ { key: "Access-Control-Allow-Origin", value: "*" }, { key: "Access-Control-Allow-Credentials", value: "true" }],
+    logger:{ error(code, metadata){ console.log(code, metadata) } },    
+    session: { strategy: 'jwt' },
     basePath: "/api/v1/auth",
     secret: config.nextAuthSecret,
     debug: process.env.NODE_ENV !== 'production'

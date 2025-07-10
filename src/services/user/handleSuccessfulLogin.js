@@ -74,14 +74,15 @@ export async function handleSuccessfulLogin({ auth_db, session, user, loginType,
     // 4. Session/History Payloads
     const sessionPayload = { _id: sessionId,
                           userId: user._id,
+                   userReference: user.referenceId,
                         provider: loginType === 'password' 
                                     ? `local-${identifierName}` 
                                     : loginType === 'otp' 
                                         ? 'local-phone' 
                                         : provider,
                         
-                         tokenId: await bcrypt.hash(tokenId, 10),
-               accessTokenExpiry,
+                        //  tokenId: await bcrypt.hash(tokenId, 10),
+            //    accessTokenExpiry,
                     refreshToken: await bcrypt.hash(refreshToken, 10),
               refreshTokenExpiry,
                             role: user.role,

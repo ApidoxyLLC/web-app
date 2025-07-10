@@ -1,16 +1,16 @@
 import crypto from 'crypto'; 
 import jwt from 'jsonwebtoken'
 import config from "../../config";
+import generateTokenId from '@/app/api/v1/auth/utils/generateTokenId';
 
 export async function generateToken({ user, sessionId }) {
-    console.log(user)
     if (!user?.referenceId || !sessionId )
         throw new Error("MISSING_REQUIRED_PARAMS");
 
     if (!config.accessTokenSecret  || !config.accessTokenExpireMinutes || !config.refreshTokenExpireMinutes) 
         throw new Error('MISSING_TOKEN_CONFIGURATION');
     
-    const            tokenId = crypto.randomBytes(32).toString("hex");
+    const            tokenId = generateTokenId()
     const       refreshToken = crypto.randomBytes(64).toString("hex")
     const  accessTokenExpiry = Date.now() + (config.accessTokenExpireMinutes * 60 * 1000);
     const refreshTokenExpiry = Date.now() + (config.refreshTokenExpireMinutes * 60 * 1000);

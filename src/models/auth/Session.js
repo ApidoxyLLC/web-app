@@ -24,9 +24,10 @@ const OAuthProviderSchema = new mongoose.Schema({
 const sessionSchema = new mongoose.Schema({
                       _id: { type: String },
                    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+            userReference: { type: String,  select: false, required: true },
                  provider: { type: String,  enum: ['local-phone', 'local-email', 'local-username', 'google', 'facebook', 'apple'], required: true},
-                  tokenId: { type: String,  select: false,  required: true },
-        accessTokenExpiry: { type: Number,  select: false,  required: true },
+                  // tokenId: { type: String,  select: false,  required: true },
+        // accessTokenExpiry: { type: Number,  select: false,  required: true },
              refreshToken: { type: String,  select: false,  required: true },    
        refreshTokenExpiry: { type: Number,    select: false,  required: true },
               fingerprint: { type: String,  select: false,  required: false },  

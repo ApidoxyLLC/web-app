@@ -9,6 +9,7 @@ const config = {
 
   // token secret 
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
+  accessTokenIdLength: parseInt(process.env.ACCESS_TOKEN_ID_LENGTH || '16', 10),
   nextAuthSecret: process.env.NEXTAUTH_SECRET,
 
   // Limitations

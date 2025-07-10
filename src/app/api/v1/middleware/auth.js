@@ -9,6 +9,8 @@ import crypto from 'crypto';
 import minutesToExpiresIn from '@/app/utils/shop-user/minutesToExpiresIn'
 import minutesToExpiryTimestamp from '@/app/utils/shop-user/minutesToExpiryTimestamp'
 
+
+// End users Authentication...
 export async function getVendorShop(request) {
     const   vendorId = request.headers.get('x-vendor-identifier');
     const       host = request.headers.get('host');
@@ -48,7 +50,6 @@ function extractRefreshToken() {
 }
 
 export async function authenticationStatus(request) {
-
   const   fingerprint = request.headers.get('x-fingerprint') || null;
   const   accessToken = extractAccessToken(request);
   const  refreshToken = extractRefreshToken();

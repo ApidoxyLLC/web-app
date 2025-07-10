@@ -228,9 +228,9 @@ if (newReservations.length > 0) {
 }
   // ✅ 8. Return Updated Cart Summary
   const response = NextResponse.json( { success: true,
-                                           cartId: savedCart.cartId,
-                                          message: "Cart updated",
-                                        itemCount: savedCart.items.length,
+                                         cartId: savedCart.cartId,
+                                        message: "Cart updated",
+                                      itemCount: savedCart.items.length,
                                       }, { status: 200, headers: securityHeaders } );
 
   if (authenticated && isTokenRefreshed && token) {
