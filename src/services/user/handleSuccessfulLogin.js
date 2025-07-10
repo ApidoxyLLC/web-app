@@ -106,28 +106,7 @@ export async function handleSuccessfulLogin({ auth_db, session, user, loginType,
         const updatedUser = await User.findOneAndUpdate( { _id: user._id }, userUpdate, { new: true, session }).select('activeSessions ');
         const historyResult = await LoginHistory.create([loginHistoryPayload], { session })
 
-    // const [ redisSessionResult, 
-    //         dbSessionResult, 
-    //         updatedUser, 
-    //         historyResult ] = await Promise.all([ setSession({ sessionId, tokenId, payload: { sub: user.referenceId, role: user.role } }),
-    //                                               Session.create([sessionPayload], { session }),
-    //                                                  User.findOneAndUpdate( { _id: user._id }, userUpdate, { new: true, session }).select('activeSessions'),
-    //                                          LoginHistory.create([loginHistoryPayload], { session }) ]);
-    
-
-    // 6. Session Cleanup (Temporary)
-    // const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
-    // console.log(updatedUser.activeSessions)
-    // let existingSessions = [];
-    // if (updatedUser.activeSessions) {
-    //     existingSessions = Array.isArray(updatedUser.activeSessions)
-    //                             ? updatedUser.activeSessions
-    //                             : [updatedUser.activeSessions];
-    // }
-
-    // const activeSessions = new Set([...existingSessions, sessionId]);
     const activeSessions = new Set([...updatedUser.activeSessions, sessionId].map(id => id.toString()))
-
     // 2. Delete orphaned sessions in bulk
     const deleteResult = await Session.deleteMany( { 
                                                         userId: user._id,
