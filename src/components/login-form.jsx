@@ -19,9 +19,10 @@ import useFingerprint from "@/hooks/useFingerprint";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { FaFacebookF } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 export function LoginForm({ className, ...props }) {
   const fingerprint = useFingerprint();
-
+  const router = useRouter()
   async function createUser(e) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -50,7 +51,7 @@ export function LoginForm({ className, ...props }) {
       console.log("Login failed", result.error);
     } else {
       // Redirect to a protected route
-
+      router.push("http://localhost:3000/")
       toast.success("Login sucessful", result.error);
     }
 

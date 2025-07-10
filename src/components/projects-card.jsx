@@ -1,3 +1,4 @@
+"use client"
 import {
   LifeBuoy,
   Lock,
@@ -24,6 +25,7 @@ import {
 } from "@radix-ui/react-popover";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ModeToggle } from "./mode-toggle";
+import { signOut } from "next-auth/react";
 
 export function ProjectsCard() {
   return (
@@ -81,7 +83,7 @@ export function ProjectsCard() {
                   Support
                 </button>
                 <div className="border-t my-1" />
-                <button className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-muted transition">
+                <button onClick={()=> signOut({ callbackUrl: "/signup" })} className="w-full cursor-pointer flex items-center gap-2 text-left px-4 pt-2 pb-3">
                   <LogOutIcon className="w-4 h-4" />
                   Logout
                 </button>
