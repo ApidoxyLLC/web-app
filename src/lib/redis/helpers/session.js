@@ -1,24 +1,41 @@
 import crypto from 'crypto';
 import getRedisClient from '../getRedisClient';
 import config from '../../../../config';
+import { timingSafeEqual } from 'crypto';
 
 const sessionRedis = getRedisClient('session');
 const SESSION_PREFIX = 'session:';
 const USER_SESSIONS_PREFIX = 'user:sessions:';
 const TTL = config.accessTokenExpireMinutes *  60;
 
+
+
+
+
+function hashTokenId(tokenId) { return crypto.createHash('sha256').update(tokenId).digest('hex');}
+
+function safeCompare(a, b) {
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) return false;
+  return timingSafeEqual(aBuf, bBuf);
+}
+
 export async function setSession({ sessionId, tokenId, payload ={}}) {
     const { sub, role } = payload
+    console.log(sessionId)
+    console.log(tokenId)
+    console.log(sub)
     if (!sessionId || !tokenId || !sub) throw new Error('Missing required session data');
-    const hashedTokenId = crypto.createHash('sha256').update(tokenId).digest('hex')
+    const hashedTokenId = hashTokenId(tokenId)
     const key = `${SESSION_PREFIX}${sessionId}`;
     const now = Date.now();
     const userSessionsKey = `${USER_SESSIONS_PREFIX}${sub}`;
 
     const pipeline = sessionRedis.pipeline();
     // Set session data with TTL
-    pipeline.setex( key, TTL, JSON.stringify({ sub, role,
-                                                tokenId: hashedTokenId,
+    pipeline.setex( key, TTL, JSON.stringify({  sub, role,
+                                                  tokenId: hashedTokenId,
                                                 createdAt: new Date().toISOString() }) );
     // Add to user sessions set with same TTL
     pipeline.zadd( userSessionsKey, now, sessionId );
@@ -42,6 +59,7 @@ export async function setSession({ sessionId, tokenId, payload ={}}) {
     return key;
 }
 
+
 export async function validateSession({ sessionId, tokenId }) {
     console.log('Validation attempt from Redis')
     if (!sessionId || !tokenId) return null;
@@ -50,8 +68,9 @@ export async function validateSession({ sessionId, tokenId }) {
     if (!raw) return null;
     try {
         const data = JSON.parse(raw);
-        const hashedTokenId = crypto.createHash('sha256').update(tokenId).digest('hex');
-        if (data.tokenId !== hashedTokenId) return null;
+        const hashedTokenId = hashTokenId(tokenId);
+
+        if (!safeCompare(data.tokenId, hashedTokenId)) return null;
         return data;
     } catch (e) {
         console.error('Failed to parse session', e);
@@ -80,7 +99,7 @@ export async function revokeAllSessions(userId) {
 
 export async function revokeSession({ sessionId, userId }) {
     if (!sessionId || !userId) 
-        throw new Error('Missing sessionId or userId');
+        return null
     // Delete the session data
     const sessionKey = `${SESSION_PREFIX}${sessionId}`;
     const userSessionKey = `${USER_SESSIONS_PREFIX}${userId}`;

@@ -9,7 +9,6 @@ import config from "../../../../../../config";
 import { setSession } from "@/lib/redis/helpers/session";
 import generateTokenId from "./generateTokenId";
  
-
 export async function tokenRefresh({ token }) {
   console.log("from inside tokenRefresh() function******************")
   console.log(token)
@@ -18,13 +17,14 @@ if (!token?.accessToken || !token?.refreshToken)
         
   try { 
       const { sessionId } = jwt.verify(token.accessToken, config.accessTokenSecret, { ignoreExpiration: true });
+      
       if (!sessionId) 
         return null
       const auth_db = await authDbConnect();
       const Session = sessionModel(auth_db);
       const session = await Session.findOne({ _id: sessionId })
-                                    .select('+refreshToken +revoked +refreshTokenExpiry +createdAt' ).lean();
-
+                                    .select('+refreshToken +userReference +revoked +refreshTokenExpiry +createdAt' ).lean();
+      console.log(session)
       if(!session)  return null;
       if(Date.now() > session.refreshTokenExpiry || session.revoked == true ){
           await Session.deleteOne({  _id: sessionId  });
@@ -54,13 +54,14 @@ if (!token?.accessToken || !token?.refreshToken)
           const accessToken = jwt.sign( payload, config.accessTokenSecret, 
                                               { expiresIn: config.accessTokenExpireMinutes * 60,
                                                 algorithm: 'HS256' });
-          await setSession({ sessionId, tokenId,
+          await setSession({ sessionId: session._id, tokenId,
                              payload: { sub: session.userReference, role: session.role } })
           return { accessToken, accessTokenExpiry, refreshToken: token?.refreshToken, tokenId  }
       }
 
       const User = userModel(auth_db);
       const user = await User.findOne({ referenceId: token.sub})
+                              .select('email phone referenceId role' )
       if(!user)  return null;
       const { accessToken,
               refreshToken,
@@ -73,10 +74,7 @@ if (!token?.accessToken || !token?.refreshToken)
 
       await Promise.all([ updateToken({        db: auth_db,
                                         sessionId, 
-                                             data: {          
-                                                              // tokenId, 
-                                                    // accessTokenExpiry,
-                                                         refreshToken, 
+                                             data: {      refreshToken, 
                                                     refreshTokenExpiry  }}),
                           setSession({ sessionId, tokenId,
                                       payload: { sub: user.referenceId, role: user.role } })
@@ -86,12 +84,6 @@ if (!token?.accessToken || !token?.refreshToken)
     console.error("Error refreshing access token:", error);
     return null
   }
-}
-
-function isRefreshTokenOld(sessionExpiry, issuedAt, totalLifetimeMs) {
-  const remaining = sessionExpiry - Date.now();
-  const used = totalLifetimeMs - remaining;
-  return used > totalLifetimeMs * 0.75;
 }
 
 export default tokenRefresh;

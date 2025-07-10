@@ -401,17 +401,6 @@ export const authOptions = {
             
             console.log("from jwt callback")
             const { token, user, account, profile } = params
-
-            console.log("************************token************************")
-            console.log(token)
-            console.log("************************user************************")
-            console.log(user)
-            console.log("************************account************************")
-            console.log(account)
-            console.log("************************profile************************")
-            console.log(profile)
-
-
             if (user && account) {
                 return {
                     ...token,
@@ -443,7 +432,7 @@ export const authOptions = {
                     const validSession = await validateSession({ sessionId: token.sessionId, tokenId: accessTokenData.tokenId });
                     if (!validSession) {
                         console.log("SESSION VALIDATION FAILED .......")
-                        return { ...token, error: 'InvalidSession' };
+                        null
                     }
 
                     return token;
@@ -462,7 +451,7 @@ export const authOptions = {
                 console.log(newTokens)
                     if(!newTokens) {
                         console.log("TOKEN REFRESH FAILED .......")
-                        return {}
+                        return null
                     }
                     console.log("TOKEN REFRESH SUCCESS .......")
                     return {

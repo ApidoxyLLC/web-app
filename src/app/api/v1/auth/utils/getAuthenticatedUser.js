@@ -5,7 +5,6 @@ import tokenRefresh from "./tokenRefresh";
 import config from "../../../../../../config";
 import { cookies } from "next/headers";
 
-
 export async function getAuthenticatedUser(req) {
     try {
         const currentToken = await getToken({ req, secret: config.nextAuthSecret});
@@ -17,8 +16,10 @@ export async function getAuthenticatedUser(req) {
             if (!decoded?.tokenId) 
                 return { authenticated: false, error: "Invalid token"  };
             
-            const redisSession = await validateSession({ sessionId: currentToken.sessionId, 
-                                                           tokenId: decoded.tokenId    });
+            let redisSession;
+            try { redisSession = await validateSession({ sessionId: currentToken.sessionId, tokenId: decoded.tokenId });} 
+            catch (err) { return { authenticated: false, error: " session check failed" };}
+            
             if(!redisSession) 
                 return { authenticated: false, error: "Invalid Memory Session"  };
 

@@ -1,26 +1,21 @@
-import { getToken } from "next-auth/jwt";
 import { userModel } from "@/models/auth/User";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { sessionModel } from "@/models/auth/Session";
 import { serialize } from "cookie";
-import { isValidObjectId } from "mongoose";
 import mongoose from "mongoose";
-import jwt from "jsonwebtoken";
-import config from "../../../../../../config";
-import bcrypt from "bcryptjs";
 import { revokeSession, validateSession } from "@/lib/redis/helpers/session";
+import getAuthenticatedUser from "../utils/getAuthenticatedUser";
+import { cookies } from 'next/headers';
 
 // Helper function for cookie cleanup
 const getCleanCookies = () => {
   const cookieNames = [
     "next-auth.session-token",
-    "__Secure-next-auth.session-token",
     "next-auth.csrf-token",
     "next-auth.callback-url",
-    "refreshToken" // Add refresh token invalidation
   ];
 
-  return cookieNames.map((cookieName) =>
+return cookieNames.map((cookieName) =>
     serialize(cookieName, "", {
       path: "/",
       expires: new Date(0),
@@ -31,89 +26,63 @@ const getCleanCookies = () => {
   );
 };
 
+export function verifyCsrfToken(req) {
+  const csrfHeader = req.headers.get("x-csrf-token");
+  const csrfCookie = cookies().get("next-auth.csrf-token")?.value;
+  if (!csrfHeader || !csrfCookie) return false;
+  const [storedToken] = csrfCookie.split("|"); // Cookie format: token|hash
+  return csrfHeader === storedToken;
+}
+
 export async function POST(req) {
   try {
-    // Validate initial token
-    const token = await getToken({ req });
-    if (!token || !token.sessionId || !isValidObjectId(token.sessionId)) 
-      return new Response(JSON.stringify({ error: "Unauthorized or invalid session" }), { status: 401 });
-
-
-
-    // Database connection and setup
-    const      db = await authDbConnect();
-    const    User = userModel(db);
-    const Session = sessionModel(db);
-
-    // Session validation
-    let userSession, decoded;
-
-    try {
-      userSession = await Session.findById(token.sessionId)
-                                 .select("tokenId refreshToken userId")
-                                 .lean();
-      if (!userSession) 
-        return new Response(JSON.stringify({ error: "Session not found" }),{ status: 404 });
+      if (!verifyCsrfToken(req))
+          return new Response(JSON.stringify({ error: "Invalid CSRF token" }), { status: 403, headers: { "Content-Type": "application/json", "Set-Cookie": getCleanCookies() }})
       
-                        decoded = jwt.verify(token.accessToken, config.accessTokenSecret);
-      const      isTokenIdValid = await bcrypt.compare(decoded.tokenId, userSession.tokenId);
-      const isRefreshTokenValid = await bcrypt.compare(token.refreshToken, userSession.refreshToken);
-             const redisSession = await validateSession({sessionId: token.sessionId, tokenId: decoded.tokenId });
-      if (!redisSession || !isTokenIdValid || !isRefreshTokenValid) 
-        return new Response(JSON.stringify({ error: "Unauthorized request" }),{ status: 401 });
-      
-    } catch (error) {
-      console.error("Session validation error:", error);
-      return new Response(JSON.stringify({ error: "Unauthorized or invalid session" }),{ status: 401 })
-    }
+      const { authenticated, error, data } = await getAuthenticatedUser(req);
+      if(!authenticated){
+          return new Response(JSON.stringify({ error: "Unauthenticated" }), {status: 401,headers: { "Content-Type": "application/json", "Set-Cookie": getCleanCookies()}})}
+      const          db = await authDbConnect();
+      const        User = userModel(db);
+      const     Session = sessionModel(db);
+      const userSession = await Session.findById(data.sessionId)
+                                       .select("refreshToken userId userReference")
+                                       .lean();
+      if (!userSession) {
+          return new Response(JSON.stringify({ error: "Invalid request" }), { status: 404, headers: { "Content-Type": "application/json", "Set-Cookie": getCleanCookies()}})}
 
-    // Start transaction
-    const session = await db.startSession();
-    const results = { redisSessionRevoked: false,
+      const dbSession = await db.startSession();
+      const results = { redisSessionRevoked: false,
                            sessionDeleted: false,
                               userUpdated: false };
-    try {
-      await revokeSession({ sessionId: token.sessionId, 
-                             userId: decoded.sub });
+
+      try {
+          await dbSession.withTransaction(async () => {
+            const revoked = await revokeSession({ sessionId: data.sessionId, 
+                                                userId: userSession.userReference });
+            if(!revoked) throw new Error("Internal server error");
             results.redisSessionRevoked = true;
-      await session.withTransaction(async () => {
-        // First revoke Redis session
-        // Then perform MongoDB operations
-        // const [sessionDeleteResult, userUpdateResult] = 
-        //                           await Promise.all([
-        //                                                 Session.deleteOne( { _id: token.sessionId }, { session }),
-        //                                                    User.updateOne( { _id: userSession.userId }, {  $pull: { activeSessions: new mongoose.Types.ObjectId(token.sessionId) }, },
-        //                                                                    { session }),
-        //                                               ]);
 
-        const sessionDeleteResult = await Session.deleteOne( { _id: token.sessionId }, { session })
-        const    userUpdateResult = await    User.updateOne( {    _id: userSession.userId }, 
-                                                             {  $pull: { activeSessions: new mongoose.Types.ObjectId(token.sessionId) } },
-                                                             { session })
-        results.sessionDeleted = sessionDeleteResult.deletedCount > 0;
-        results.userUpdated    = userUpdateResult.modifiedCount > 0;
+            const sessionDeleteResult = await Session.deleteOne( { _id: userSession._id }, { session: dbSession })
+            if(sessionDeleteResult)                                       
+              results.sessionDeleted = sessionDeleteResult.deletedCount > 0;
+            const    userUpdateResult = await    User.updateOne( {    _id: userSession.userId }, 
+                                                                 {  $pull: { activeSessions: userSession._id } },
+                                                                 { session: dbSession } )
+            if(userUpdateResult)
+              results.userUpdated    = userUpdateResult.modifiedCount > 0;
 
-        if (!results.sessionDeleted || !results.userUpdated) 
-          throw new Error("Failed to update database records");
-        
-      });
-    } catch (error) {
-      console.error("Transaction error:", error);
-      // If Redis was revoked but MongoDB failed, log for recovery
-      if (results.redisSessionRevoked) 
-        console.error( "Inconsistent state: Redis session revoked but MongoDB operations failed" );
-      return new Response( JSON.stringify({ error: "Failed to complete sign-out", details: error.message, }), { status: 500, headers: {"Content-Type": "application/json", "Set-Cookie": getCleanCookies(),},});
-    } finally {
-      await session.endSession();
-    }
+          if (!results.sessionDeleted || !results.userUpdated) 
+            throw new Error("Failed to update database records");
+          
+          }, { readPreference: 'primary' });
+      } catch (error) {
+        return new Response( JSON.stringify({ error: "Failed to complete sign-out", details: error.message, }), { status: 500, headers: {"Content-Type": "application/json", "Set-Cookie": getCleanCookies(),},});
+      } finally { await dbSession.endSession() }
 
     // Successful response
-    const headers = new Headers();
-    getCleanCookies().forEach((cookie) => {
-      headers.append("Set-Cookie", cookie);
-    });
-    headers.set("Content-Type", "application/json");
-    return new Response( JSON.stringify({ message: "Sign-out successful", results }),{ status: 200, headers });
+    const headers = new Headers([ ["Content-Type", "application/json"], ...getCleanCookies().map((cookie) => ["Set-Cookie", cookie]) ]);
+    return new Response(JSON.stringify({ message: "Sign-out successful", results }), { status: 200, headers } );
   } catch (error) {
     console.error("Unexpected error in sign-out:", error);
     return new Response( JSON.stringify({ error: "Internal server error" }), { status: 500, headers: { "Content-Type": "application/json", "Set-Cookie": getCleanCookies() },});
