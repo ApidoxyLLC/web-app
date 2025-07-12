@@ -117,7 +117,7 @@ const userSchema = new mongoose.Schema({
                 avatar: { type: String, default: null},
         activeSessions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],
                  shops: { type: [mongoose.Schema.Types.ObjectId], select: false, default: [] },
-                 email: { type: String, trim: true, unique: true, index: true, sparse: true  },
+                 email: { type: String, trim: true, unique: true, sparse: true  },
                  phone: { type: String, trim: true, unique: true, sparse: true },
             isVerified: { type: Boolean,  default: undefined },
        isEmailVerified: { type: Boolean, default: false, select: false  },

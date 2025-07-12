@@ -15,9 +15,39 @@ export async function POST(request) {
   try { body = await request.json();} 
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
 
-  const userSession = await getAuthenticatedUser(request);
-  if(!userSession) 
+  const { authenticated, error, data } = await getAuthenticatedUser(request);
+
+  // sessionId
+  // userReferenceId
+  // name
+  // email
+  // phone
+  // role
+  // isVerified
+  // timezone
+  // theme
+  // language
+  // currency
+
+  // const userSession = await getAuthenticatedUser(request);
+  if(!authenticated) 
       return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+
+
+  const response = await fetch(`${process.env.DOMAIN_SDK_URL}/domain`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.EXTERNAL_API_KEY}` // Optional
+      },
+      body: JSON.stringify({
+        name: requestBody.name,
+        email: requestBody.email
+      }),
+      cache: 'no-store', // Optional: disables caching
+    });
+
+
 
   const parsed = createShopDTOSchema.safeParse(body);
   if (!parsed.success) 
@@ -59,9 +89,7 @@ export async function POST(request) {
 
           const shop = await ShopModel.create([{
                                                   _id: shopId,
-                                            //  vendorId: ()=> cuid(),
-                                              ownerId: userSession?.userId,
-                                    ownerLoginSession: userSession?.sessionId,
+                                              ownerId: user._id,
                                               country: country,
                                              industry: industry,
                                          businessName: businessName,
@@ -101,126 +129,12 @@ export async function POST(request) {
   return new NextResponse(JSON.stringify({response: "sample response "}), { status: 201 });
 }
 
-export async function GET(request, response) {
-  const { authenticated, error, data } = await getAuthenticatedUser(request, response);
-
-  const res = NextResponse.json( { data:"sample Data " })
-  return res
-  // try {
-  //   // Authenticate the user
-    
-  //   if (!userSession) 
-  //     return NextResponse.json({ error: "Not authorized" }, { status: 401 });
-    
-  //   // Pagination params (optional, default to page 1, limit 10)
-  //   const { searchParams } = new URL(request.url);
-  //   const page = parseInt(searchParams.get("page") || "1", 10);
-  //   const limit = parseInt(searchParams.get("limit") || "10", 10);
-  //   const skip = (page - 1) * limit;
-  //   // Connect to the auth database
-  //   const auth_db = await authDbConnect();
-  //   const ShopModel = shopModel(auth_db);
-
-  //   const userId = userSession.userId
-  //   const sessionId = userSession.sessionId;
-
-  //   const result = await ShopModel.aggregate([ { $lookup: { 
-  //                                                             from: "users",
-  //                                                              let: { userId, sessionId },
-  //                                                         pipeline: [ { 
-  //                                                                       $match: {
-  //                                                                                   $expr: { $or: [ 
-  //                                                                                                   { $eq: ["$userId", "$$userId"] },
-  //                                                                                                   { $in: ["$$sessionId", "$activeSessions"] }
-  //                                                                                                 ] },
-  //                                                                               isDeleted: false
-  //                                                                             }
-  //                                                                       },
-  //                                                                     { $limit: 1 },
-  //                                                                     { $project: { _id: 1 } }
-  //                                                                   ],
-  //                                                               as: "user"
-  //                                                         }
-  //                                               },
-  //                                               { $match: {
-  //                                                           $or: [ 
-  //                                                                   {  $expr: { $eq: ["$ownerId", { $arrayElemAt: ["$user._id", 0] }] } },
-  //                                                                   { stuffs: { $elemMatch: {
-  //                                                                                             userId: { $eq: { $arrayElemAt: ["$user._id", 0] } }, 
-  //                                                                                             status: "active"
-  //                                                                                           } 
-  //                                                                             } 
-  //                                                                   } 
-  //                                                                 ]
-  //                                                         }
-  //                                               },
-  //                                               { $facet: {
-  //                                                           shops: [ {    $skip: skip  },
-  //                                                                    {   $limit: limit },
-  //                                                                    { $project: { user: 0, __v: 0 } } ],
-  //                                                           total: [{ $count: "count" }]
-  //                                                         }
-  //                                               },
-  //                                               { $project: {
-  //                                                                   shops: "$shops",
-  //                                                                   total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-  //                                                             currentPage: { $literal: page },
-  //                                                              totalPages: {
-  //                                                                           $ceil: {
-  //                                                                               $divide: [
-  //                                                                                           { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-  //                                                                                           limit
-  //                                                                                       ]
-  //                                                                             }
-  //                                                                          }
-  //                                                           }
-  //                                               },
-  //                                               {
-  //                                                 $addFields: {
-  //                                                   nextPage: {
-  //                                                     $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
-  //                                                   },
-  //                                                   prevPage: {
-  //                                                     $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
-  //                                                   }
-  //                                                 }
-  //                                               }
-  //                                             ]);
-
-  //   const response = result[0] || {
-  //     shops: [],
-  //     total: 0,
-  //     currentPage: page,
-  //     totalPages: 0,
-  //     nextPage: null,
-  //     prevPage: null
-  //   };
-
-  //   return NextResponse.json({
-  //         success: true,
-  //            data: response.shops,
-  //           total: response.total,
-  //     currentPage: response.currentPage,
-  //      totalPages: response.totalPages,
-  //        nextPage: response.nextPage,
-  //        prevPage: response.prevPage
-  //   }, { status: 200 });
-  // } catch (error) { return NextResponse.json({ error: error.message || "Failed to retrieve shop data", stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined }, { status: 500 });}
-
-}
-
-/* *************Do not delete it ***************
-/* *************Do not delete it ***************
-/* *************Do not delete it ***************
-/* temporary off out of testing purpose --
-this is actual GET request 
-this is actual GET request 
-this is actual GET request 
 export async function GET(request) {
   try {
     // Authenticate the user
-    const userSession = await getAuthenticatedUser(request);
-    if (!userSession) {
+    const { authenticated, error, data } = await getAuthenticatedUser(request);
+
+    if (!authenticated) {
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
     }
     // Pagination params (optional, default to page 1, limit 10)
@@ -232,21 +146,22 @@ export async function GET(request) {
     const auth_db = await authDbConnect();
     const ShopModel = shopModel(auth_db);
 
-    const userId = userSession.userId
-    const sessionId = userSession.sessionId;
+    const { sessionId, userReferenceId, name, email, phone, role, isVerified, timezone, theme, language, currency } = data
 
     const result = await ShopModel.aggregate([ { $lookup: { 
                                                               from: "users",
-                                                               let: { userId, sessionId },
-                                                          pipeline: [ { 
+                                                               let: { userReferenceId, sessionId, email },
+                                                          pipeline: [ {
                                                                         $match: {
                                                                                     $expr: { $or: [ 
-                                                                                                    { $eq: ["$userId", "$$userId"] },
-                                                                                                    { $in: ["$$sessionId", "$activeSessions"] }
-                                                                                                  ] },
+                                                                                                    { $eq: ["$referenceId", "$$userReferenceId"] },
+                                                                                                    { $eq: ["$$email", "$email"] },
+                                                                                                    { $in: ["$$sessionId", "$activeSessions"] },
+                                                                                                  ] 
+                                                                                                },
                                                                                 isDeleted: false
                                                                               }
-                                                                        },
+                                                                      },
                                                                       { $limit: 1 },
                                                                       { $project: { _id: 1 } }
                                                                     ],
@@ -298,14 +213,12 @@ export async function GET(request) {
                                                 }
                                               ]);
 
-    const response = result[0] || {
-      shops: [],
-      total: 0,
-      currentPage: page,
-      totalPages: 0,
-      nextPage: null,
-      prevPage: null
-    };
+    const response = result[0] || {     shops: [],
+                                        total: 0,
+                                  currentPage: page,
+                                   totalPages: 0,
+                                     nextPage: null,
+                                     prevPage: null   };
 
     return NextResponse.json({
       success: true,
@@ -323,7 +236,7 @@ export async function GET(request) {
     }, { status: 500 });
   }
 }
-*/
+
 
 
 

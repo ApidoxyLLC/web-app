@@ -1,43 +1,17 @@
 import { userModel } from "@/models/auth/User";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { sessionModel } from "@/models/auth/Session";
-import { serialize } from "cookie";
-import mongoose from "mongoose";
+import getCleanCookies from "../utils/getCleanCookies";
+import verifyCsrfToken from "../utils/verifyCsrfToken";
 import { revokeSession, validateSession } from "@/lib/redis/helpers/session";
 import getAuthenticatedUser from "../utils/getAuthenticatedUser";
-import { cookies } from 'next/headers';
-
-// Helper function for cookie cleanup
-const getCleanCookies = () => {
-  const cookieNames = [
-    "next-auth.session-token",
-    "next-auth.csrf-token",
-    "next-auth.callback-url",
-  ];
-
-return cookieNames.map((cookieName) =>
-    serialize(cookieName, "", {
-      path: "/",
-      expires: new Date(0),
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-    })
-  );
-};
-
-export function verifyCsrfToken(req) {
-  const csrfHeader = req.headers.get("x-csrf-token");
-  const csrfCookie = cookies().get("next-auth.csrf-token")?.value;
-  if (!csrfHeader || !csrfCookie) return false;
-  const [storedToken] = csrfCookie.split("|"); // Cookie format: token|hash
-  return csrfHeader === storedToken;
-}
 
 export async function POST(req) {
   try {
-      if (!verifyCsrfToken(req))
+      const csrfVerified = verifyCsrfToken(req)
+      if (!csrfVerified){
           return new Response(JSON.stringify({ error: "Invalid CSRF token" }), { status: 403, headers: { "Content-Type": "application/json", "Set-Cookie": getCleanCookies() }})
+      }
       
       const { authenticated, error, data } = await getAuthenticatedUser(req);
       if(!authenticated){

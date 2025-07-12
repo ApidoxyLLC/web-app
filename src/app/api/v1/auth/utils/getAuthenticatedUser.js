@@ -67,7 +67,7 @@ export async function getAuthenticatedUser(req) {
 
 }
 
-// ✅ Extracted helper for consistent return
+// Extracted helper for consistent return
 function formatUserResponse(token) {
     return {       sessionId: token.sessionId,
              userReferenceId: token.sub,

@@ -101,10 +101,7 @@ export async function POST(request) {
       // Don't fail the request - just log the error
     }
 
-    return NextResponse.json(
-      { success: true, message: "Password reset instructions sent to your email" },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true, message: "Password reset instructions sent to your email" }, { status: 200 });
   } catch (error) {
     console.error("Forgot password error:", error);
     return NextResponse.json(

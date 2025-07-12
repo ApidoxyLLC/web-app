@@ -11,5 +11,8 @@ const config = {
     errRetryInterval: parseInt(process.env.DB_ERROR_RETRY_INTERVAL_MS || '60000', 10),
     connectionHealthCheckInterval: parseInt(process.env.DB_CONNECTION_HEALTH_CHECK_INTERVAL || '30000', 10),
     connectionLockTimeout: parseInt(process.env.DB_CONNECTION_LOCK_TIMEOUT || '50000', 10),
+
+    vendorDbUri: process.env.VENDOR_DB_URI,
+    authDbUri: process.env.AUTH_DB_URI,
 };
 export default config
