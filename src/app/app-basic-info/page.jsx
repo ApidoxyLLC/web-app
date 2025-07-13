@@ -34,57 +34,6 @@ const AppBasicInfo = () => {
   return (
     <div>
       <div className="flex flex-row items-center gap-6">
-        {/* <ModeToggle />
-        <Popover>
-          <PopoverTrigger asChild>
-            <div className="cursor-pointer">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
-            </div>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-0 border bg-muted/100 shadow-lg rounded-xl relative  z-50 mr-2">
-            <div className="p-4 border-b trap ">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src="https://github.com/shadcn.png" />
-                  <AvatarFallback>CN</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-semibold">John Doe</div>
-                  <div className="text-xs text-muted-foreground">
-                    john@example.com
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <button className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-muted transition">
-                <UserCircle2 className="w-4 h-4" />
-                Account
-              </button>
-              <button className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-muted transition">
-                <Shield className="w-4 h-4" />
-                Security
-              </button>
-              <button className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-muted transition">
-                <Lock className="w-4 h-4" />
-                Privacy
-              </button>
-              <div className="border-t my-1" />
-              <button className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-muted transition">
-                <LifeBuoy className="w-4 h-4" />
-                Support
-              </button>
-              <div className="border-t my-1" />
-              <button className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-muted transition">
-                <LogOutIcon className="w-4 h-4" />
-                Logout
-              </button>
-            </div>
-          </PopoverContent>
-        </Popover> */}
       </div>
       <Card className="overflow-hidden flex justify-center mt-10  border-none p-0 shadow-none ">
         <CardContent className="grid p-0 md:grid-cols-2 w-10/12  ">

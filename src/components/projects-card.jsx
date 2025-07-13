@@ -25,9 +25,23 @@ import {
 } from "@radix-ui/react-popover";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ModeToggle } from "./mode-toggle";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function ProjectsCard() {
+  const router = useRouter()
+  const data = useSession()
+  useEffect(() => {
+    if (data.status === "authenticated" && data.data?.user) {
+        router.push("http://localhost:3000/");
+      } else {
+        router.push("http://localhost:3000/signup");
+      }
+    
+  }, [data, data.status, router]);
+  
+
   return (
     <div>
       <div className="flex flex-row items-center justify-between p-6 gap-4 border-b bg-white dark:bg-background">
@@ -93,8 +107,8 @@ export function ProjectsCard() {
         </div>
       </div>
       <div className="*:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-4 grid grid-cols-1 gap-6 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card lg:px-6 py-6">
-        <Link href="123/dashboard">
-          <Card className="@container/card">
+        <Link href={"http://localhost:3000/app-basic-info"}>
+        <Card className="@container/card cursor-pointer">
             <CardHeader className="relative">
               <CardDescription>Total Revenue</CardDescription>
               <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
@@ -118,8 +132,7 @@ export function ProjectsCard() {
                 Visitors for the last 6 months
               </div>
             </CardFooter>
-          </Card>
-        </Link>
+          </Card></Link>
         <Link href="123/dashboard">
           <Card className="@container/card">
             <CardHeader className="relative">
@@ -147,7 +160,6 @@ export function ProjectsCard() {
             </CardFooter>
           </Card>
         </Link>
-
         <Link href="123/dashboard">
           <Card className="@container/card">
             <CardHeader className="relative">
