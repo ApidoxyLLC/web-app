@@ -114,56 +114,65 @@ const dbSchema = new mongoose.Schema({
       prefix: { type: String, default: 'shop_' }
 }, { timestamps: false });
 
-const keySchema = new mongoose.Schema({
-           ACCESS_TOKEN_SECRET: { type: String, required: true },
-          REFRESH_TOKEN_SECRET: { type: String, required: true }, 
-               NEXTAUTH_SECRET: { type: String, required: true },
-    //  EMAIL_VERIFICATION_SECRET: { type: String, required: true },
-  //  ACCESS_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || 15 ) }, 
-  // REFRESH_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || 10080) }, 
+// const keySchema = new mongoose.Schema({
+//            ACCESS_TOKEN_SECRET: { type: String, required: true },
+//           REFRESH_TOKEN_SECRET: { type: String, required: true }, 
+//                NEXTAUTH_SECRET: { type: String, required: true },
+//     //  EMAIL_VERIFICATION_SECRET: { type: String, required: true },
+//   //  ACCESS_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || 15 ) }, 
+//   // REFRESH_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || 10080) }, 
 
-  // ACCESS_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
-  // REFRESH_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
+//   // ACCESS_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
+//   // REFRESH_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
    
-}, { timestamps: false, _id: false })
-const timeLimitationsSchema = new mongoose.Schema({
-     EMAIL_VERIFICATION_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRY || 10 ) }, 
-     PHONE_VERIFICATION_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRY || 3 ) }, 
-           ACCESS_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || 15 ) }, 
-          REFRESH_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || 10080) }, 
+// }, { timestamps: false, _id: false })
 
-  // ACCESS_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
-  // REFRESH_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
+// const timeLimitationsSchema = new mongoose.Schema({
+//      EMAIL_VERIFICATION_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRY || 10 ) }, 
+//      PHONE_VERIFICATION_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRY || 3 ) }, 
+//            ACCESS_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || 15 ) }, 
+//           REFRESH_TOKEN_EXPIRE_MINUTES: { type: Number, required: true, default: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || 10080) }, 
+
+//   // ACCESS_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
+//   // REFRESH_TOKEN_ENCRYPTION_KEY: { type: String, required: true },
  
-}, { timestamps: false, _id: false })
+// }, { timestamps: false, _id: false })
 
-const hostSchema = new mongoose.Schema({
-             domain: {   type: String, required: true, trim: true,
-                       unique: true, match: /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/ },
-           hostType: {   type: [String], enum:['web', 'android', 'ios'], default: [] }, 
-         subdomains: {   type: [String],  default: [] },
-}, { timestamps: true });
+// const hostSchema = new mongoose.Schema({
+//              domain: {   type: String, required: true, trim: true,
+//                        unique: true, match: /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/ },
+//            hostType: {   type: [String], enum:['web', 'android', 'ios'], default: [] }, 
+//          subdomains: {   type: [String],  default: [] },
+// }, { timestamps: true });
+
+const transactionFieldsSchema = new mongoose.Schema({
+                txId: {  type: String, index: true, required: function() { return this.sagaStatus !== 'success' }},
+          sagaStatus: { type: String, enum: ['pending', 'success', 'aborted', 'compensating', 'failed'], default: 'pending', index: true },
+        lastTxUpdate: { type: Date },
+}, { _id: false, timestamps: false });
 
 const stuffSchema = new mongoose.Schema(
-  { userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  {      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     designation: { type: String, enum: [ 'store_manager', 'assistant_manager', 'cashier', 'sales_associate', 'inventory_clerk', 'security', 'janitor', 'other' ], required: true },
-    status: { type: String, enum: ['active', 'terminated', 'on_leave', 'resigned'], default: 'active' },
-    permission: { type: [String], enum: ['r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
-    startDate: { type: Date, required: true,},
-    endDate: { type: Date, },
-    notes: [{ date: { type: Date, default: Date.now },
-              author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-              content: String }],
+         status: { type: String, enum: ['active', 'terminated', 'on_leave', 'resigned'], default: 'active' },
+     permission: { type: [String], enum: ['r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
+      startDate: { type: Date, required: true,},
+        endDate: { type: Date },
+          notes: [{    date: { type: Date, default: Date.now },
+                     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+                    content: String }],
   },
   { timestamps: true }
 );
 
 const shopSchema = new mongoose.Schema({
-                // _id: { type: mongoose.Schema.Types.ObjectId, required: true },
+                _id: { type: mongoose.Schema.Types.ObjectId, required: true },
+        referenceId: { type: String, select: true },
+          //  vendorId: { type: mongoose.Schema.Types.ObjectId, required: true  },
             ownerId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
-           vendorId: { type: String, default:()=> cuid() },
   // ownerLoginSession: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Session' },
               email: { type: String, trim: true, unique: true, sparse: true  },
+              phone: { type: String, trim: true, unique: true, sparse: true  },
             country: { type: String, required: true },
            industry: { type: String, required: true },
        businessName: { type: String, required: true },
@@ -171,19 +180,21 @@ const shopSchema = new mongoose.Schema({
 
         //  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
   maxSessionAllowed: { type: Number, default: Number(process.env.END_USER_DEFAULT_MAX_SESSIONS || 5), select: false },
-             dbInfo: { type: dbSchema,  required: true, select: false },
-               keys: { type: keySchema, required: true, select: false },
-    timeLimitations: { type: timeLimitationsSchema, select: false },
+              
+              // dbUri: { type: String },
+            //  dbInfo: { type: dbSchema,  required: true, select: false },
+              //  keys: { type: keySchema, required: true, select: false },
+    // timeLimitations: { type: timeLimitationsSchema, select: false },
                slug: { type: String, default: null },
          activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                 web: { type: webAppSchema, default: null },
             android: { type: androidAppSchema, default: null },
                 ios: { type: iosAppSchema, default: null },
-            domains: { type: [hostSchema], default: [] },
-        socialLinks: { type: [socialLinksSchema], required: false, default: [] },
-   facebookDataFeed: { type: String, default: null },
-             stuffs: { type: [stuffSchema], default: undefined }
-
+            // domains: { type: [hostSchema], default: [] },
+        // socialLinks: { type: [socialLinksSchema], required: false, default: [] },
+  //  facebookDataFeed: { type: String, default: null },
+             stuffs: { type: [stuffSchema], default: undefined },
+        transaction: { type: transactionFieldsSchema },
 }, { timestamps: true, collection: 'shops' });
 
 

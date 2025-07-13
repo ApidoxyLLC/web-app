@@ -44,9 +44,9 @@ const config = {
   defaultVendorDbProvider: process.env.VENDOR_DEFAULT_DB_PROVIDER,
   vendorDbDefaultUri: process.env.VENDOR_DB_DEFAULT_URI,
   vendorDbUriEncryptionKey: process.env.VENDOR_DB_URI_ENCRYPTION_KEY,
-  vendorDbPrefix: process.env.VENDOR_DB_PREFIX
+  vendorDbPrefix: process.env.VENDOR_DB_PREFIX,
 
-
+  shopDefaultDomain: process.env.SHOP_DEFAULT_DOMAIN
 };
 export default config
 

@@ -11,7 +11,7 @@ const templates = [
     },
 ];
 
-export async function addDNSRecord({ domain, template, ttl = null }) {
+export async function addDNSRecord({ domain, template, zoneId, ttl = null }) {
   const controller = new AbortController();
   const timeout = 10000;
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -27,7 +27,7 @@ export async function addDNSRecord({ domain, template, ttl = null }) {
 
   try {
     const response = await fetch(
-      `https://api.cloudflare.com/client/v4/zones/${config.zoneId}/dns_records`,
+      `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`,
       {
         method: "POST",
         headers: {

@@ -3,131 +3,137 @@ import { createShopDTOSchema } from "./createShopDTOSchema";
 import mongoose from "mongoose";
 import { dbConnect } from "@/lib/mongodb/db";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
+import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { encrypt } from "@/lib/encryption/cryptoEncryption";
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import { shopModel } from "@/models/auth/Shop";
 import { userModel } from "@/models/auth/User";
+import { vendorModel } from "@/models/vendor/Vendor";
 import crypto from 'crypto'; 
 import config from "../../../../../config";
+import cuid from "@bugsnag/cuid";
 
-export async function POST(request) {
-  let body;
-  try { body = await request.json();} 
-  catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
+  export async function POST(request) {
+      let body;
+      try { body = await request.json();} 
+      catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
 
-  const { authenticated, error, data } = await getAuthenticatedUser(request);
+      const { authenticated, error, data } = await getAuthenticatedUser(request);
+      if(!authenticated) 
+          return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
-  // sessionId
-  // userReferenceId
-  // name
-  // email
-  // phone
-  // role
-  // isVerified
-  // timezone
-  // theme
-  // language
-  // currency
-
-  // const userSession = await getAuthenticatedUser(request);
-  if(!authenticated) 
-      return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+      const parsed = createShopDTOSchema.safeParse(body);
+      if (!parsed.success)
+          return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+      
+      const      auth_db = await authDbConnect()
+      const    UserModel =  userModel(auth_db);
+      const         user = await UserModel.findOne({ referenceId: data.userReferenceId, 
+                                                      isDeleted: false }).select('+_id +usage');
+      
+      if (!user) return NextResponse.json({ error: "User not found or deleted" }, { status: 404 });
 
 
-  const response = await fetch(`${process.env.DOMAIN_SDK_URL}/domain`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.EXTERNAL_API_KEY}` // Optional
-      },
-      body: JSON.stringify({
-        name: requestBody.name,
-        email: requestBody.email
-      }),
-      cache: 'no-store', // Optional: disables caching
-    });
+      const           _id = new mongoose.Types.ObjectId();
+      const   referenceId = cuid();
+      const          txId = cuid();
+      const        dbName = `${config.vendorDbPrefix}_${_id}_db`
+      const primaryDomain = _id+'.'+config.shopDefaultDomain
+
+      const shopPayload = {        _id,
+                           referenceId,
+                               ownerId: user._id,
+                                 email: user.email ? user.email : undefined,
+                                 phone: user.phone ? user.email : undefined,
+                               country: parsed.data.country.trim(),
+                              industry: parsed.data.industry?.trim(),
+                          businessName: parsed.data.businessName?.trim(),
+                              location: parsed.data.location,
+                           transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() } }
+
+      const vendorPayload = {      _id,
+                           referenceId,
+                               ownerId: user._id,
+                                 email: user.email ? user.email : undefined,
+                                 phone: user.phone ? user.email : undefined,
+                               country: parsed.data.country.trim(),
+                              industry: parsed.data.industry?.trim(),
+                          businessName: parsed.data.businessName?.trim(),
+                              location: parsed.data.location,
+                                dbInfo:  { dbName, 
+                                            dbUri: await encrypt({    data: config.vendorDbDefaultUri+'/'+ dbName,
+                                                                options: { secret: config.vendorDbUriEncryptionKey } }) 
+                                          },
+                               secrets:  {  accessTokenSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
+                                                                               options: { secret: config.accessTokenSecretEncryptionKey  } }),
+
+                                           refreshTokenSecret: await encrypt({    data: crypto.randomBytes(64).toString('hex'),
+                                                                               options: { secret: config.refreshTokenSecretEncryptionKey } }),
+
+                                               nextAuthSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
+                                                                               options: { secret: config.nextAuthSecretEncryptionKey     } }),
+                                          },
+                         primaryDomain,
+                               domains: [primaryDomain],
+                           transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }    }
+
+      const userUpdateQuery =  { $push: { shops: _id },
+                                  $inc: { 'usage.shops': 1 } }
+
+      const vendor_db = await vendorDbConnect()
+      const [   authDb_session, 
+              vendorDb_session ] = await Promise.all([   auth_db.startSession(), 
+                                                 vendor_db.startSession()])
+                                                
+      await Promise.all([ authDb_session.startTransaction(), 
+                        vendorDb_session.startTransaction()])
+      const VendorModel = vendorModel(vendor_db)
+      const   ShopModel = shopModel(auth_db);                        
+      try {
+            const [[shop], [vendor], updatedUser ] = await  Promise.all([ ShopModel.create([shopPayload], { session: authDb_session }), 
+                                                                    VendorModel.create([vendorPayload], { session: vendorDb_session }), 
+                                                                      UserModel.updateOne({ _id: user._id }, userUpdateQuery, { session: authDb_session } )])
+
+            const updateSagaSuccess = { 'transaction.sagaStatus': 'success',
+                                        'transaction.lastTxUpdate': new Date()};
+
+            await Promise.all([   ShopModel.updateOne({ _id: shop._id }, { $set: updateSagaSuccess }, { session: authDb_session }),
+                                VendorModel.updateOne({ _id: vendor._id }, { $set: updateSagaSuccess }, { session: vendorDb_session })]);
+
+            await Promise.all([ authDb_session.commitTransaction(), 
+                              vendorDb_session.commitTransaction()])
+
+            const returnData = {            id: shop.referenceId,
+                                  businessName: shop.businessName,
+                                       country: shop.country, 
+                                      industry: shop.industry,
+                                      location: shop.location,
+                                       domains: vendor.domains      }
+            
+        if(shop)
+          return NextResponse.json({ message: "Shop created successfully", success: true, data: returnData }, { status: 201 })
+      } catch (error) {
+        await Promise.allSettled([   authDb_session.abortTransaction(),
+                                   vendorDb_session.abortTransaction()]);
+
+        try { await VendorModel.updateOne( { 'transaction.txId': txId },
+                                           { $set: {   'transaction.sagaStatus': 'failed',
+                                                     'transaction.lastTxUpdate': new Date() } });
+        } catch (e) { console.error('Failed to mark saga as failed', e) }
+
+        try { await ShopModel.updateOne({ 'transaction.txId': txId },
+                                        { $set: {   'transaction.sagaStatus': 'failed',
+                                                  'transaction.lastTxUpdate': new Date() } });
+        } catch (e) { console.error('Failed to mark saga as failed', e) }
 
 
-
-  const parsed = createShopDTOSchema.safeParse(body);
-  if (!parsed.success) 
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
-
-  const auth_db = await authDbConnect()
-  const UserModel =  userModel(auth_db);
-  const user = await UserModel.findOne({ isDeleted: false,
-                                          $or: [
-                                            { userId: inputUserId },
-                                            { activeSessions: inputSessionId }
-                                          ]
-                                        }).select('+_id +usage');
-
-  const      country = parsed.data.country.trim();
-  const     industry = parsed.data.industry?.trim();
-  const businessName = parsed.data.businessName?.trim();
-  const     location = parsed.data.location;
-  // const _sample_ownerId = new mongoose.Types.ObjectId();
-
-  const  accessTokenSecretCipherText = await encrypt({   data: crypto.randomBytes(32).toString('base64'),
-                                                      options: { secret: config.accessTokenSecretEncryptionKey  } });
-
-  const refreshTokenSecretCipherText = await encrypt({   data: crypto.randomBytes(64).toString('hex'),
-                                                      options: { secret: config.refreshTokenSecretEncryptionKey } });
-
-  const     nextauthSecretCipherText = await encrypt({   data: crypto.randomBytes(32).toString('base64'),
-                                                      options: { secret: config.nextAuthSecretEncryptionKey     } });
-
-  const     shopId = new mongoose.Types.ObjectId();
-  const shopDbName = config.vendorDbPrefix + shopId
-
-  const dbUriCipherText = await encrypt({ data: config.vendorDbDefaultUri+'/'+ shopDbName,
-                                       options: { secret: config.vendorDbUriEncryptionKey } });
-
-    try {
-
-          const ShopModel = shopModel(auth_db);
-
-          const shop = await ShopModel.create([{
-                                                  _id: shopId,
-                                              ownerId: user._id,
-                                              country: country,
-                                             industry: industry,
-                                         businessName: businessName,
-                                             location: location,
-
-                                               dbInfo:  { provider: config.defaultVendorDbProvider,
-                                                               uri: dbUriCipherText,
-                                                            prefix: config.vendorDbPrefix },
-
-                                                 keys:  {    ACCESS_TOKEN_SECRET: accessTokenSecretCipherText,
-                                                            REFRESH_TOKEN_SECRET: refreshTokenSecretCipherText,
-                                                                 NEXTAUTH_SECRET: nextauthSecretCipherText,
-                                                      //  EMAIL_VERIFICATION_SECRET: emailVerificationCipherText
-                                                        },
-                                      timeLimitations:  { ACCESS_TOKEN_EXPIRE_MINUTES: config.accessTokenDefaultExpireMinutes,
-                                                          REFRESH_TOKEN_EXPIRE_MINUTES: config.refreshTokenDefaultExpireMinutes,
-                                                          EMAIL_VERIFICATION_EXPIRE_MINUTES: config.emailVerificationDefaultExpireMinutes,
-                                                          PHONE_VERIFICATION_EXPIRE_MINUTES: config.phoneVerificationDefaultExpireMinutes
-                                                        }
-                                      }]);
-                        await UserModel.updateOne(  { _id: user._id },
-                                                    {
-                                                      $push: { shops: shop._id },
-                                                      $inc: { 'usage.shops': 1 }
-                                                    }
-                                                  );
-
-        
-      if(shop[0])
-        return NextResponse.json({ message: "Shop created successfully", success: true, data: shop[0] }, { status: 201 })
-    } catch (error) {
-      return NextResponse.json({
-              error: error.message || "Shop Not created",
-              stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-            }, { status: 500 });
-    }
-  return new NextResponse(JSON.stringify({response: "sample response "}), { status: 201 });
-}
+        return NextResponse.json({
+                error: error.message || "Shop Not created",
+                stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+              }, { status: 500 });
+      }
+    return new NextResponse(JSON.stringify({response: "sample response "}), { status: 201 });
+  }
 
 export async function GET(request) {
   try {

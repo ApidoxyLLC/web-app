@@ -11,11 +11,7 @@ services:
       - ./:/app # Binds your host directory to /app in container
       - /app/node_modules
     command:
-      [
-        "sh",
-        "-c",
-        "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; npm run dev",
-      ]
+      [ "sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; npm run dev", ]
     env_file:
       - .env
     environment:
