@@ -25,7 +25,7 @@ const scopeLimiters = {
     keyPrefix: 'rl:register',
     points: 100,
     duration: 60,
-    blockDuration: 60 * 30, 
+    blockDuration: 60 * 15, 
   }),
   otpLogin: new RateLimiterRedis({
     storeClient: redis,
