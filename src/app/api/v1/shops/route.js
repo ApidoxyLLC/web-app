@@ -29,7 +29,7 @@ import cuid from "@bugsnag/cuid";
       const      auth_db = await authDbConnect()
       const    UserModel =  userModel(auth_db);
       const         user = await UserModel.findOne({ referenceId: data.userReferenceId, 
-                                                      isDeleted: false }).select('+_id +usage');
+                                                      isDeleted: false }).select('+_id +usage +phone +email');
       
       if (!user) return NextResponse.json({ error: "User not found or deleted" }, { status: 404 });
 
@@ -44,7 +44,7 @@ import cuid from "@bugsnag/cuid";
                            referenceId,
                                ownerId: user._id,
                                  email: user.email ? user.email : undefined,
-                                 phone: user.phone ? user.email : undefined,
+                                 phone: user.phone ? user.phone : undefined,
                                country: parsed.data.country.trim(),
                               industry: parsed.data.industry?.trim(),
                           businessName: parsed.data.businessName?.trim(),
@@ -55,7 +55,7 @@ import cuid from "@bugsnag/cuid";
                            referenceId,
                                ownerId: user._id,
                                  email: user.email ? user.email : undefined,
-                                 phone: user.phone ? user.email : undefined,
+                                 phone: user.phone ? user.phone : undefined,
                                country: parsed.data.country.trim(),
                               industry: parsed.data.industry?.trim(),
                           businessName: parsed.data.businessName?.trim(),
