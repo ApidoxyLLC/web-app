@@ -12,11 +12,17 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import crypto from 'crypto'; 
 import config from "../../../../../config";
 import cuid from "@bugsnag/cuid";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
   export async function POST(request) {
       let body;
       try { body = await request.json();} 
       catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
+
+      // Rate Limit
+      const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
+      const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createShop' });
+      if (!allowed) return null;
 
       const { authenticated, error, data } = await getAuthenticatedUser(request);
       if(!authenticated) 
@@ -31,8 +37,8 @@ import cuid from "@bugsnag/cuid";
       const         user = await UserModel.findOne({ referenceId: data.userReferenceId, 
                                                       isDeleted: false }).select('+_id +usage +phone +email');
       
-      if (!user) return NextResponse.json({ error: "User not found or deleted" }, { status: 404 });
-
+      if (!user) 
+        return NextResponse.json({ error: "...not authorized" }, { status: 404 });
 
       const           _id = new mongoose.Types.ObjectId();
       const   referenceId = cuid();
@@ -136,6 +142,10 @@ import cuid from "@bugsnag/cuid";
   }
 
 export async function GET(request) {
+  // Rate Limit
+      const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
+      const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
+      if (!allowed) return null;
   try {
     // Authenticate the user
     const { authenticated, error, data } = await getAuthenticatedUser(request);

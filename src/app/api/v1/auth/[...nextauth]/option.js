@@ -43,7 +43,7 @@ export const authOptions = {
 
                     // Rate Limit
                     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
-                    const { allowed, remaining, retryAfter } = await applyRateLimit({ key: `login:${ip}`, scope: 'login'      });
+                    const { allowed, remaining, retryAfter } = await applyRateLimit({ key: ip, scope: 'login'      });
                     if (!allowed) return null
                     if (!['email', 'phone', 'username'].includes(identifierName)) return null
                     const { phone, email, username } = { [identifierName]: identifier }
@@ -149,7 +149,7 @@ export const authOptions = {
                     
                     // Rate Limit
                     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
-                    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'otp-login' });
+                    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'otpLogin' });
                     if (!allowed) return null;
                     // Database connection 
                     
