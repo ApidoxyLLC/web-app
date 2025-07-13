@@ -20,7 +20,7 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
       catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
 
       // Rate Limit
-      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
+      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
       const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createShop' });
       if (!allowed) return null;
 
@@ -132,7 +132,6 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
                                                   'transaction.lastTxUpdate': new Date() } });
         } catch (e) { console.error('Failed to mark saga as failed', e) }
 
-
         return NextResponse.json({
                 error: error.message || "Shop Not created",
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
@@ -143,7 +142,7 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
 export async function GET(request) {
   // Rate Limit
-      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
+      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
       const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
       if (!allowed) return null;
   try {
@@ -152,6 +151,9 @@ export async function GET(request) {
 
     if (!authenticated) {
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+    }
+    if (page < 1 || limit < 1 || limit > 100) {
+      return NextResponse.json({ error: "Invalid pagination parameters" }, { status: 400 });
     }
     // Pagination params (optional, default to page 1, limit 10)
     const { searchParams } = new URL(request.url);

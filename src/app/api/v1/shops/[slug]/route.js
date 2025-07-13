@@ -17,7 +17,7 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
 export async function GET(request) {
   // Rate Limit
-      const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
+      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
       const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
       if (!allowed) return null;
   try {
