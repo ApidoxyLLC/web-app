@@ -16,6 +16,7 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
   export async function POST(request) {
       let body;
+      console.log(body)
       try { body = await request.json();} 
       catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
 
