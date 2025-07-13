@@ -16,20 +16,17 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
   export async function POST(request) {
       let body;
-
       try { body = await request.json();} 
       catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
 
       // Rate Limit
-      // const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
-      // const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createShop' });
-      // if (!allowed) return null;
+      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
+      const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createShop' });
+      if (!allowed) return null;
 
       const { authenticated, error, data } = await getAuthenticatedUser(request);
       if(!authenticated) 
           return NextResponse.json({ error: "...not authorized" }, { status: 401 });
-
-      
 
       const parsed = createShopDTOSchema.safeParse(body);
       if (!parsed.success)
@@ -50,23 +47,23 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
         const          txId = cuid();
         const        dbName = `${config.vendorDbPrefix}_${_id}_db`
         const primaryDomain = _id.toString()+'.'+config.shopDefaultDomain
-        const shopPayload = {        _id,
-                            referenceId,
-                                ownerId: user._id,
-                                  email: user.email ? user.email : undefined,
-                                  phone: user.phone ? user.phone : undefined,
-                                country: parsed.data.country.trim(),
-                                industry: parsed.data.industry?.trim(),
-                            businessName: parsed.data.businessName?.trim(),
-                                location: parsed.data.location,
-                            transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() } }
+        const shopPayload = {         _id,
+                              referenceId,
+                                  ownerId: user._id,
+                                    email: user.email ? user.email : undefined,
+                                    phone: user.phone ? user.phone : undefined,
+                                  country: parsed.data.country.trim(),
+                                 industry: parsed.data.industry?.trim(),
+                             businessName: parsed.data.businessName?.trim(),
+                                 location: parsed.data.location,
+                              transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() } }
 
         const vendorPayload = {      _id,
-                            referenceId,
-                                ownerId: user._id,
-                                  email: user.email ? user.email : undefined,
-                                  phone: user.phone ? user.phone : undefined,
-                                country: parsed.data.country.trim(),
+                             referenceId,
+                                 ownerId: user._id,
+                                   email: user.email ? user.email : undefined,
+                                   phone: user.phone ? user.phone : undefined,
+                                 country: parsed.data.country.trim(),
                                 industry: parsed.data.industry?.trim(),
                             businessName: parsed.data.businessName?.trim(),
                                 location: parsed.data.location,
@@ -86,15 +83,6 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
                           primaryDomain,
                                 domains: [primaryDomain],
                             transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }    }
-        console.log("Create Shop POST REQUEST")
-        console.log(parsed.data)
-        console.log(_id)
-        console.log(referenceId)
-        console.log(dbName)
-        console.log(shopPayload)
-        console.log(vendorPayload)
-        console.log(data)
-
 
         const userUpdateQuery =  { $push: { shops: _id },
                                     $inc: { 'usage.shops': 1 } }
@@ -125,11 +113,11 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
               await Promise.all([ authDb_session.commitTransaction(), 
                                 vendorDb_session.commitTransaction()])
 
-              const returnData = {            id: shop.referenceId,
-                                    businessName: shop.businessName,
+              const returnData = {           id: shop.referenceId,
+                                   businessName: shop.businessName,
                                         country: shop.country, 
-                                        industry: shop.industry,
-                                        location: shop.location,
+                                       industry: shop.industry,
+                                       location: shop.location,
                                         domains: vendor.domains      }
               
           if(shop)
@@ -166,6 +154,8 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
   }
 
 export async function GET(request) {
+
+
   // Rate Limit
       const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
       const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
@@ -177,20 +167,27 @@ export async function GET(request) {
     if (!authenticated) {
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
     }
-    if (page < 1 || limit < 1 || limit > 100) {
-      return NextResponse.json({ error: "Invalid pagination parameters" }, { status: 400 });
-    }
+    // if (page < 1 || limit < 1 || limit > 100) {
+    //   return NextResponse.json({ error: "Invalid pagination parameters" }, { status: 400 });
+    // }
+
+    console.log("From GET request....")
+    console.log(data)
+
     // Pagination params (optional, default to page 1, limit 10)
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
     const skip = (page - 1) * limit;
+
     // Connect to the auth database
     const auth_db = await authDbConnect();
     const ShopModel = shopModel(auth_db);
 
     const { sessionId, userReferenceId, name, email, phone, role, isVerified, timezone, theme, language, currency } = data
+    
 
+    
     const result = await ShopModel.aggregate([ { $lookup: { 
                                                               from: "users",
                                                                let: { userReferenceId, sessionId, email },
@@ -226,7 +223,41 @@ export async function GET(request) {
                                                 { $facet: {
                                                             shops: [ {    $skip: skip  },
                                                                      {   $limit: limit },
-                                                                     { $project: { user: 0, __v: 0 } } ],
+                                                                     { $project: { id: "$referenceId",
+                                                                                  email: 1,
+                                                                                  phone: 1,
+                                                                                  businessName: 1,
+                                                                                  domain: 1,
+                                                                                  country: 1,
+                                                                                  industry: 1,
+                                                                                  location: 1,
+                                                                                  slug: 1,
+                                                                                  activeApps: 1,
+                                                                                  web: 1,
+                                                                                  android: 1,
+                                                                                  ios: 1,
+                                                                                  stuffs: {
+                                                                                                $cond: [
+                                                                                                  { $gt: [{ $size: { $ifNull: ["$stuffs", []] } }, 0] },
+                                                                                                  {
+                                                                                                    $map: {
+                                                                                                      input: "$stuffs",
+                                                                                                      as: "s",
+                                                                                                      in: "$$s.name"
+                                                                                                    }
+                                                                                                  },
+                                                                                                  []
+                                                                                                ]
+                                                                                              },
+                                                                                  _id: 0,
+                                                                                  // __v: 0,
+                                                                                  // user: 0,
+                                                                                  // ownerId: 0,
+                                                                                  // transaction: 0,
+                                                                                  // stuffs: 0,
+                                                                                  
+
+                                                                      } } ],
                                                             total: [{ $count: "count" }]
                                                           }
                                                 },
@@ -273,6 +304,7 @@ export async function GET(request) {
       prevPage: response.prevPage
     }, { status: 200 });
   } catch (error) {
+    console.log(error)
     return NextResponse.json({
       error: error.message || "Failed to retrieve shop data",
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined

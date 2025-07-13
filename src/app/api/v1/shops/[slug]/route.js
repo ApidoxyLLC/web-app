@@ -6,14 +6,10 @@ import { shopModel } from "@/models/auth/Shop";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { vendorModel } from "@/models/vendor/Vendor";
 
-
 export async function GET(request, { params  }) {
   const { slug } = await params
   // Rate Limit
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-           || request.headers.get("x-real-ip")
-           || request.ip
-           || '';
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || request.ip || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: "getShopDetail" });
   if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
