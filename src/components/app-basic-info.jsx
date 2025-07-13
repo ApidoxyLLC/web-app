@@ -35,17 +35,14 @@ const AppBasicInfo = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const country = form.get("country");
-    const industry = form.get("industry");
-    const businessName = form.get("businessName");
-    const businessLocation = form.get("businessLocation");
+
     const formData = {
-      country,
-      industry,
-      businessName,
-      businessLocation,
-    };
-    console.log(formData)
+                        country: form.get("country"),
+                        industry: form.get("industry"),
+                        businessName: form.get("businessName"),
+                        location: form.get("businessLocation"),
+                      };
+
     // if(!name){
     //   return toast.error("Name is required");
 

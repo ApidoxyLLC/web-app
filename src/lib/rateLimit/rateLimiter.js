@@ -48,7 +48,16 @@ const scopeLimiters = {
     duration: 60,         // per 60 seconds
     blockDuration: 60 * 10 // Block for 2 minutes if exceeded
   }),
+  getShopDetail: new RateLimiterRedis({
+    storeClient: redis,
+    keyPrefix: 'rl:get_shop_detail',
+    points: 60,           // Max 60 GET requests
+    duration: 60,         // per 60 seconds
+    blockDuration: 60 * 10 // Block for 2 minutes if exceeded
+  }),
 };
+
+
 
 export async function applyRateLimit({ key, scope = null }) {
   const limiter = scope && scopeLimiters[scope] ? scopeLimiters[scope] : globalLimiter;

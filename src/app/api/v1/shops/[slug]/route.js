@@ -1,127 +1,68 @@
 import { NextResponse } from "next/server";
-import { createShopDTOSchema } from "./createShopDTOSchema";
-import mongoose from "mongoose";
-import { dbConnect } from "@/lib/mongodb/db";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-import { encrypt } from "@/lib/encryption/cryptoEncryption";
-import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
+import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { shopModel } from "@/models/auth/Shop";
-import { userModel } from "@/models/auth/User";
-import { vendorModel } from "@/models/vendor/Vendor";
-import crypto from 'crypto'; 
-import config from "../../../../../config";
-import cuid from "@bugsnag/cuid";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import { vendorModel } from "@/models/vendor/Vendor";
 
 
-export async function GET(request) {
+export async function GET(request, { params  }) {
+  const { slug } = await params
   // Rate Limit
-      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
-      const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
-      if (!allowed) return null;
-  try {
-    // Authenticate the user
-    const { authenticated, error, data } = await getAuthenticatedUser(request);
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+           || request.headers.get("x-real-ip")
+           || request.ip
+           || '';
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: "getShopDetail" });
+  if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
+  try {
+    const { authenticated, data } = await getAuthenticatedUser(request);
     if (!authenticated) {
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
     }
-    // Pagination params (optional, default to page 1, limit 10)
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "10", 10);
-    const skip = (page - 1) * limit;
-    // Connect to the auth database
-    const auth_db = await authDbConnect();
-    const ShopModel = shopModel(auth_db);
 
-    const { sessionId, userReferenceId, name, email, phone, role, isVerified, timezone, theme, language, currency } = data
+    const db = await authDbConnect();
+    const vendor_db = await vendorDbConnect();
+    const Shop = shopModel(db);
+    const Vendor = vendorModel(vendor_db)
 
-    const result = await ShopModel.aggregate([ { $lookup: { 
-                                                              from: "users",
-                                                               let: { userReferenceId, sessionId, email },
-                                                          pipeline: [ {
-                                                                        $match: {
-                                                                                    $expr: { $or: [ 
-                                                                                                    { $eq: ["$referenceId", "$$userReferenceId"] },
-                                                                                                    { $eq: ["$$email", "$email"] },
-                                                                                                    { $in: ["$$sessionId", "$activeSessions"] },
-                                                                                                  ] 
-                                                                                                },
-                                                                                isDeleted: false
-                                                                              }
-                                                                      },
-                                                                      { $limit: 1 },
-                                                                      { $project: { _id: 1 } }
-                                                                    ],
-                                                                as: "user"
-                                                          }
-                                                },
-                                                { $match: {
-                                                            $or: [ 
-                                                                    {  $expr: { $eq: ["$ownerId", { $arrayElemAt: ["$user._id", 0] }] } },
-                                                                    { stuffs: { $elemMatch: {
-                                                                                              userId: { $eq: { $arrayElemAt: ["$user._id", 0] } }, 
-                                                                                              status: "active"
-                                                                                            } 
-                                                                              } 
-                                                                    } 
-                                                                  ]
-                                                          }
-                                                },
-                                                { $facet: {
-                                                            shops: [ {    $skip: skip  },
-                                                                     {   $limit: limit },
-                                                                     { $project: { user: 0, __v: 0 } } ],
-                                                            total: [{ $count: "count" }]
-                                                          }
-                                                },
-                                                { $project: {
-                                                                    shops: "$shops",
-                                                                    total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-                                                              currentPage: { $literal: page },
-                                                               totalPages: {
-                                                                            $ceil: {
-                                                                                $divide: [
-                                                                                            { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-                                                                                            limit
-                                                                                        ]
-                                                                              }
-                                                                           }
-                                                            }
-                                                },
-                                                {
-                                                  $addFields: {
-                                                    nextPage: {
-                                                      $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
-                                                    },
-                                                    prevPage: {
-                                                      $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
-                                                    }
-                                                  }
-                                                }
-                                              ]);
+    // Find the shop by slug or referenceId, with access check
+    const shop = await Shop.findOne({ $or: [ { slug: slug },
+                                             { referenceId: slug }
+                                            ]}).select("-__v");
+    if(shop) return NextResponse.json({ error: "Not Found" }, { status: 404 });
+    console.log(shop)
+    const vendor = await Vendor.findOne({ _id: shop._id })
+                               .select("-__v -_id");
+                               
+    console.log(vendor)
+    if (!shop) 
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
-    const response = result[0] || {     shops: [],
-                                        total: 0,
-                                  currentPage: page,
-                                   totalPages: 0,
-                                     nextPage: null,
-                                     prevPage: null   };
+    const resultData = {                id: shop.referenceId,
+                                     email: shop.email,
+                                     phone: shop.phone,
+                                   country: shop.country,
+                                  industry: shop.industry,
+                              businessName: shop.businessName,
+                                  location: shop.location,
+                                      slug: shop.slug,
+                                activeApps: shop.activeApps,
+                                       web: shop.web,
+                                   android: shop.android,
+                                       ios: shop.ios,
+                             primaryDomain: vendor.primaryDomain,
+                                   domains: vendor.domains,
+                          facebookDataFeed: vendor.facebookDataFeed,
+                               socialLinks: vendor.socialLinks,       }
 
-    return NextResponse.json({
-      success: true,
-      data: response.shops,
-      total: response.total,
-      currentPage: response.currentPage,
-      totalPages: response.totalPages,
-      nextPage: response.nextPage,
-      prevPage: response.prevPage
-    }, { status: 200 });
+    return NextResponse.json({ success: true, data: resultData}, { status: 200 });
+
   } catch (error) {
     return NextResponse.json({
-      error: error.message || "Failed to retrieve shop data",
+      error: error.message || "Failed to retrieve shop",
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
     }, { status: 500 });
   }
