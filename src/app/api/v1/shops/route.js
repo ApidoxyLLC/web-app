@@ -22,7 +22,8 @@ export async function POST(request) {
     // Rate Limit
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createShop' });
-    if (!allowed) return null;
+    if (!allowed) 
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
 
     const { authenticated, error, data } = await getAuthenticatedUser(request);
     if(!authenticated) 
@@ -36,11 +37,10 @@ export async function POST(request) {
       const      auth_db = await authDbConnect()
       const    UserModel =  userModel(auth_db);
       const         user = await UserModel.findOne({ referenceId: data.userReferenceId, 
-                                                      isDeleted: false }).select('+_id +usage +phone +email');
-
+                                                       isDeleted: false }).select('+_id +usage +phone +email');
       // console.log(user)
-      if (!user) return NextResponse.json({ error: "...not authorized" }, { status: 404 });
-        
+      if (!user) 
+        return NextResponse.json({ error: "...not authorized" }, { status: 404 });        
       
       const           _id = new mongoose.Types.ObjectId();
       const   referenceId = cuid();
@@ -54,23 +54,23 @@ export async function POST(request) {
                                   phone: user.phone ? user.phone : undefined,
                       ownerLoginSession: data.sessionId,
                                 country: parsed.data.country.trim(),
-                                industry: parsed.data.industry?.trim(),
-                            businessName: parsed.data.businessName?.trim(),
-                                location: parsed.data.location,
+                               industry: parsed.data.industry?.trim(),
+                           businessName: parsed.data.businessName?.trim(),
+                               location: parsed.data.location,
                             transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() } }
 
       const vendorPayload = {      _id,
-                            referenceId,
-                                ownerId: user._id,
-                                  email: user.email ? user.email : undefined,
-                                  phone: user.phone ? user.phone : undefined,
-                                country: parsed.data.country.trim(),
+                           referenceId,
+                               ownerId: user._id,
+                                 email: user.email ? user.email : undefined,
+                                 phone: user.phone ? user.phone : undefined,
+                               country: parsed.data.country.trim(),
                               industry: parsed.data.industry?.trim(),
                           businessName: parsed.data.businessName?.trim(),
                               location: parsed.data.location,
                                 dbInfo:  { dbName, 
                                             dbUri: await encrypt({    data: config.vendorDbDefaultUri+'/'+ dbName,
-                                                                options: { secret: config.vendorDbUriEncryptionKey } }) 
+                                                                   options: { secret: config.vendorDbUriEncryptionKey } }) 
                                           },
                               secrets:  {  accessTokenSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
                                                                               options: { secret: config.accessTokenSecretEncryptionKey  } }),
@@ -115,7 +115,7 @@ export async function POST(request) {
                               vendorDb_session.commitTransaction()])
 
             const returnData = {           id: shop.referenceId,
-                                  businessName: shop.businessName,
+                                 businessName: shop.businessName,
                                       country: shop.country, 
                                       industry: shop.industry,
                                       location: shop.location,
@@ -138,6 +138,12 @@ export async function POST(request) {
                                                   'transaction.lastTxUpdate': new Date() } });
         } catch (e) { console.error('Failed to mark saga as failed', e) }
 
+        await Promise.allSettled([
+                                    ShopModel.deleteOne({ $and: [{ $or: [{ 'transaction.sagaStatus': 'pending' }, { 'transaction.sagaStatus': 'failed'  } ] }, 
+                                                                 { 'transaction.txId': txId }] }),
+                                    VendorModel.deleteOne({ $and: [{ $or: [{ 'transaction.sagaStatus': 'pending' }, { 'transaction.sagaStatus': 'failed'  } ] }, 
+                                                                 { 'transaction.txId': txId }] })
+                                  ]);
         return NextResponse.json({
                 error: error.message || "Shop Not created",
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
@@ -158,7 +164,7 @@ export async function GET(request) {
   // Rate Limit
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
-  if (!allowed) return null;
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: {'Retry-After': retryAfter.toString(),}});
 
   try {
     // Authenticate the user

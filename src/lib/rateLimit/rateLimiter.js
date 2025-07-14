@@ -16,42 +16,42 @@ const scopeLimiters = {
   login: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:login',
-    points: 5,
+    points: 500,
     duration: 60,
     blockDuration: 60 * 15,
   }),
   register: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:register',
-    points: 100,
+    points: 500,
     duration: 60,
     blockDuration: 60 * 15, 
   }),
   otpLogin: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:otp',
-    points: 3,
+    points: 500,
     duration: 300,
     blockDuration: 60 * 60,
   }),
   createShop: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:create_shop',
-    points: 3,               // max 3 project creation attempts
+    points: 500,               // max 3 project creation attempts
     duration: 3600,          // per 1 hour
     blockDuration: 60 * 15,  // if exceeded, block for 15 minutes
   }),
   getShop: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:get_shop',
-    points: 60,           // Max 60 GET requests
+    points: 500,           // Max 60 GET requests
     duration: 60,         // per 60 seconds
     blockDuration: 60 * 10 // Block for 2 minutes if exceeded
   }),
   getShopDetail: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:get_shop_detail',
-    points: 60,           // Max 60 GET requests
+    points: 500,           // Max 60 GET requests
     duration: 60,         // per 60 seconds
     blockDuration: 60 * 10 // Block for 2 minutes if exceeded
   }),

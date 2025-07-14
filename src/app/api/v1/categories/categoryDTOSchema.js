@@ -1,9 +1,12 @@
 const { z } = require('zod');
 const mongoose = require('mongoose');
 
+const objectIdSchema = z.string().refine((val) => isValidObjectId(val), {
+  message: "Invalid ObjectId format"
+});
 
 export const categoryDTOSchema = z.object({
-  shopId: z.string(),
+  shop: z.string(),
   title: z.string().min(1, { message: "Title is required" }).max(100, { message: "Title cannot exceed 100 characters" }).trim(),
   slug: z.string().min(1, { message: "Slug is required" }).max(100, { message: "Slug cannot exceed 100 characters" })
                   .regex(/^[a-z0-9\-]+$/, { message: "Slug can only contain lowercase letters, numbers and hyphens" })
@@ -15,13 +18,7 @@ export const categoryDTOSchema = z.object({
                     width: z.number().int().positive().optional(),
                     height: z.number().int().positive().optional()
                 }).optional(),
-  parent: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), { message: "Invalid parent category ID" })
-            .optional().nullable(),
-  // isActive: z.boolean().default(true),
-  // metaTitle: z.string().max(70, { message: "Meta title cannot exceed 70 characters" }).trim().optional(),
-  // metaDescription: z.string().max(160, { message: "Meta description cannot exceed 160 characters" }).trim().optional(),
-  // keywords: z.array(z.string().trim().transform(val => val.toLowerCase())).optional(),
-  // metadata: z.record(z.string()).optional(),
+  parent: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), { message: "Invalid parent category ID" }).optional().nullable(),
 })
 // .superRefine(async (data, ctx) => {
 //   if (data.slug) {

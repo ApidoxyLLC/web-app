@@ -101,7 +101,7 @@ export async function handleSuccessfulLogin({ auth_db, session, user, loginType,
 
     // 5. Execute All DB Operations
         const redisSessionResult = await setSession({ sessionId, tokenId,
-                             payload: { sub: user.referenceId, role: user.role } })
+                             payload: { sub: user.referenceId, role: user.role, userId: user._id, } })
         const dbSessionResult = await Session.create([sessionPayload], { session });
         const updatedUser = await User.findOneAndUpdate( { _id: user._id }, userUpdate, { new: true, session }).select('activeSessions ');
         const historyResult = await LoginHistory.create([loginHistoryPayload], { session })

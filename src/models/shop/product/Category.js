@@ -1,11 +1,9 @@
 import cuid from '@bugsnag/cuid';
 import mongoose from 'mongoose';
-import { unique } from 'next/dist/build/utils';
 
 const categorySchema = new mongoose.Schema({
-
   title: { type: String, required: true, trim: true },
-  slug: { type: String, required: true, unique: true, lowercase: true, trim: true, match: /^[a-z0-9\-]+$/ },
+  slug: { type: String, required: true, unique: true, lowercase: true, trim: true, match: /^[a-z0-9_-]+$/ },
   description: { type: String, default: '' },
   image: { url: { type: String }, alt: { type: String }, width: Number, height: Number },
   isActive: { type: Boolean, default: true },
@@ -13,9 +11,9 @@ const categorySchema = new mongoose.Schema({
   // Hierarchy
   parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   // ancestors: [ { type: mongoose.Schema.Types.ObjectId, ref: 'Category' } ],
-  children: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category', unique: true }], default:[] },
-  level: { type: Number, default: 0 },
-  // position: { type: Number, default: 0},
+  children: { type: [ { type: mongoose.Schema.Types.ObjectId, ref: 'Category' } ], default: [] },
+  level: { type: Number, default: 1 },
+  // position: { type: Number, default: 0}, 
   
   // SEO
   metaTitle: { type: String, trim: true, maxlength: [70, 'Meta title cannot exceed 70 characters'] },

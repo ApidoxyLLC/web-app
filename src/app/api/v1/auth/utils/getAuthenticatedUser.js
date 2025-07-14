@@ -9,7 +9,7 @@ export async function getAuthenticatedUser(req) {
     try {
         const currentToken = await getToken({ req, secret: config.nextAuthSecret});
         if (!currentToken || !currentToken.accessToken) 
-            return { authenticated: false, error: "Authtication Error..."  };
+            return { authenticated: false, error: "Authentication Error..."  };
 
         try {
             const decoded = jwt.verify(currentToken.accessToken, config.accessTokenSecret);
@@ -26,7 +26,8 @@ export async function getAuthenticatedUser(req) {
             // sub role tokenId
             const data =  formatUserResponse({ ...currentToken, 
                                                 sub: redisSession.sub, 
-                                               user: { ...currentToken.user, role: redisSession.role } });
+                                                userId: redisSession.userId,
+                                               user: { ...currentToken.user,   role: redisSession.role } });
 
             return { authenticated: true, data };
 
@@ -35,7 +36,8 @@ export async function getAuthenticatedUser(req) {
                 if (!currentToken.refreshToken)
                     return { authenticated: false, data: null, error: "Missing refresh token" }  
                 
-                const { accessToken,
+                const { userId,
+                        accessToken,
                         refreshToken,
                         accessTokenExpiry }  = await tokenRefresh({ token: currentToken })
             
@@ -56,7 +58,7 @@ export async function getAuthenticatedUser(req) {
                                           maxAge:  24 * 60 * 60,
                                         sameSite: 'lax' });
 
-                const data = formatUserResponse(updatedToken);  
+                const data = formatUserResponse({ ...updatedToken, userId });  
                 return { authenticated: true, data }                                                                                        
             }
             return { authenticated: false, error: `Initial auth error: ${error.message || "Unknown"}` };
@@ -71,6 +73,7 @@ export async function getAuthenticatedUser(req) {
 function formatUserResponse(token) {
     return {       sessionId: token.sessionId,
              userReferenceId: token.sub,
+                      userId: token.userId,
                         name: token.name,
                        email: token.email,
                        phone: token.user?.phone,

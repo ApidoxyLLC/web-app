@@ -4,7 +4,7 @@ import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { shopModel } from '@/models/auth/Shop';
 import { getToken } from 'next-auth/jwt';
 import { userModel } from '@/models/auth/User';
-import { categoryModel } from '@/models/shop/product/_Category';
+import { categoryModel } from '@/models/shop/product/Category';
 import slugify from 'slugify';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
