@@ -45,14 +45,15 @@ export async function refreshAccessToken({ token }) {
         const accessToken = jwt.sign( payload, config.accessTokenSecret, 
                                                 { expiresIn: config.accessTokenExpireMinutes * 60,
                                                   algorithm: 'HS256' });
-
-        await Promise.all([ updateToken({        db: auth_db,
-                                          sessionId,
-                                               data: {           tokenId, 
-                                                       accessTokenExpiry }}),
-                            setSession({ sessionId, tokenId,
-                                         payload: { sub: user.referenceId, role: user.role } })
-                            ])
+        await setSession({ sessionId, tokenId,
+                      payload: { sub: user.referenceId, role: user.role } })
+        // await Promise.all([ updateToken({        db: auth_db,
+        //                                   sessionId,
+        //                                        data: {           tokenId, 
+        //                                                accessTokenExpiry }}),
+        //                     setSession({ sessionId, tokenId,
+        //                                  payload: { sub: user.referenceId, role: user.role } })
+        //                     ])
         return { accessToken, accessTokenExpiry }
     } catch (error) {
         console.error("Error refreshing access token:", error);

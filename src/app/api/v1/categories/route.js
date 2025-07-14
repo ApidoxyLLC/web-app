@@ -1,82 +1,88 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-
+// import { connectVendorDb } from '../utils/connectVendorDb';
 import { categoryModel } from '@/models/shop/product/_Category';
 import { categoryDTOSchema } from './categoryDTOSchema';
 import authDbConnect from '@/lib/mongodb/authDbConnect';
+import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { shopModel } from '@/models/auth/Shop';
-import { getToken } from 'next-auth/jwt';
+import { vendorModel } from '@/models/vendor/Vendor';
 import { userModel } from '@/models/auth/User';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
 import securityHeaders from '../utils/securityHeaders';
+import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
+import config from '../../../../../config';
 
 const MAX_CATEGORY_DEPTH = parseInt(process.env.MAX_CATEGORY_DEPTH || '5', 10);
 
 export async function POST(request) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-          || request.headers.get('x-real-ip')
-          || 'unknown_ip';
-  const fingerprint = request.headers.get('x-fingerprint') || null;
-
   let body;
   try { body = await request.json();} 
   catch { return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400, headers: securityHeaders });}
+
+  // const fingerprint = request.headers.get('x-fingerprint') || null;
+  const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
+  if (!allowed) return null;
+
+  const { authenticated, error, data } = await getAuthenticatedUser(request);
+  if(!authenticated) 
+      return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
   const parsed = categoryDTOSchema.safeParse(body);
   if (!parsed.success)
     return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
-  const { vendorId, slug: inputSlug } = parsed.data;
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session)) 
-    return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 401, headers: securityHeaders });
+  const { shopId, slug: inputSlug } = parsed.data;
+  // const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  // if (!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session)) 
+  //   return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 401, headers: securityHeaders });
   
   const   auth_db = await authDbConnect();
+  const vendor_db = await vendorDbConnect();
   const      User = userModel(auth_db);
   const ShopModel = shopModel(auth_db);
+  const VendorModel = vendorModel(vendor_db);
+
 
   // Find user with active session and not deleted
-  const user = await User.findOne({ activeSessions: new mongoose.Types.ObjectId(token.session),
-                                         isDeleted: false       })
+  const user = await User.findOne({ referenceId: data.userReferenceId,
+                                      isDeleted: false       })
                          .select('+_id +activeSessions +shops')
                          .lean();
-
   if (!user) 
     return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
   
-  const shop = await ShopModel.findOne({ vendorId })
-                              .select( "+_id "                                +
-                                      "+dbInfo +dbInfo.uri +dbInfo.prefix "   +
-                                      "+keys.ACCESS_TOKEN_SECRET "            +
-                                      "+timeLimitations.ACCESS_TOKEN_EXPIRE_MINUTES")
+  const vendorData = await VendorModel.findOne({ referenceId: shopId })
+                              .select( "+_id +dbInfo +secrets +expirations")
                               .lean();
 
-  if (!shop) 
+  if (!vendorData) 
     return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
   
   // Verify user owns the shop
-  if (!user.shops.some(id => id.equals(shop._id))) 
+  if (!user.shops.some(id => id.equals(vendorData._id))) 
     return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 401, headers: securityHeaders });
 
   // Decrypt vendor DB URI
-  const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-  if (!DB_URI_ENCRYPTION_KEY) 
-    return NextResponse.json({ success: false, error: 'Server configuration error' }, { status: 500, headers: securityHeaders } );
+  // const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
+  // if (!DB_URI_ENCRYPTION_KEY)
+  //   return NextResponse.json({ success: false, error: 'Server configuration error' }, { status: 500, headers: securityHeaders } );
   
 
-  const         dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
-                                           options: { secret: DB_URI_ENCRYPTION_KEY } });
-  const    shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
-  const     vendor_db = await dbConnect({ dbKey: shopDbName, dbUri });
-  const CategoryModel = categoryModel(vendor_db);
+  const dbUri = await decrypt({ cipherText: vendorData.dbInfo.uri,
+                                   options: { secret: config.vendorDbUriEncryptionKey } });
 
-  const     slugExist = await CategoryModel.exists({ slug: inputSlug });
+  const shop_db = await dbConnect({ dbKey: vendorData.dbInfo.dbName, dbUri });
+  const CategoryModel = categoryModel(shop_db);
+
+  const slugExist = await CategoryModel.exists({ slug: inputSlug });
   if (slugExist)
     return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
   // Start mongoose session & transaction
-  const session = await vendor_db.startSession();
+  const session = await shop_db.startSession();
   session.startTransaction();
 
   try {
@@ -110,7 +116,9 @@ export async function POST(request) {
       rawDocs.push({ node, _id, parentId, level });
     }
 
-    const existingSlugs = await CategoryModel.find({ slug: { $in: [...slugsToCheck] } }, { slug: 1 } ).session(session).lean();
+    const existingSlugs = await CategoryModel.find({ slug: { $in: [...slugsToCheck] } }, { slug: 1 } )
+                                             .select("+slug")
+                                             .lean();
 
     if (existingSlugs.length > 0)
       throw new Error(`Duplicate slugs: ${existingSlugs.map(s => s.slug).join(', ')}`);

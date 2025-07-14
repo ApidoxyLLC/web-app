@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 
 export const categoryDTOSchema = z.object({
-  vendorId: z.string().length(32),
+  shopId: z.string(),
   title: z.string().min(1, { message: "Title is required" }).max(100, { message: "Title cannot exceed 100 characters" }).trim(),
   slug: z.string().min(1, { message: "Slug is required" }).max(100, { message: "Slug cannot exceed 100 characters" })
                   .regex(/^[a-z0-9\-]+$/, { message: "Slug can only contain lowercase letters, numbers and hyphens" })

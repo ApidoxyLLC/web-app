@@ -168,31 +168,20 @@ const stuffSchema = new mongoose.Schema(
 const shopSchema = new mongoose.Schema({
                 _id: { type: mongoose.Schema.Types.ObjectId, required: true },
         referenceId: { type: String, select: true },
-          //  vendorId: { type: mongoose.Schema.Types.ObjectId, required: true  },
             ownerId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
-  // ownerLoginSession: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Session' },
+  ownerLoginSession: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Session' },
               email: { type: String, trim: true },
               phone: { type: String, trim: true },
             country: { type: String, required: true },
            industry: { type: String, required: true },
        businessName: { type: String, required: true },
            location: { type: String, required: true },
-
-        //  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
   maxSessionAllowed: { type: Number, default: Number(process.env.END_USER_DEFAULT_MAX_SESSIONS || 5), select: false },
-              
-              // dbUri: { type: String },
-            //  dbInfo: { type: dbSchema,  required: true, select: false },
-              //  keys: { type: keySchema, required: true, select: false },
-    // timeLimitations: { type: timeLimitationsSchema, select: false },
                slug: { type: String, default: null },
          activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                 web: { type: webAppSchema, default: null },
             android: { type: androidAppSchema, default: null },
-                ios: { type: iosAppSchema, default: null },
-            // domains: { type: [hostSchema], default: [] },
-        // socialLinks: { type: [socialLinksSchema], required: false, default: [] },
-  //  facebookDataFeed: { type: String, default: null },
+                ios: { type: iosAppSchema, default: null },           
              stuffs: { type: [stuffSchema], default: undefined },
         transaction: { type: transactionFieldsSchema },
 }, { timestamps: true, collection: 'shops' });
@@ -202,4 +191,17 @@ export const shopModel = (db) => db.models.Shop || db.model('Shop', shopSchema);
 // export const Shop = mongoose.models.Shop || mongoose.model("Shop", shopSchema, 'shops');
 // export default Shop;
 
+ // domains: { type: [hostSchema], default: [] },
+        // socialLinks: { type: [socialLinksSchema], required: false, default: [] },
+  //  facebookDataFeed: { type: String, default: null },
 
+                
+              // dbUri: { type: String },
+            //  dbInfo: { type: dbSchema,  required: true, select: false },
+              //  keys: { type: keySchema, required: true, select: false },
+    // timeLimitations: { type: timeLimitationsSchema, select: false },
+
+
+
+
+            //  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],

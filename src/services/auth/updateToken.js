@@ -5,20 +5,18 @@ export async function updateToken({ db, sessionId, data }) {
     try {
         if (!db || !sessionId || !data) 
                 throw new Error('Missing required parameters');
-        const { tokenId, accessTokenExpiry, refreshToken, refreshTokenExpiry } = data
-        if (!tokenId || !accessTokenExpiry || !refreshToken || !refreshTokenExpiry) 
+        const { refreshToken, refreshTokenExpiry } = data
+        if (!refreshToken || !refreshTokenExpiry) 
             throw new Error('Missing required token data');
 
-        const [hashedTokenId, hashedRefreshToken] = await Promise.all([ bcrypt.hash(tokenId, 10),
-                                                                        bcrypt.hash(refreshToken, 10) ]);
-        
+        // const [hashedTokenId, hashedRefreshToken] = await Promise.all([ bcrypt.hash(tokenId, 10),
+        //                                                                  ]);
+        const hashedRefreshToken = await bcrypt.hash(refreshToken, 10)
         const Session = sessionModel(db)
         const  result = await Session.updateOne(
                             { _id: sessionId },
                             {
-                                $set: {           "tokenId": hashedTokenId,
-                                        "accessTokenExpiry": accessTokenExpiry,
-                                             "refreshToken": hashedRefreshToken,
+                                $set: {      "refreshToken": hashedRefreshToken,
                                        "refreshTokenExpiry": refreshTokenExpiry       }
                             }
                         );
@@ -31,3 +29,6 @@ export async function updateToken({ db, sessionId, data }) {
 }
 
 export default updateToken;
+
+//  "tokenId": hashedTokenId,
+//  "accessTokenExpiry": accessTokenExpiry,

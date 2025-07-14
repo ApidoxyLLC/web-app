@@ -11,7 +11,7 @@ import generateTokenId from "./generateTokenId";
  
 export async function tokenRefresh({ token }) {
   console.log("from inside tokenRefresh() function******************")
-  console.log(token)
+  // console.log(token)
 if (!token?.accessToken || !token?.refreshToken) 
             return null;
         
@@ -24,7 +24,6 @@ if (!token?.accessToken || !token?.refreshToken)
       const Session = sessionModel(auth_db);
       const session = await Session.findOne({ _id: sessionId })
                                     .select('+refreshToken +userReference +revoked +refreshTokenExpiry +createdAt' ).lean();
-      console.log(session)
       if(!session)  return null;
       if(Date.now() > session.refreshTokenExpiry || session.revoked == true ){
           await Session.deleteOne({  _id: sessionId  });
@@ -71,7 +70,8 @@ if (!token?.accessToken || !token?.refreshToken)
                                                                               phone: user.phone || '',
                                                                         referenceId: user.referenceId }, 
                                                                 sessionId });
-
+      // await setSession({ sessionId, tokenId,
+      //                      payload: { sub: user.referenceId, role: user.role } })
       await Promise.all([ updateToken({        db: auth_db,
                                         sessionId, 
                                              data: {      refreshToken, 

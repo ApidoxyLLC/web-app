@@ -54,9 +54,7 @@ if (!token?.accessToken || !token?.refreshToken)
       
       await Promise.all([ updateToken({        db: auth_db,
                                         sessionId, 
-                                             data: {          tokenId, 
-                                                    accessTokenExpiry, 
-                                                         refreshToken, 
+                                             data: {      refreshToken, 
                                                     refreshTokenExpiry  }}),
                           setSession({ sessionId, tokenId,
                                       payload: { sub: user.referenceId, role: user.role } })

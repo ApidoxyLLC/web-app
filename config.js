@@ -46,7 +46,8 @@ const config = {
   vendorDbUriEncryptionKey: process.env.VENDOR_DB_URI_ENCRYPTION_KEY,
   vendorDbPrefix: process.env.VENDOR_DB_PREFIX,
 
-  shopDefaultDomain: process.env.SHOP_DEFAULT_DOMAIN
+  shopDefaultDomain: process.env.SHOP_DEFAULT_DOMAIN,
+  
 };
 export default config
 
