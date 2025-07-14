@@ -10,7 +10,7 @@ const categorySchema = new mongoose.Schema({
 
   // Hierarchy
   parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
-  // ancestors: [ { type: mongoose.Schema.Types.ObjectId, ref: 'Category' } ],
+  ancestors: [ { type: mongoose.Schema.Types.ObjectId, ref: 'Category' } ],
   children: { type: [ { type: mongoose.Schema.Types.ObjectId, ref: 'Category' } ], default: [] },
   level: { type: Number, default: 1 },
   // position: { type: Number, default: 0}, 

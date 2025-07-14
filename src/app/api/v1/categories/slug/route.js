@@ -9,6 +9,8 @@ import slugify from 'slugify';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
 import rateLimit from '@/lib/rateLimit';
+import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
+
 
 
 const DICTIONARY_WORDS = ['pro', 'shop', 'store', 'mart', 'boutique', 'hub', 'zone', 'central', 'elite', 'premium'];
@@ -89,21 +91,20 @@ const generateRecommendations = async (baseSlug, exclude, title, CategoryModel) 
 
 export async function GET(request) {
   try {
-    const rateLimitRes = await limiter(request);
-    if (rateLimitRes) return rateLimitRes;
+      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
+      const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
+      if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
 
-    // Validate token
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token?.session || !mongoose.Types.ObjectId.isValid(token.session)) 
-      return NextResponse.json({ success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
-    // const user_auth_session = await getServerSession(authOptions);
+      const { authenticated, error, data } = await getAuthenticatedUser(request);
+      if(!authenticated) 
+          return NextResponse.json({ error: "...not authorized" }, { status: 401 });
     
     // Parse and validate parameters
-    const { searchParams } = new URL(request.url);
-    const params = { inputSlug: searchParams.get('slug'),
-                      vendorId: searchParams.get('vendor'),
-                         title: searchParams.get('title'),
-                       exclude: (searchParams.get('exclude') || '').split(',').map(s => s.trim()) };
+      const { searchParams } = new URL(request.url);
+      const params = { inputSlug: searchParams.get('slug'),
+                        // vendorId: searchParams.get('vendor'),
+                          title: searchParams.get('title'),
+                        exclude: (searchParams.get('exclude') || '').split(',').map(s => s.trim()) };
 
     if ((!params.title && !params.inputSlug) || !params.vendorId) 
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400, headers: securityHeaders });

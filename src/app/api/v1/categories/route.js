@@ -1,18 +1,15 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
 import { categoryModel } from '@/models/shop/product/Category';
 import { categoryDTOSchema } from './categoryDTOSchema';
-// import { categoryDTOSchema } from './categoryDTOSchema';
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
-// import { shopModel } from '@/models/auth/Shop';
 import { vendorModel } from '@/models/vendor/Vendor';
-import { userModel } from '@/models/auth/User';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
 import securityHeaders from '../utils/securityHeaders';
 import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
 import config from '../../../../../config';
+import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 
 const MAX_CATEGORY_DEPTH = parseInt(process.env.MAX_CATEGORY_DEPTH || '5', 10);
 
@@ -21,186 +18,87 @@ export async function POST(request) {
   try { body = await request.json();} 
   catch { return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400, headers: securityHeaders });}
 
-  // const fingerprint = request.headers.get('x-fingerprint') || null;
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
-  if (!allowed) return null;
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
 
   const { authenticated, error, data } = await getAuthenticatedUser(request);
   if(!authenticated) 
       return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
   const parsed = categoryDTOSchema.safeParse(body);
-  console.log(parsed.error)
   if (!parsed.success)
     return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
-  const { shop, slug: inputSlug } = parsed.data;
-  // const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-  // if (!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session)) 
-  //   return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 401, headers: securityHeaders });
-  
-  const   auth_db = await authDbConnect();
-  const vendor_db = await vendorDbConnect();
-  const      User = userModel(auth_db);
-  // const ShopModel = shopModel(auth_db);
-  const Vendor = vendorModel(vendor_db);
-
-  // Find user with active session and not deleted
-  const user = await User.findOne({ referenceId: data.userReferenceId,
-                                      isDeleted: false       })
-                         .select('+_id +activeSessions +shops')
-                         .lean();
-
-  // const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje",
-  //                                     isDeleted: false       })
-  //                        .select('+_id +activeSessions +shops')
-  //                        .lean();
-
-  if (!user) 
-    return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
-  
-  const vendorData = await Vendor.findOne({ referenceId: shop })
-                                      .select( "+_id +dbInfo +secrets +expirations")
-                                      .lean();
-  if (!vendorData) 
-    return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
-    
-  // Verify user owns the shop
-  if (!user.shops.some(id => id.equals(vendorData._id)))
-    return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 401, headers: securityHeaders });
-
-  // Decrypt vendor DB URI
-  // const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-  // if (!DB_URI_ENCRYPTION_KEY)
-  //   return NextResponse.json({ success: false, error: 'Server configuration error' }, { status: 500, headers: securityHeaders } );
-
-  console.log(vendorData)
-  const dbUri = await decrypt({ cipherText: vendorData.dbInfo.dbUri,
-                                   options: { secret: config.vendorDbUriEncryptionKey } });
-
-  const shop_db = await dbConnect({ dbKey: vendorData.dbInfo.dbName, dbUri });
-  const Category = categoryModel(shop_db);
-
-  const slugExist = await Category.exists({ slug: inputSlug });
-  if (slugExist)
-    return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
-
-  console.log(parsed.data)
-  console.log(user)
-  console.log(vendorData)
-
-  let parent = null 
-  if(parsed?.data?.parent){
-    parent = await Category.findById(parsed.data.parent).select('ancestors').session(session)
-    return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
-  }
-
-
-  const payload = {                      title: parsed.data.title,
-                                          slug: parsed.data.slug,
-  ...(parsed.data.description && { description: parsed.data.description}),
-  ...(parsed.data.image       && {       image: parsed.data.image}),
-  ...(parent                  && {      parent: parent._id, 
-                                         level: parent.level + 1 }),
-                                     createdBy: user._id }
-
-  console.log("Payload*******************************************************")
-  console.log(payload)
-
-  const category = await Category.create(payload)
-  if(category){
-    console.log(category)
-    const res = NextResponse.json({ success: true, data: category, message: 'Category created successfully' }, { status: 201 } );    
-    Object.entries(securityHeaders).forEach(([key, value]) => res.headers.set(key, value));
-    return res;
-  }
-  // return NextResponse.json({ data: "sample response" }, { status: 200 });
-  
-  /** 
-  // Start mongoose session & transaction
-  const session = await shop_db.startSession();
-  session.startTransaction();
-
   try {
-    const        stack = [{ node: parsed.data, parentId: null, level: 0 }];
-    const        idMap = new Map();
-    const slugsToCheck = new Set();
-    const      rawDocs = [];
+    const { shop, slug: inputSlug } = parsed.data;
+    const   auth_db = await authDbConnect();
+    const vendor_db = await vendorDbConnect();
+    const Vendor = vendorModel(vendor_db);
 
-    // First pass: collect slugs and assign _id
-    while (stack.length > 0) {
-      const { node, parentId, level } = stack.pop();
-
-      if (level > MAX_CATEGORY_DEPTH)
-        throw new Error(`Maximum Step is Exceeded...`);
-
-      if (!node.title || !node.slug)
-        throw new Error(`Missing required fields (title or slug) for category`);
-
-      if (slugsToCheck.has(node.slug))
-        throw new Error(`Validation Error...`);
-
-      slugsToCheck.add(node.slug);
-      const _id = new mongoose.Types.ObjectId();
-      idMap.set(node, _id);
-
-      const children = node.children || [];
-      [...children].reverse().forEach(child => {
-        stack.push({ node: child, parentId: _id, level: level + 1 });
-      });
-
-      rawDocs.push({ node, _id, parentId, level });
-    }
-
+    const vendor = await Vendor.findOne({ referenceId: shop })
+                                  .select( "+_id +dbInfo +secrets +expirations")
+                                  .lean();
+    if (!vendor) 
+      return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
     
-    const existingSlugs = await CategoryModel.find({ slug: { $in: [...slugsToCheck] } }, { slug: 1 } )
-                                             .select("+slug")
-                                             .lean();
+    if (data.userId != vendor.userId)
+      return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
 
-    if (existingSlugs.length > 0)
-      throw new Error(`Duplicate slugs: ${existingSlugs.map(s => s.slug).join(', ')}`);
+    const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
+                                    options: { secret: config.vendorDbUriEncryptionKey } });
 
-    const categoryDocs = await Promise.all(rawDocs.map(async ({ node, _id, parentId, level }) => {
-    const     children = node.children || [];
-    const  childrenIds = children.map(child => { const id = idMap.get(child);
-                                                  if (!id) throw new Error(`Missing reference for child category`);
-                                                  return id;
-                                                });
+    const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+    const Category = categoryModel(shop_db);
 
-    return {   _id,
-             title: node.title,
-       description: node.description || '',
-              slug: node.slug,
-            parent: parentId,
-         ancestors: parentId 
-                        ? [...(await CategoryModel.findById(parentId).select('ancestors').session(session)).ancestors, parentId]
-                        : [],
-             image: node.image || { url: '', alt: '' },
-         metaTitle: node.metaTitle || '',
-   metaDescription: node.metaDescription || '',
-          keywords: node.keywords || [],
-             level,
-          children: childrenIds,
-         createdBy: user._id   };
-    }));
+    const slugExist = await Category.exists({ slug: inputSlug });
+    if (slugExist)
+      return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
-    const createdCategories = await CategoryModel.create(categoryDocs, { session });
-    await session.commitTransaction();    
-    const res = NextResponse.json({ success: true, data: createdCategories.map(c => c.toObject()), message: 'Category created successfully' }, { status: 201 } );    
-    Object.entries(securityHeaders).forEach(([key, value]) => res.headers.set(key, value));
-    return res;
-    */
-  // } catch (err) {
-  //   await session.abortTransaction();
-  //   const errorMsg = err.code === 11000 
-  //     ? 'A category with this slug already exists' 
-  //     : err.message || 'Something went wrong';
-  //   return NextResponse.json(
-  //     { success: false, error: errorMsg },
-  //     { status: 400, headers: securityHeaders }
-  //   );
-  // } finally {
-  //   session.endSession();
-  // }
+    let parent = null 
+    if(parsed?.data?.parent){
+      parent = await Category.findById(parsed.data.parent).select('ancestors')
+      if(!parent)
+        return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
+    }
+      if (parent && ((parent.level || 0) + 1) > MAX_CATEGORY_DEPTH) {
+        return NextResponse.json({ success: false, error: `Category depth exceeds maximum allowed (${MAX_CATEGORY_DEPTH})` }, { status: 422, headers: securityHeaders });
+      }
+
+    const payload = {                      title: parsed.data.title,
+                                            slug: parsed.data.slug,
+    ...(parsed.data.description && { description: parsed.data.description}),
+    ...(parsed.data.image       && {       image: parsed.data.image}),
+    ...(parent                  && {      parent: parent._id, 
+                                      ancestors: [...(parent.ancestors || []), parent._id],
+                                          level: (parent.level || 0) + 1}),
+                                      createdBy: vendor.userId }
+
+    const session = await shop_db.startSession();
+    try {
+        const result = await session.withTransaction(async () => {
+          const [category] = await Category.create([{ ...payload }], { session });
+          if (parent ) {
+            await Category.updateOne({ _id: parent._id }, { $addToSet: { children: category._id } }, { session });
+          }
+          const res = NextResponse.json({ success: true, data: category, message: 'Category created successfully' }, { status: 201 } );    
+          Object.entries(securityHeaders).forEach(([key, value]) => res.headers.set(key, value));
+          return res;
+        });
+        return result;
+        
+    } catch (error) {
+        console.error("Transaction failed:", error);
+  return NextResponse.json({ success: false, error: 'Category creation failed' }, { status: 500 });
+    }finally{
+      session.endSession();
+    }
+  } catch (error) {
+    console.error("Unexpected error during category creation:", error);
+  return NextResponse.json({
+    success: false,
+    error: 'Internal Server Error',
+    ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
+  }, { status: 500, headers: securityHeaders });
+  }
 }
