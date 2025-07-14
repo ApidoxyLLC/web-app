@@ -169,7 +169,7 @@ const shopSchema = new mongoose.Schema({
                 _id: { type: mongoose.Schema.Types.ObjectId, required: true },
         referenceId: { type: String, select: true },
             ownerId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
-  ownerLoginSession: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Session' },
+  ownerLoginSession: { type: mongoose.Schema.Types.ObjectId },
               email: { type: String, trim: true },
               phone: { type: String, trim: true },
             country: { type: String, required: true },

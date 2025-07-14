@@ -13,13 +13,10 @@ export async function updateToken({ db, sessionId, data }) {
         //                                                                  ]);
         const hashedRefreshToken = await bcrypt.hash(refreshToken, 10)
         const Session = sessionModel(db)
-        const  result = await Session.updateOne(
-                            { _id: sessionId },
-                            {
-                                $set: {      "refreshToken": hashedRefreshToken,
-                                       "refreshTokenExpiry": refreshTokenExpiry       }
-                            }
-                        );
+        const  result = await Session.updateOne( { _id: sessionId },
+                                                 { $set: {       "refreshToken": hashedRefreshToken,
+                                                           "refreshTokenExpiry": refreshTokenExpiry  }  }
+                                                );
         return result.modifiedCount > 0;                        
     } catch (error) {
         console.error('Failed to update token:', error);

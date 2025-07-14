@@ -42,7 +42,7 @@ export async function POST(request) {
   const   auth_db = await authDbConnect();
   const vendor_db = await vendorDbConnect();
   const      User = userModel(auth_db);
-  const ShopModel = shopModel(auth_db);
+  // const ShopModel = shopModel(auth_db);
   const VendorModel = vendorModel(vendor_db);
 
 
@@ -55,8 +55,8 @@ export async function POST(request) {
     return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
   
   const vendorData = await VendorModel.findOne({ referenceId: shopId })
-                              .select( "+_id +dbInfo +secrets +expirations")
-                              .lean();
+                                      .select( "+_id +dbInfo +secrets +expirations")
+                                      .lean();
 
   if (!vendorData) 
     return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
@@ -92,29 +92,29 @@ export async function POST(request) {
     const      rawDocs = [];
 
     // First pass: collect slugs and assign _id
-    while (stack.length > 0) {
-      const { node, parentId, level } = stack.pop();
+    // while (stack.length > 0) {
+    //   const { node, parentId, level } = stack.pop();
 
-      if (level > MAX_CATEGORY_DEPTH)
-        throw new Error(`Maximum Step is Exceeded...`);
+    //   if (level > MAX_CATEGORY_DEPTH)
+    //     throw new Error(`Maximum Step is Exceeded...`);
 
-      if (!node.title || !node.slug)
-        throw new Error(`Missing required fields (title or slug) for category`);
+    //   if (!node.title || !node.slug)
+    //     throw new Error(`Missing required fields (title or slug) for category`);
 
-      if (slugsToCheck.has(node.slug)) 
-        throw new Error(`Validation Error...`);
+    //   if (slugsToCheck.has(node.slug))
+    //     throw new Error(`Validation Error...`);
 
-      slugsToCheck.add(node.slug);
-      const _id = new mongoose.Types.ObjectId();
-      idMap.set(node, _id);
+    //   slugsToCheck.add(node.slug);
+    //   const _id = new mongoose.Types.ObjectId();
+    //   idMap.set(node, _id);
 
-      const children = node.children || [];
-      [...children].reverse().forEach(child => {
-        stack.push({ node: child, parentId: _id, level: level + 1 });
-      });
+    //   const children = node.children || [];
+    //   [...children].reverse().forEach(child => {
+    //     stack.push({ node: child, parentId: _id, level: level + 1 });
+    //   });
 
-      rawDocs.push({ node, _id, parentId, level });
-    }
+    //   rawDocs.push({ node, _id, parentId, level });
+    // }
 
     const existingSlugs = await CategoryModel.find({ slug: { $in: [...slugsToCheck] } }, { slug: 1 } )
                                              .select("+slug")

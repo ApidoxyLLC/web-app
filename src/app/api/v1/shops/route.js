@@ -52,6 +52,7 @@ export async function POST(request) {
                                 ownerId: user._id,
                                   email: user.email ? user.email : undefined,
                                   phone: user.phone ? user.phone : undefined,
+                      ownerLoginSession: data.sessionId,
                                 country: parsed.data.country.trim(),
                                 industry: parsed.data.industry?.trim(),
                             businessName: parsed.data.businessName?.trim(),
@@ -184,8 +185,6 @@ export async function GET(request) {
     const ShopModel = shopModel(auth_db);
 
     const { sessionId, userReferenceId, name, email, phone, role, isVerified, timezone, theme, language, currency } = data
-    
-
     
     const result = await ShopModel.aggregate([ { $lookup: { 
                                                               from: "users",

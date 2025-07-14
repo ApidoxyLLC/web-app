@@ -17,11 +17,11 @@ export const categoryDTOSchema = z.object({
                 }).optional(),
   parent: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), { message: "Invalid parent category ID" })
             .optional().nullable(),
-  isActive: z.boolean().default(true),
-  metaTitle: z.string().max(70, { message: "Meta title cannot exceed 70 characters" }).trim().optional(),
-  metaDescription: z.string().max(160, { message: "Meta description cannot exceed 160 characters" }).trim().optional(),
-  keywords: z.array(z.string().trim().transform(val => val.toLowerCase())).optional(),
-  metadata: z.record(z.string()).optional(),
+  // isActive: z.boolean().default(true),
+  // metaTitle: z.string().max(70, { message: "Meta title cannot exceed 70 characters" }).trim().optional(),
+  // metaDescription: z.string().max(160, { message: "Meta description cannot exceed 160 characters" }).trim().optional(),
+  // keywords: z.array(z.string().trim().transform(val => val.toLowerCase())).optional(),
+  // metadata: z.record(z.string()).optional(),
 })
 // .superRefine(async (data, ctx) => {
 //   if (data.slug) {
