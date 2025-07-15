@@ -1,4 +1,5 @@
 import { ProjectsCard } from "@/components/projects-card";
+import AlertDialogDemo from "@/components/shop-info-modal";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export default function Page() {
