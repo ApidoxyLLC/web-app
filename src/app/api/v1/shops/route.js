@@ -35,7 +35,8 @@ export async function POST(request) {
 
   try {
     const auth_db = await authDbConnect()
-    const collections = await auth_db.listCollections({ name: 'shops' }).toArray();
+    const nativeAuthDb = auth_db.db;
+    const collections = await nativeAuthDb.listCollections({ name: 'shops' }).toArray();
     if (collections.length === 0) {
       await auth_db.createCollection('shops'); // create outside transaction
     }
@@ -173,6 +174,7 @@ export async function POST(request) {
       await authDb_session.endSession();
     }
   } catch (error) {
+    console.log(error)
     return NextResponse.json({
       error: error.message || "Shop Not created",
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
