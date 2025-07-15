@@ -23,7 +23,7 @@ if (!token?.accessToken || !token?.refreshToken)
       const auth_db = await authDbConnect();
       const Session = sessionModel(auth_db);
       const session = await Session.findOne({ _id: sessionId })
-                                    .select('+refreshToken +userReference +revoked +refreshTokenExpiry +createdAt' ).lean();
+                                    .select('+userId +refreshToken +userReference +revoked +refreshTokenExpiry +createdAt' ).lean();
       if(!session)  return null;
       if(Date.now() > session.refreshTokenExpiry || session.revoked == true ){
           await Session.deleteOne({  _id: sessionId  });
@@ -54,8 +54,8 @@ if (!token?.accessToken || !token?.refreshToken)
                                               { expiresIn: config.accessTokenExpireMinutes * 60,
                                                 algorithm: 'HS256' });
           await setSession({ sessionId: session._id, tokenId,
-                             payload: { sub: session.userReference, role: session.role } })
-          return { accessToken, accessTokenExpiry, refreshToken: token?.refreshToken, tokenId  }
+                             payload: { sub: session.userReference, role: session.role, userId: session.userId } })
+          return { userId: session.userId, accessToken, accessTokenExpiry, refreshToken: token?.refreshToken, tokenId  }
       }
 
       const User = userModel(auth_db);
@@ -77,9 +77,9 @@ if (!token?.accessToken || !token?.refreshToken)
                                              data: {      refreshToken, 
                                                     refreshTokenExpiry  }}),
                           setSession({ sessionId, tokenId,
-                                      payload: { sub: user.referenceId, role: user.role } })
+                                      payload: { sub: user.referenceId, role: user.role, userId: session.userId } })
                         ])
-      return { accessToken, accessTokenExpiry, refreshToken, tokenId  }
+      return { userId: session.userId, accessToken, accessTokenExpiry, refreshToken, tokenId  }
   } catch (error) {
     console.error("Error refreshing access token:", error);
     return null

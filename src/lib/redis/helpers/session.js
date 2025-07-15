@@ -22,11 +22,11 @@ function safeCompare(a, b) {
 }
 
 export async function setSession({ sessionId, tokenId, payload ={}}) {
-    const { sub, role } = payload
+    const { sub, role, userId } = payload
     console.log(sessionId)
     console.log(tokenId)
     console.log(sub)
-    if (!sessionId || !tokenId || !sub) throw new Error('Missing required session data');
+    if (!sessionId || !tokenId || !sub || !userId) throw new Error('Missing required session data');
     const hashedTokenId = hashTokenId(tokenId)
     const key = `${SESSION_PREFIX}${sessionId}`;
     const now = Date.now();
@@ -34,7 +34,7 @@ export async function setSession({ sessionId, tokenId, payload ={}}) {
 
     const pipeline = sessionRedis.pipeline();
     // Set session data with TTL
-    pipeline.setex( key, TTL, JSON.stringify({  sub, role,
+    pipeline.setex( key, TTL, JSON.stringify({  sub, role, userId,
                                                   tokenId: hashedTokenId,
                                                 createdAt: new Date().toISOString() }) );
     // Add to user sessions set with same TTL

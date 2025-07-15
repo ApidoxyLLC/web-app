@@ -46,8 +46,8 @@ const config = {
   vendorDbUriEncryptionKey: process.env.VENDOR_DB_URI_ENCRYPTION_KEY,
   vendorDbPrefix: process.env.VENDOR_DB_PREFIX,
 
-  shopDefaultDomain: process.env.SHOP_DEFAULT_DOMAIN,
-  
+  shopDefaultDomain: process.env.SHOP_DEFAULT_DOMAIN,  
+  categorySlugMaxSuggestion: parseInt(process.env.CATEGORY_SLUG_MAX_SUGGESTIONS || '3', 10)
 };
 export default config
 

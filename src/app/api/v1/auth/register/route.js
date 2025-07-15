@@ -1,10 +1,8 @@
 import authDbConnect from "@/lib/mongodb/authDbConnect";
-// import User from "@/models/auth/User";
 import { NextResponse } from "next/server";
 import registerDTOSchema from "./registerDTOSchema";
 import { createUser } from "@/services/auth/user.service";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
-import { userModel } from "@/models/auth/User";
 import getUserByIdentifier from "@/services/user/getUserByIdentifier";
 
 export async function POST(request) {

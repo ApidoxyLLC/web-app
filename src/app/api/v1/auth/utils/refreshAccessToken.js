@@ -46,7 +46,7 @@ export async function refreshAccessToken({ token }) {
                                                 { expiresIn: config.accessTokenExpireMinutes * 60,
                                                   algorithm: 'HS256' });
         await setSession({ sessionId, tokenId,
-                      payload: { sub: user.referenceId, role: user.role } })
+                      payload: { sub: user.referenceId, role: user.role, userId: user._id } })
         // await Promise.all([ updateToken({        db: auth_db,
         //                                   sessionId,
         //                                        data: {           tokenId, 

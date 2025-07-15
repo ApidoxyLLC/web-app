@@ -30,10 +30,10 @@ const socialLinksSchema = new mongoose.Schema({
     link: { type: String },
 }, { _id: false });
 
-
 const vendorSchema = new mongoose.Schema({
                                    _id: { type: mongoose.Schema.Types.ObjectId, required: true },
                            referenceId: { type: String, required: true, unique: true },
+                               ownerId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
                           businessName: { type: String, required: true },
                               location: { type: String, required: true },
                                country: { type: String, required: true },

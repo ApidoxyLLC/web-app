@@ -57,7 +57,7 @@ if (!token?.accessToken || !token?.refreshToken)
                                              data: {      refreshToken, 
                                                     refreshTokenExpiry  }}),
                           setSession({ sessionId, tokenId,
-                                      payload: { sub: user.referenceId, role: user.role } })
+                                      payload: { sub: user.referenceId, role: user.role, userId: session.userId } })
                         ])
       return { accessToken, accessTokenExpiry, refreshToken, tokenId  }
   } catch (error) {
