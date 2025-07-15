@@ -55,6 +55,18 @@ const scopeLimiters = {
     duration: 60,         // per 60 seconds
     blockDuration: 60 * 10 // Block for 2 minutes if exceeded
   }),
+// checkSlug
+  checkSlug: new RateLimiterRedis({
+      storeClient: redis,
+      keyPrefix: 'rl:check_slug',
+      points: 500,           // Max 60 GET requests
+      duration: 60,         // per 60 seconds
+      blockDuration: 60 * 10 // Block for 2 minutes if exceeded
+    }),
+
+
+
+
 };
 
 

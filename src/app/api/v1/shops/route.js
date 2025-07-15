@@ -35,13 +35,11 @@ export async function POST(request) {
     
     try {
       const      auth_db = await authDbConnect()
-      const    UserModel =  userModel(auth_db);
-      const         user = await UserModel.findOne({ referenceId: data.userReferenceId, 
-                                                       isDeleted: false }).select('+_id +usage +phone +email');
-      // console.log(user)
-      if (!user) 
-        return NextResponse.json({ error: "...not authorized" }, { status: 404 });        
-      
+      const collections = await auth_db.listCollections({ name: 'shops' }).toArray();
+      if (collections.length === 0) {
+        await auth_db.createCollection('shops'); // create outside transaction
+      }
+
       const           _id = new mongoose.Types.ObjectId();
       const   referenceId = cuid();
       const          txId = cuid();
@@ -49,9 +47,9 @@ export async function POST(request) {
       const primaryDomain = _id.toString()+'.'+config.shopDefaultDomain
       const shopPayload = {         _id,
                             referenceId,
-                                ownerId: user._id,
-                                  email: user.email ? user.email : undefined,
-                                  phone: user.phone ? user.phone : undefined,
+                                ownerId: data.userId,
+                                  email: data.email ? data.email : undefined,
+                                  phone: data.phone ? data.phone : undefined,
                       ownerLoginSession: data.sessionId,
                                 country: parsed.data.country.trim(),
                                industry: parsed.data.industry?.trim(),
@@ -61,9 +59,9 @@ export async function POST(request) {
 
       const vendorPayload = {      _id,
                            referenceId,
-                               ownerId: user._id,
-                                 email: user.email ? user.email : undefined,
-                                 phone: user.phone ? user.phone : undefined,
+                               ownerId: data.userId,
+                                 email: data.email ? data.email : undefined,
+                                 phone: data.phone ? data.phone : undefined,
                                country: parsed.data.country.trim(),
                               industry: parsed.data.industry?.trim(),
                           businessName: parsed.data.businessName?.trim(),
@@ -88,46 +86,37 @@ export async function POST(request) {
       const userUpdateQuery =  { $push: { shops: _id },
                                   $inc: { 'usage.shops': 1 } }
 
-      const vendor_db = await vendorDbConnect()
-      const [   authDb_session, 
-              vendorDb_session ] = await Promise.all([   auth_db.startSession(), 
-                                                vendor_db.startSession()])
-      
-      await Promise.all([ authDb_session.startTransaction(), 
-                        vendorDb_session.startTransaction()])
-      const VendorModel = vendorModel(vendor_db)
-      const   ShopModel = shopModel(auth_db);                        
+      const      vendor_db = await vendorDbConnect()
+      const authDb_session = await auth_db.startSession()
+      const    VendorModel = vendorModel(vendor_db)
+      const      ShopModel = shopModel(auth_db);
+      const      UserModel =  userModel(auth_db);
+      await authDb_session.startTransaction()
       try {
-          console.log("Inside try catch");
-            const [ [shop], [vendor], updatedUser ] = await  Promise.all([ await ShopModel.create([{...shopPayload}], { session: authDb_session }),
-                                                                    VendorModel.create([{...vendorPayload}], { session: vendorDb_session }), 
-                                                                      UserModel.updateOne({ _id: user._id }, userUpdateQuery, { session: authDb_session } )])
+          const      [shop] = await ShopModel.create([{...shopPayload}], { session: authDb_session })
+          if (!shop || !shop._id) throw new Error("Shop creation failed");
+          await UserModel.updateOne({ _id: data.userId }, userUpdateQuery, { session: authDb_session } )
+          const vendor = await VendorModel.create({...vendorPayload})
+          const updateSagaSuccess = { 'transaction.sagaStatus'  : 'success',
+                                      'transaction.lastTxUpdate': new Date()};
 
-            const updateSagaSuccess = { 'transaction.sagaStatus': 'success',
-                                        'transaction.lastTxUpdate': new Date()};
+          await Promise.all([   ShopModel.updateOne({ _id: shop._id }, { $set: updateSagaSuccess }, { session: authDb_session }),
+                              VendorModel.updateOne({ _id: vendor._id }, { $set: updateSagaSuccess })]);
+
+          await authDb_session.commitTransaction()
+          const result =  {           id: shop.referenceId,
+                            businessName: shop.businessName,
+                                 country: shop.country, 
+                                industry: shop.industry,
+                                location: shop.location,
+                                 domains: vendor.domains      }
 
 
-            
-            await Promise.all([   ShopModel.updateOne({ _id: shop._id }, { $set: updateSagaSuccess }, { session: authDb_session }),
-                                VendorModel.updateOne({ _id: vendor._id }, { $set: updateSagaSuccess }, { session: vendorDb_session })]);
 
-            await Promise.all([ authDb_session.commitTransaction(), 
-                              vendorDb_session.commitTransaction()])
-
-            const returnData = {           id: shop.referenceId,
-                                 businessName: shop.businessName,
-                                      country: shop.country, 
-                                      industry: shop.industry,
-                                      location: shop.location,
-                                      domains: vendor.domains      }
-            
-        if(shop)
-          return NextResponse.json({ message: "Shop created successfully", success: true, data: returnData }, { status: 201 })
+        if(result)
+          return NextResponse.json({ message: "Shop created successfully", success: true, data: result }, { status: 201 })
       } catch (error) {
-        console.log(error)
-        await Promise.allSettled([   authDb_session.abortTransaction(),
-                                  vendorDb_session.abortTransaction()]);
-
+        await authDb_session.abortTransaction()
         try { await VendorModel.updateOne( { 'transaction.txId': txId },
                                           { $set: {   'transaction.sagaStatus': 'failed',
                                                     'transaction.lastTxUpdate': new Date() } });
@@ -138,16 +127,16 @@ export async function POST(request) {
                                                   'transaction.lastTxUpdate': new Date() } });
         } catch (e) { console.error('Failed to mark saga as failed', e) }
 
-        await Promise.allSettled([
-                                    ShopModel.deleteOne({ $and: [{ $or: [{ 'transaction.sagaStatus': 'pending' }, { 'transaction.sagaStatus': 'failed'  } ] }, 
+        await Promise.allSettled([ ShopModel.deleteOne({ $and: [{ $or: [{ 'transaction.sagaStatus': 'pending' }, { 'transaction.sagaStatus': 'failed'  } ] }, 
                                                                  { 'transaction.txId': txId }] }),
                                     VendorModel.deleteOne({ $and: [{ $or: [{ 'transaction.sagaStatus': 'pending' }, { 'transaction.sagaStatus': 'failed'  } ] }, 
-                                                                 { 'transaction.txId': txId }] })
-                                  ]);
+                                                                 { 'transaction.txId': txId }] }) ]);
         return NextResponse.json({
                 error: error.message || "Shop Not created",
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
               }, { status: 500 });
+      } finally{
+        await authDb_session.endSession();
       }
     } catch (error) {
       return NextResponse.json({
@@ -155,9 +144,6 @@ export async function POST(request) {
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
               }, { status: 500 });
     }
-    
-    
-
 }
 
 export async function GET(request) {
