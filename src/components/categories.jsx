@@ -102,7 +102,7 @@ const shopId = "cmd4gkrcb0000ckvh1zi4souv"
     const data = await res.json();
     if (data.success) {
       setCollections(prev => [...prev, data.data]);
-      setNewCategory({ title: "", handle: "", description: "", image: "" });
+      setNewCategory({ title: "", slug: "", description: "", image: "" });
       setSlugCheck({ isAvailable: null, suggestions: [] });
       setIsOpen(false);
     } else {
@@ -119,52 +119,58 @@ const shopId = "cmd4gkrcb0000ckvh1zi4souv"
     deleteRecursive(id);
   };
 
-  const buildTree = (items, parentId = null) =>
-    items
-      .filter((item) => item.parent === parentId)
-      .map((item) => ({
+  const buildTree = (items, parentId = null, visited = new Set()) =>
+  items
+    .filter((item) => item.parent === parentId)
+    .map((item) => {
+      if (visited.has(item.id)) {
+        return null 
+      }
+
+      visited.add(item.id);
+
+      const children = buildTree(items, item.id, new Set(visited));
+
+      return {
         ...item,
         name: (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 group">
             <img src={item.image} alt={item.title} className="h-6 w-6 rounded" />
             <span>{item.title}</span>
-            <div className="flex items-center gap-1">
-              {buildTree(items, item.id).length > 0 && (
-                <Badge variant="outlined" className="text-sm h-6 bg-primary-foreground rounded-sm italic px-2 py-0 font-normal">
-                  {buildTree(items, item.id).length}
-                </Badge>
-              )}
-              <div className="flex gap-1">
-                <Badge
-                  variant="default"
-                  size="sm"
-                  className="h-6 px-2 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedCategory(item);
-                    setIsOpen(true);
-                  }}
-                >
-                  <PlusIcon className="h-3 w-3" />
-                </Badge>
-                <Badge
-                  variant="destructive"
-                  size="sm"
-                  className="h-6 px-2 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(item.id);
-                  }}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Badge>
-              </div>
+
+            {children.length > 0 && (
+              <Badge className="text-sm h-6 bg-primary-foreground italic px-2 py-0">
+                {children.length}
+              </Badge>
+            )}
+
+            <div className="flex gap-1">
+              <Badge
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedCategory(item);
+                  setIsOpen(true);
+                }}
+              >
+                <PlusIcon className="h-3 w-3" />
+              </Badge>
+              <Badge
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(item.id);
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Badge>
             </div>
           </div>
         ),
-        children: buildTree(items, item.id),
+        children, 
         draggable: true,
-      }));
+      };
+    })
+    .filter(Boolean);
+
 
   const itemsTree = buildTree(collections);
 
@@ -223,14 +229,14 @@ const shopId = "cmd4gkrcb0000ckvh1zi4souv"
 
             <ControlGroup className="w-full">
               <ControlGroupItem>
-                <InputBase><InputBaseAdornment>Handle</InputBaseAdornment></InputBase>
+                <InputBase><InputBaseAdornment>Slug</InputBaseAdornment></InputBase>
               </ControlGroupItem>
               <ControlGroupItem className="flex-1">
                 <InputBase>
                   <InputBaseControl>
                     <InputBaseInput
-                      value={newCategory.handle}
-                      placeholder="category-handle"
+                      value={newCategory.slug}
+                      placeholder="category-slug"
                       onChange={(e) => setNewCategory(prev => ({ ...prev, slug: e.target.value }))}
                     />
                   </InputBaseControl>
@@ -244,7 +250,14 @@ const shopId = "cmd4gkrcb0000ckvh1zi4souv"
                  Slug taken. Try:
                 <div className="flex flex-wrap gap-2 mt-2">
                   {slugCheck.suggestions.map(sug => (
-                    <Badge key={sug} onClick={() => setNewCategory(prev => ({ ...prev, handle: sug }))} className="cursor-pointer">
+                    <Badge key={sug} onClick={() => {
+                      setNewCategory(prev => ({ ...prev, slug: sug }))
+                      setSlugCheck(prev => ({
+                    ...prev,
+                    isAvailable: true
+                  }));
+                      
+                    }} className="cursor-pointer">
                       {sug}
                     </Badge>
                   ))}

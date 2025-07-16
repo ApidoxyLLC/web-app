@@ -23,29 +23,30 @@ export async function POST(request) {
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
 
-  // const { authenticated, error, data } = await getAuthenticatedUser(request);
-  // if(!authenticated) 
-  //     return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+  const { authenticated, error, data } = await getAuthenticatedUser(request);
+  if(!authenticated) 
+      return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
-  const authDb = await authDbConnect()
-  const User = userModel(authDb);
-  const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje" })
-                          .select('referenceId _id name email phone role isEmailVerified')
-  const data = { sessionId: "686f81d0f3fc7099705e44d7",
-            userReferenceId: user?.referenceId,
-                    userId: user?._id,
-                      name: user?.name,
-                      email: user?.email,
-                      phone: user?.phone,
-                      role: user?.role,
-                isVerified: user?.isEmailVerified || user?.isPhoneVerified,
-                  // timezone: token.user?.timezone,
-                  //    theme: token.user?.theme,
-                  // language: token.user?.language,
-                  // currency: token.user?.currency   
-                }
+  // const authDb = await authDbConnect()
+  // const User = userModel(authDb);
+  // const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje" })
+  //                         .select('referenceId _id name email phone role isEmailVerified')
+  // const data = { sessionId: "686f81d0f3fc7099705e44d7",
+  //           userReferenceId: user?.referenceId,
+  //                   userId: user?._id,
+  //                     name: user?.name,
+  //                     email: user?.email,
+  //                     phone: user?.phone,
+  //                     role: user?.role,
+  //               isVerified: user?.isEmailVerified || user?.isPhoneVerified,
+  //                 // timezone: token.user?.timezone,
+  //                 //    theme: token.user?.theme,
+  //                 // language: token.user?.language,
+  //                 // currency: token.user?.currency   
+  //               }
 
   const parsed = categoryDTOSchema.safeParse(body);
+  console.log("bodttttttttttttttttttttt",body)
   if (!parsed.success)
     return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
@@ -62,7 +63,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
     
     console.log(vendor)
-    console.log(data)
+    console.log("ddddddddddddddddddddddddddddddd",data)
     if (data.userId.toString() != vendor.ownerId.toString())
       return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
 
