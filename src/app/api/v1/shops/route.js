@@ -43,7 +43,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "...not authorized" }, { status: 404 });
 
   // Check shop limit before allowing to create
-  const currentShopUsage = user.usage?.shop;
+  const currentShopUsage = user.usage?.shops;
   const allowedShopLimit = user.subscriptionScope?.shops;
 
   console.log(currentShopUsage, allowedShopLimit)
