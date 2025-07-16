@@ -29,12 +29,40 @@ export async function POST(request) {
   if (!authenticated)
     return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
+  const auth_db = await authDbConnect()
+  const UserModel = userModel(auth_db);
+
+  const user = await UserModel.findOne({
+    referenceId: data.userReferenceId,
+    isDeleted: false
+  }).select('+_id +usage +phone +email');
+
+  console.log(user)
+
+  if (!user)
+    return NextResponse.json({ error: "...not authorized" }, { status: 404 });
+
+  // Check shop limit before allowing to create
+  const currentShopUsage = user.usage?.shop;
+  const allowedShopLimit = user.subscriptionScope?.shops;
+
+  console.log(currentShopUsage, allowedShopLimit)
+
+  if (currentShopUsage >= allowedShopLimit) {
+    return NextResponse.json({
+      warning: `You have reached your shop limit (${allowedShopLimit}) for the current plan.`,
+      success: false
+    }, { status: 403 });
+  }
+
+
   const parsed = createShopDTOSchema.safeParse(body);
   if (!parsed.success)
     return NextResponse.json({ error: "Invalid Data" }, { status: 422 });
 
+
+
   try {
-    const auth_db = await authDbConnect()
     const nativeAuthDb = auth_db.db;
     const collections = await nativeAuthDb.listCollections({ name: 'shops' }).toArray();
     if (collections.length === 0) {
@@ -107,7 +135,6 @@ export async function POST(request) {
     const authDb_session = await auth_db.startSession()
     const VendorModel = vendorModel(vendor_db)
     const ShopModel = shopModel(auth_db);
-    const UserModel = userModel(auth_db);
     await authDb_session.startTransaction()
     try {
       const [shop] = await ShopModel.create([{ ...shopPayload }], { session: authDb_session })

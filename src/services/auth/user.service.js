@@ -10,6 +10,7 @@ import { encrypt } from "@/lib/encryption/cryptoEncryption";
 import { setSession } from "@/lib/redis/helpers/session";
 import config from "../../../config";
 import sendSMS from "../mail/sendSMS";
+import { planModel } from "@/models/subscription/Plan";
 
 // Funcionality with database
 export async function getUserByIdentifier({ db, session, data }) {
@@ -25,17 +26,17 @@ export async function getUserByIdentifier({ db, session, data }) {
     const query = UserModel.findOne({ $or: [{ email }, { phone }] })
       .select(
         "+_id " +
-          "+security " +
-          "+security.password " +
-          "+security.failedAttempts " +
-          "+lock " +
-          "+lock.isLocked " +
-          "+lock.lockReason " +
-          "+lock.lockUntil " +
-          "+verification " +
-          "+isEmailVerified " +
-          "+isPhoneVerified " +
-          "+role "
+        "+security " +
+        "+security.password " +
+        "+security.failedAttempts " +
+        "+lock " +
+        "+lock.isLocked " +
+        "+lock.lockReason " +
+        "+lock.lockUntil " +
+        "+verification " +
+        "+isEmailVerified " +
+        "+isPhoneVerified " +
+        "+role "
       )
       .lean();
     if (session) query.session(session);
@@ -80,31 +81,86 @@ export async function createUser({ db, session, data }) {
   if (!data || typeof data !== "object") throw new Error("Invalid data format");
 
   const { name, email, phone, password } = data || {};
-  const      UserModel = userModel(db);
-  const           salt = await bcrypt.genSalt(14);
+  const SubscriptionPlan = planModel(db);
+  const UserModel = userModel(db);
+  const salt = await bcrypt.genSalt(14);
   const hashedPassword = await bcrypt.hash(password, salt);
-  const          token = crypto.randomBytes(32).toString("hex");
-  const    hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-  const            otp = crypto.randomInt(100000, 999999).toString();
-  const      hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+  const token = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const otp = crypto.randomInt(100000, 999999).toString();
+  const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+  const plan = await SubscriptionPlan.findOne({ slug: "free-starter", isActive: true }).lean();
+  console.log("************ Plan fetched from DB ************");
+  console.log(plan);
+  if (!plan) throw new Error("Free Starter plan not found");
+
+  // const trialDays = plan.trialPeriod?.days || 0;
+  // const now = new Date();
+  // const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+
+  const subscriptionScope = {
+    customDomains: plan.limits?.customDomains,
+    subDomains: plan.limits?.subDomains,
+    shops: plan.limits?.shops,
+    androidApp: plan.limits?.apps?.android,
+    webApp: plan.limits?.apps?.web,
+    iosApp: plan.limits?.apps?.ios,
+    androidBuild: plan.limits?.builds?.android,
+    webBuild: plan.limits?.builds?.web,
+    iosBuild: plan.limits?.builds?.ios,
+    paymentIntegrations: plan.limits?.paymentIntegrations,
+    deliveryIntegrations: plan.limits?.deliveryIntegrations,
+    smsGateways: plan.limits?.smsGateways,
+    monthlyNotifications: plan.limits?.monthlyNotifications,
+    storageMB: plan.limits?.storageMB,
+    customerAccounts: plan.limits?.customerAccounts,
+    staffUsers: plan.limits?.staffUsers,
+    products: plan.limits?.products,
+    monthlyOrders: plan.limits?.monthlyOrders,
+    features: {
+      analyticsDashboard: plan.features?.analyticsDashboard,
+      inventoryManagement: plan.features?.inventoryManagement,
+      customerSupport: plan.features?.customerSupport,
+      socialLogin: plan.features?.socialLogin,
+    },
+   
+    billingCycle: plan.prices?.billingCycles?.[0] || 'monthly',
+    currency: plan.prices?.currency || 'BDT',
+    isActive: true,
+    planId: plan.planId || plan._id, 
+    planName: plan.title,  
+    planSlug: plan.slug,             
+    tier: plan.tier,                 
+    description: plan.description,
+  };
+
+  // console.log('subscriptionScope', subscriptionScope)
 
   const userData = {
     name,
     security: { ...(password && { password: hashedPassword, salt }) },
     verification: {
-                    ...(email && {    token: hashedToken,
-                                tokenExpiry: new Date( Date.now() + config.emailVerificationExpireMinutes * 60 * 1000).getTime() }),
-                    
-                    ...(phone && !email && {
-                              otp: hashedOtp,
-                        otpExpiry: new Date(Date.now() + config.phoneVerificationExpireMinutes * 60 * 1000).getTime()}),
+      ...(email && {
+        token: hashedToken,
+        tokenExpiry: new Date(Date.now() + config.emailVerificationExpireMinutes * 60 * 1000).getTime(),
+      }),
+      ...(phone && !email && {
+        otp: hashedOtp,
+        otpExpiry: new Date(Date.now() + config.phoneVerificationExpireMinutes * 60 * 1000).getTime(),
+      }),
     },
     ...(email && { email }),
     ...(phone && { phone }),
+    subscriptionScope,
+    tier: plan.tier,
   };
 
+  // Save user
   const user = new UserModel(userData);
   const newUser = await user.save(session ? { session } : {});
+
+  // Send email or SMS
   if (email) {
     const result = await sendEmail({
       receiverEmail: email,
@@ -112,22 +168,18 @@ export async function createUser({ db, session, data }) {
       senderEmail: "no-reply@apidoxy.com",
       token,
     });
-
     console.log("Email sent successfully:", result.messageId);
   }
   if (phone && !email) {
     const message = `Your Apidoxy verification code is: ${otp}. It will expire in ${config.phoneVerificationExpireMinutes} minutes.`;
-
-    const result = await sendSMS({
-      phone: phone,
-      message,
-    });
-
-    console.log("OTP sent successfully:", result.messageId);
+    const result = await sendSMS({ phone: phone, message });
+    console.log("OTP sent successfully:");
+    console.log(result);
   }
 
   return newUser;
 }
+
 
 export async function addLoginSession({ db, session, data }) {
   //  ************************************************************** //
@@ -202,9 +254,9 @@ export default async function verifyEmailToken({ token }) {
     const db = await authDbConnect();
     const User = userModel(db);
     const user = await User.findOne({
-                                            "verification.token": token,
-                                      "verification.emailVerificationTokenExpire": { $gt: Date.now() },
-                                    });
+      "verification.token": token,
+      "verification.emailVerificationTokenExpire": { $gt: Date.now() },
+    });
     if (user) {
       const updatedUser = await User.findByIdAndUpdate(user._id, {
         $set: { isEmailVerified: true },
@@ -368,23 +420,24 @@ function calculateLockTime(failedAttempts) {
 
   return new Date(
     Date.now() +
-      Math.pow(2, failedAttempts - config.maxLoginAttempt) * 60 * 1000
+    Math.pow(2, failedAttempts - config.maxLoginAttempt) * 60 * 1000
   );
 }
 
-export async function generateAccessTokenWithEncryption({ user, sessionId, userId, role = []}) {
+export async function generateAccessTokenWithEncryption({ user, sessionId, userId, role = [] }) {
   if (!user || !sessionId || !userId)
     throw new Error("MISSING_REQUIRED_PARAMS");
   // ✅ Token generation
   const tokenId = crypto.randomBytes(16).toString("hex");
   const expireMs = config.accessTokenExpireMinutes * 60 * 1000;
-  const payload = { sessionId,
-                    ...(user.email && { email: user.email }),
-                    ...(user.phone && { phone: user.phone }),
-                      tokenId,
-                    tokenType: "access",
-                    iat: Math.floor(Date.now() / 1000),
-                  };
+  const payload = {
+    sessionId,
+    ...(user.email && { email: user.email }),
+    ...(user.phone && { phone: user.phone }),
+    tokenId,
+    tokenType: "access",
+    iat: Math.floor(Date.now() / 1000),
+  };
 
   const accessToken = jwt.sign(payload, config.accessTokenSecret, {
     expiresIn: config.accessTokenExpireMinutes * 60,
