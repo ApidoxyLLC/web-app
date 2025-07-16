@@ -28,11 +28,11 @@ export async function POST(request, response) {
     // 4. Send Request to Database 
       try {
           const      auth_db = await authDbConnect();
-          const    planModel = await planModel(auth_db);
-          const existingPlan = await planModel.findOne({ tier: parsed.data.tier });
+          const    Plan = await planModel(auth_db);
+          const existingPlan = await Plan.findOne({ tier: parsed.data.tier });
           if (existingPlan) 
             return NextResponse.json( { error: "This Tier plan already exist, Add different one. " }, { status: 400 } );
-          const result = await planModel.create([parsed.data])
+          const result = await Plan.create([parsed.data])
           if(result)
               return NextResponse.json({ message: "Subscription plan created successfully... ", success: true, data: result }, { status: 201 })
       } catch (error) {

@@ -4,7 +4,7 @@ import config from '../config';
 const dbInfoSchema = new mongoose.Schema({
     dbName: { type: String },
      dbUri: { type: String },
-}, { timestamps: false });
+}, { timestamps: false,  _id: false });
 
 const secretKeySchema = new mongoose.Schema({
            accessTokenSecret: { type: String, required: true },

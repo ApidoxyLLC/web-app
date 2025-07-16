@@ -7,6 +7,7 @@ import { vendorModel } from '@/models/vendor/Vendor';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
 import securityHeaders from '../utils/securityHeaders';
+import { userModel } from '@/models/auth/User';
 import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
 import config from '../../../../../config';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
@@ -22,9 +23,27 @@ export async function POST(request) {
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
 
-  const { authenticated, error, data } = await getAuthenticatedUser(request);
-  if(!authenticated) 
-      return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+  // const { authenticated, error, data } = await getAuthenticatedUser(request);
+  // if(!authenticated) 
+  //     return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+
+  const authDb = await authDbConnect()
+  const User = userModel(authDb);
+  const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje" })
+                          .select('referenceId _id name email phone role isEmailVerified')
+  const data = { sessionId: "686f81d0f3fc7099705e44d7",
+            userReferenceId: user.referenceId,
+                    userId: user._id,
+                      name: user.name,
+                      email: user.email,
+                      phone: user.phone,
+                      role: user.role,
+                isVerified: user.isEmailVerified || user.isPhoneVerified,
+                  // timezone: token.user?.timezone,
+                  //    theme: token.user?.theme,
+                  // language: token.user?.language,
+                  // currency: token.user?.currency   
+                }
 
   const parsed = categoryDTOSchema.safeParse(body);
   if (!parsed.success)
@@ -32,22 +51,24 @@ export async function POST(request) {
 
   try {
     const { shop, slug: inputSlug } = parsed.data;
-    const   auth_db = await authDbConnect();
     const vendor_db = await vendorDbConnect();
     const Vendor = vendorModel(vendor_db);
 
     const vendor = await Vendor.findOne({ referenceId: shop })
                                   .select( "+_id +dbInfo +secrets +expirations")
                                   .lean();
+
     if (!vendor) 
       return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
     
-    if (data.userId != vendor.userId)
+    console.log(vendor)
+    console.log(data)
+    if (data.userId.toString() != vendor.ownerId.toString())
       return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
 
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
                                     options: { secret: config.vendorDbUriEncryptionKey } });
-
+console.log(dbUri)
     const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
     const Category = categoryModel(shop_db);
 
