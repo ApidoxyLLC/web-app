@@ -37,7 +37,6 @@ export async function POST(request) {
     isDeleted: false
   }).select('+_id +usage +phone +email');
 
-  console.log(user)
 
   if (!user)
     return NextResponse.json({ error: "...not authorized" }, { status: 404 });
@@ -46,7 +45,6 @@ export async function POST(request) {
   const currentShopUsage = user.usage?.shops;
   const allowedShopLimit = user.subscriptionScope?.shops;
 
-  console.log(currentShopUsage, allowedShopLimit)
 
   if (currentShopUsage >= allowedShopLimit) {
     return NextResponse.json({
