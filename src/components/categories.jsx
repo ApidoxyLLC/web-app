@@ -1,8 +1,10 @@
+// Rewritten Categories component with slug checking and API-based creation
+
 "use client";
 
 import { TreeView } from '@/components/tree-view';
 import { PlusCircle, PlusIcon, Trash2, FolderPlus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,35 +26,106 @@ import {
   InputBaseInput,
 } from "@/components/ui/input-base";
 import PicturePreviewInput from "@/components/picture-preview-input";
+import { Textarea } from './ui/textarea';
 
 export default function Categories() {
-  const [collections, setCollections] = useState([
-    { id: "123456789", title: "Clothing", handle: "clothing", description: "All clothing items.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-    { id: "987654321", title: "Men's Clothing", handle: "mens-clothing", description: "Trendy men's clothing.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "123456789" },
-    { id: "567890123", title: "Jackets", handle: "mens-jackets", description: "Stylish jackets for men.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "987654321" },
-    { id: "567890124", title: "Shirts", handle: "mens-shirts", description: "Casual and formal shirts for men.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "987654321" },
-    { id: "987654322", title: "Women's Clothing", handle: "womens-clothing", description: "Stylish women's fashion.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "123456789" },
-    { id: "567890125", title: "Dresses", handle: "womens-dresses", description: "Elegant dresses for all occasions.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "987654322" },
-    { id: "567890126", title: "Tops", handle: "womens-tops", description: "Trendy tops for everyday wear.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "987654322" },
-    { id: "123456743489", title: "Food and beverage", handle: "food-beverage", description: "All food and drink items.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-    { id: "1245573456789", title: "Plastics", handle: "plastics", description: "Plastic materials and goods.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-    { id: "12345645454789", title: "Fabrics", handle: "fabrics", description: "Various fabric types.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-    { id: "123445456789", title: "Chemicals", handle: "chemicals", description: "Chemical products and materials.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-  ]);
-  
+  const [collections, setCollections] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [slugCheck, setSlugCheck] = useState({ isAvailable: null, suggestions: [] });
+  const [loading, setLoading] = useState(false);
   const [newCategory, setNewCategory] = useState({
     title: "",
-    handle: "",
+    slug: "",
     description: "",
-    image: null,
+    image: undefined,
   });
+
+// useEffect(()=>{
+//   try {
+//     const res =  fetch('http://localhost:3000/api/v1/shops/')
+//     .then(res => res.json())
+//     .then(data=>{
+//       // joy
+//     });
+//     // if (json.success) {
+//     //   console.log('All shops:', json.data);
+//     //   const shopId = json.data[0]?.id; 
+//     //   console.log('Shop ID:', shopId);
+//     //   return shopId;
+//     // } else {
+//     //   console.error(json.error);
+//     //   return null;
+//     // }
+//   } catch (err) {
+//     console.error("Fetch shop error:", err);
+//     return null;
+//   }
+// })
+const shopId = "cmd4gkrcb0000ckvh1zi4souv"
+
+  // useEffect(() => {
+  //   const fetchCategories = async () => {
+  //     const res = await fetch(`/api/vendor/category?shop=${shopId}`);
+  //     const data = await res.json();
+  //     if (data.success) {
+  //       setCollections(data.categories);
+  //     }
+  //   };
+  //   fetchCategories();
+  // }, []);
+
+  // useEffect(() => {
+  //   if (newCategory.title && !newCategory.handle) {
+  //     const generated = newCategory.title.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, "");
+  //     setNewCategory(prev => ({ ...prev, handle: generated }));
+  //   }
+  // }, [newCategory.title]);
+
+  const checkSlug = async () => {
+    if (!newCategory.slug) return;
+    setLoading(true);
+    const res = await fetch(`http://localhost:3000/api/v1/categories/slug?slug=${newCategory.slug}&title=${newCategory.title}&shop=${shopId}`);
+    const data = await res.json();
+    setSlugCheck({ isAvailable: data.isAvailable, suggestions: data.recommendations || [] });
+    setLoading(false);
+  };
+
+  const handleCreateCategory = async () => {
+    if (!slugCheck.isAvailable) return;
+    const parentId = selectedCategory?.id || null ;
+    const res = await fetch(`http://localhost:3000/api/v1/categories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...newCategory, parent: parentId, shop: shopId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      setCollections(prev => [...prev, data.data]);
+      setNewCategory({ title: "", handle: "", description: "", image: "" });
+      setSlugCheck({ isAvailable: null, suggestions: [] });
+      setIsOpen(false);
+    } else {
+      alert(data.error || "Category creation failed");
+    }
+  };
+
+  const handleDelete = (id) => {
+    const deleteRecursive = (categoryId) => {
+      const children = collections.filter(item => item.parent === categoryId);
+      children.forEach(child => deleteRecursive(child.id));
+      setCollections(prev => prev.filter(item => item.id !== categoryId));
+    };
+    deleteRecursive(id);
+  };
 
   const buildTree = (items, parentId = null) =>
     items
       .filter((item) => item.parent === parentId)
-      .map((item) => ({        ...item,        name: (          <div className="flex items-center gap-2">
+      .map((item) => ({
+        ...item,
+        name: (
+          <div className="flex items-center gap-2">
             <img src={item.image} alt={item.title} className="h-6 w-6 rounded" />
             <span>{item.title}</span>
             <div className="flex items-center gap-1">
@@ -89,55 +162,20 @@ export default function Categories() {
             </div>
           </div>
         ),
-        actions: (
-          <div className="flex gap-2">
-          </div>
-        ),
         children: buildTree(items, item.id),
         draggable: true,
       }));
-
-  const handleDelete = (id) => {
-    // Recursively delete category and its children
-    const deleteRecursive = (categoryId) => {
-      const children = collections.filter(item => item.parent === categoryId);
-      children.forEach(child => deleteRecursive(child.id));
-      setCollections(prev => prev.filter(item => item.id !== categoryId));
-    };
-    deleteRecursive(id);
-  };
-
-  const handleCreateCategory = () => {
-    const newId = Math.random().toString(36).substr(2, 9);
-    const parentId = selectedCategory ? selectedCategory.id : null;
-    
-    setCollections(prev => [...prev, {
-      id: newId,
-      parent: parentId,
-      image: "https://placehold.co/400x400.png",
-      cover: "https://placehold.co/400x400.png",
-      ...newCategory
-    }]);
-
-    setNewCategory({ title: "", handle: "", description: "" });
-    setIsOpen(false);
-  };
 
   const itemsTree = buildTree(collections);
 
   return (
     <div className="space-y-4 p-6">
       <div className="flex justify-between items-center gap-2">
-        <div className="truncate text-ellipsis">
+        <div>
           <h2 className="text-xl font-semibold">Categories</h2>
-          <p className="text-sm text-muted-foreground text-ellipsis">Create, update and delete categories and subcategories</p>
+          <p className="text-sm text-muted-foreground">Create, update and delete categories and subcategories</p>
         </div>
-        <Button 
-          onClick={() => {
-            setSelectedCategory(null);
-            setIsOpen(true);
-          }}
-        >
+        <Button onClick={() => { setSelectedCategory(null); setIsOpen(true); }}>
           <FolderPlus className="mr-2 h-4 w-4" />
           Add Root Category
         </Button>
@@ -147,27 +185,25 @@ export default function Categories() {
         <DialogContent className="max-w-md p-0">
           <div className="px-6 pt-6">
             <DialogHeader>
-              <DialogTitle className="text-lg font-semibold">Create New Category</DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground m-0">
+              <DialogTitle>Create New Category</DialogTitle>
+              <DialogDescription>
                 {selectedCategory ? `Subcategory of ${selectedCategory.title}` : 'Root level category'}
               </DialogDescription>
             </DialogHeader>
           </div>
+
           <div className="grid gap-6 p-6">
-            <div className="flex justify-center">
-              <PicturePreviewInput
-                width={120}
-                height={120}
-                label="Upload Category Image"
-                picture={newCategory.image}
-                onChange={(url) => setNewCategory(prev => ({ ...prev, image: url }))}
-              />
-            </div>
+            {/* <PicturePreviewInput
+              width={120}
+              height={120}
+              label="Upload Category Image"
+              picture={newCategory.image}
+              onChange={(url) => setNewCategory(prev => ({ ...prev, image: url }))}
+            /> */}
+
             <ControlGroup className="w-full">
               <ControlGroupItem>
-                <InputBase>
-                  <InputBaseAdornment>Title</InputBaseAdornment>
-                </InputBase>
+                <InputBase><InputBaseAdornment>Title</InputBaseAdornment></InputBase>
               </ControlGroupItem>
               <ControlGroupItem className="flex-1">
                 <InputBase>
@@ -178,7 +214,6 @@ export default function Categories() {
                       onChange={(e) => setNewCategory(prev => ({
                         ...prev,
                         title: e.target.value,
-                        handle: e.target.value.toLowerCase().replace(/ /g, '-')
                       }))}
                     />
                   </InputBaseControl>
@@ -188,9 +223,7 @@ export default function Categories() {
 
             <ControlGroup className="w-full">
               <ControlGroupItem>
-                <InputBase>
-                  <InputBaseAdornment>Handle</InputBaseAdornment>
-                </InputBase>
+                <InputBase><InputBaseAdornment>Handle</InputBaseAdornment></InputBase>
               </ControlGroupItem>
               <ControlGroupItem className="flex-1">
                 <InputBase>
@@ -198,41 +231,51 @@ export default function Categories() {
                     <InputBaseInput
                       value={newCategory.handle}
                       placeholder="category-handle"
-                      onChange={(e) => setNewCategory(prev => ({
-                        ...prev,
-                        handle: e.target.value
-                      }))}
+                      onChange={(e) => setNewCategory(prev => ({ ...prev, slug: e.target.value }))}
                     />
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
+              <Button size="sm" onClick={checkSlug} disabled={loading}>Check</Button>
             </ControlGroup>
+
+            {slugCheck.isAvailable === false && (
+              <div className="text-sm text-red-500">
+                 Slug taken. Try:
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {slugCheck.suggestions.map(sug => (
+                    <Badge key={sug} onClick={() => setNewCategory(prev => ({ ...prev, handle: sug }))} className="cursor-pointer">
+                      {sug}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {slugCheck.isAvailable === true && (
+              <div className="text-sm text-green-600"> Slug is available</div>
+            )}
+
+            <Textarea
+              placeholder="Category description"
+              value={newCategory.description}
+              onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
+            />
           </div>
+
           <DialogFooter className="flex-row gap-2 p-6 pt-0">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateCategory}>
-              Create Category
-            </Button>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateCategory} disabled={!slugCheck.isAvailable}>Create Category</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <div className="border rounded-lg">
-        <TreeView 
-          data={itemsTree} 
+        <TreeView
+          data={itemsTree}
           defaultLeafIcon={<PlusCircle />}
           onDocumentDrag={(source, target) => {
-            if (target.id) {
-              setCollections(prev => prev.map(item => 
-                item.id === source.id ? {...item, parent: target.id} : item
-              ));
-            } else {
-              setCollections(prev => prev.map(item => 
-                item.id === source.id ? {...item, parent: null} : item
-              ));
-            }
+            const newParent = target?.id || null;
+            setCollections(prev => prev.map(item => item.id === source.id ? { ...item, parent: newParent } : item));
           }}
         />
       </div>

@@ -48,6 +48,7 @@
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "emblor": "^1.4.8",
     "input-otp": "^1.4.2",
     "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",

@@ -2,6 +2,7 @@
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogHeader,
@@ -175,9 +176,12 @@ export default function AlertDialogDemo() {
               </ControlGroup>
 
               {/* Submit Button */}
-              <Button type="submit" className="w-full">
-                Next
-              </Button>
+              
+              <AlertDialogCancel className="bg-none border-none w-full  px-0">
+                <Button type="submit" className="w-full">
+                  Next
+                </Button>
+              </AlertDialogCancel>
             </div>
         </form>
         </AlertDialogHeader>
