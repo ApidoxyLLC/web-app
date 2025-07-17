@@ -289,6 +289,7 @@ export const authOptions = {
     ],
     callbacks: {
         async signIn(params, req) {
+            console.log('******************************************paramssssssssssssss******************************************')
             console.log(params)
             const { user, account, profile } = params
             const timezone = req?.headers['x-timezone'] || null;
