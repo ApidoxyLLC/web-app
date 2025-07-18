@@ -4,9 +4,9 @@ const nextConfig = {
     async rewrites() {
         return [
             {
-                source: '/api/auth/:path*',
-                destination: '/api/v1/auth/:path*',
-            },
+                source: '/api/auth/callback/:path*',
+                destination: '/api/v1/auth/callback/:path*',
+            }
         ];
     },
 };

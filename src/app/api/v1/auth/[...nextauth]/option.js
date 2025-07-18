@@ -6,7 +6,6 @@ import GoogleProvider from 'next-auth/providers/google'
 import FacebookProvider from 'next-auth/providers/facebook'
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import crypto from 'crypto'; 
-import cuid from '@bugsnag/cuid';
 import tokenRefresh from '../utils/tokenRefresh';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import config from '../../../../../../config';
@@ -290,12 +289,12 @@ export const authOptions = {
         }),
     ],
     callbacks: {
-        async signIn(params, req) {
+        async signIn({ user, account, profile, email, credentials }) {
             console.log('******************************************PARAMS IN SIGN IN CALLBACK******************************************')
             console.log(params)
             // console.log('******************************************REQUEST IN SIGN IN CALLBACK******************************************')
             // // console.log(req)
-            const { user, account, profile } = params
+            // const { user, account, profile } = params
             if (account.provider === 'google' || account.provider === 'facebook') {
 
                 // Rate Limit
@@ -388,10 +387,10 @@ export const authOptions = {
                    user.accessTokenExpiry = accessTokenExpiry;
                         user.refreshToken = refreshToken;
                                 user.role = _user?.role;
-                                user.name = profile.name || '';
-                            user.username = profile.email?.split('@')[0] || profile.id;
-                               user.email = profile.email;
-                               user.phone = _user.phone || '';
+                                user.name = profile?.name || '';
+                            user.username = profile?.email?.split('@')[0] || profile.id;
+                               user.email = profile?.email;
+                               user.phone = _user?.phone || '';
                           user.isVerified = true;
 
                     return true;
@@ -552,261 +551,3 @@ export const authOptions = {
     secret: config.nextAuthSecret,
     debug: process.env.NODE_ENV !== 'production'
 };
-
-
-
-
-// code from facebook/google provider login 
-// const    sessionId = new mongoose.Types.ObjectId();                  
-// const LoginHistory = loginHistoryModel(auth_db)
-// const      Session = sessionModel(auth_db)
-
-// const { accessToken,
-//         refreshToken,
-//         tokenId,
-//         accessTokenExpiry,
-//         refreshTokenExpiry,
-//         refreshTokenCipherText } = await generateToken({ user, sessionId });
-
-// const   ipAddressCipherText = await encrypt({    data: ip,
-//                                               options: { secret: config.ipAddressEncryptionKey }     });
-
-// const userUpdate = { $set: {
-//                             "security.failedAttempts": 0,
-//                                      "lock.lockUntil": null,
-//                                  "security.lastLogin": new Date(),
-//                                     "isPhoneVerified": true,
-//                             ...(timezone && !user.timezone && (moment.tz.zone(timezone) !== null) && { timezone })
-//                         },
-//                      $push: {
-//                             activeSessions: {
-//                                                 $each: [sessionId],
-//                                                 $slice: -config.maxSessionsAllowed
-//                                             }
-//                         }
-//                     };
-// const sessionPayload = {      _id: sessionId,
-//                            userId: user._id,
-//                          provider: 'local-phone',
-//                       fingerprint,
-//                           tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
-//                 accessTokenExpiry,
-//                      refreshToken: refreshTokenCipherText,
-//                refreshTokenExpiry,
-//                              role: user.role,
-//                                ip: ipAddressCipherText,
-//                          userAgent,
-//                           timezone               }
-            
-// const loginHistoryPayload = { userId: user._id,
-//                            sessionId,
-//                             provider: 'local-phone',
-//                          fingerprint,
-//                                   ip: ipAddressCipherText,
-//                             userAgent }
-// const promiseArray = [  setSession({ sessionId,
-//                                        tokenId,
-//                                        payload: { sub: user.referenceId, 
-//                                                  role: user.role         }}),
-
-//                         Session.create([sessionPayload], 
-//                                   { session: auth_db_session }),
-
-//                            User.updateOne({ _id: user._id },
-//                                      userUpdate,
-//                                       { session: auth_db_session }),
-
-//                    LoginHistory.create([loginHistoryPayload],  
-//                                        { session: auth_db_session })]                                                       
-// await Promise.all(promiseArray);
-
-// /** *********************Temporary Execution of function********************* **/
-// /**   This operation need transfer into corn job/ this will done in future    **/
-// const updatedUser = await User.findOne({ _id: user._id }, { activeSessions: 1 });
-// await Session.deleteMany({ userId: user._id,
-//                             _id: { $nin: updatedUser.activeSessions }
-//                         }, { session: auth_db_session });
-// /** ########################################################################## **/
-
-
-
-
-
-
-
-
-                    // code from facebook/google provider login 
-                    // const sessionId = new mongoose.Types.ObjectId();
-                    // const        Session = sessionModel(auth_db)
-                    // const   LoginHistory = loginHistoryModel(auth_db)
-                    // const { accessToken,
-                    //         refreshToken,
-                    //         tokenId,
-                    //         accessTokenExpiry,
-                    //         refreshTokenExpiry,
-                    //         refreshTokenCipherText } = await generateToken({ user, sessionId });
-                    // const   ipAddressCipherText = await encrypt({    data: ip,
-                    //                                             options: { secret: config.ipAddressEncryptionKey }});
-
-                    // const userUpdate = { $set: { "security.failedAttempts": 0,
-                    //                                  "lock.lockUntil"     : null,
-                    //                              "security.lastLogin"     : new Date(),
-                    //                             ...(account.provider && ((account.provider === 'google' && !_user.oauth.google) || (account.provider === 'facebook' && !_user.oauth.facebook))
-                    //                                                     ({
-                    //                                                         [`oauth.${account.provider}`]: {
-                    //                                                                                                         id: account.provider === 'google' ? profile.sub : profile.id,
-                    //                                                                                                accessToken: account.access_token,
-                    //                                                                                               refreshToken: account.refresh_token,
-                    //                                                                                             tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null
-                    //                                                                                         }
-                    //                                                     }))
-                    //                             },
-                    //                     $push: { activeSessions: {
-                    //                                                 $each: [sessionId],
-                    //                                                $slice: -config.maxSessionsAllowed
-                    //                                             }
-                    //                             }
-                    //                     };
-
-                    // const sessionPayload = {   _id: sessionId,
-                    //                         userId: _user._id,
-                    //                       provider: account.provider,
-                    //                        tokenId: crypto.createHash('sha256').update(tokenId).digest('hex'),
-                    //              accessTokenExpiry,
-                    //                   refreshToken: refreshTokenCipherText,
-                    //             refreshTokenExpiry,
-                    //                           role: _user.role,
-                    //                             ip: ipAddressCipherText,
-                    //                      userAgent,
-                    //                       timezone,               }
-
-                    // const loginHistoryPayload = { userId: _user._id,
-                    //                            sessionId,
-                    //                             provider: account.provider,
-                    //                                   ip: ipAddressCipherText,
-                    //                            userAgent                        }
-
-                    // const promiseArray = [  setSession({ sessionId,
-                    //                                        tokenId,
-                    //                                             payload: { sub: _user.referenceId, 
-                    //                                                       role: _user.role         }}),
-
-                    //                         Session.create([sessionPayload], 
-                    //                                         { session: auth_db_session }),
-
-                    //                         User.updateOne({ _id: _user._id },
-                    //                                             userUpdate,
-                    //                                         { session: auth_db_session }),
-
-                    //                 LoginHistory.create([loginHistoryPayload],  
-                    //                                     { session: auth_db_session })]
-                    //                         await Promise.all(promiseArray);
-
-                    // /** *********************Temporary Execution of function********************* **/
-                    // /**   This operation need transfer into corn job/ this will done in future    **/
-                    // const updatedUser = await User.findOne({ _id: _user._id }, { activeSessions: 1 });
-                    // await Session.deleteMany({ userId: _user._id,
-                    //                             _id: { $nin: updatedUser.activeSessions }
-                    //                         }, { session: auth_db_session });
-                    // /** ########################################################################## **/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        // await Promise.all([setSession({ sessionId,
-                        //                                   tokenId,
-                        //                                   payload: { sub: user.referenceId, 
-                        //                                             role: user.role         }}),
-
-                        //                    Session.create([sessionPayload], 
-                        //                                   { session: auth_db_session }),
-
-                        //                    User.updateOne({ _id: user._id },
-                        //                                     userUpdate,
-                        //                                   { upsert: true, session: auth_db_session }),
-                                                            
-                        //                    LoginHistory.create([loginHistoryPayload],  
-                        //                                       { session: auth_db_session })])
-
-                        
-
-                        // if (MAX_SESSIONS_ALLOWED && user?.activeSessions?.length) {
-                        //     await cleanInvalidSessions({ activeSessions: user.activeSessions, 
-                        //                                          userId: user._id, 
-                        //                                currentSessionId: loggedInSession._id.toString(), 
-                        //                                    sessionLimit: MAX_SESSIONS_ALLOWED, 
-                        //                                              db: auth_db,
-                        //                                      db_session: auth_db_session  })
-                        //     }
