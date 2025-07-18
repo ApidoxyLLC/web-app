@@ -47,7 +47,11 @@ const config = {
   vendorDbPrefix: process.env.VENDOR_DB_PREFIX,
 
   shopDefaultDomain: process.env.SHOP_DEFAULT_DOMAIN,  
-  categorySlugMaxSuggestion: parseInt(process.env.CATEGORY_SLUG_MAX_SUGGESTIONS || '3', 10)
+  categorySlugMaxSuggestion: parseInt(process.env.CATEGORY_SLUG_MAX_SUGGESTIONS || '3', 10),
+
+
+
+  
 };
 export default config
 

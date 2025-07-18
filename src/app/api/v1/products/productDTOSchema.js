@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import z from 'zod';
+import mongoose from 'mongoose';
 
 // Helper schemas
 const discountSchema = z.object({
@@ -106,7 +107,7 @@ export const productDTOSchema = z.object({
   }).optional(),
   shipping: shippingSchema.optional(),
   variants: z.array(variantSchema).optional(),
-  vendorId: z.string().min(1, "Vendor ID is required")
+      shop: z.string().min(1, "Vendor ID is required")
 }).strict();
 
 

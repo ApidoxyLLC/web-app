@@ -53,6 +53,7 @@ const LockSchema = new mongoose.Schema({
 const OAuthProviderSchema = new mongoose.Schema({
   id: { type: String, required: true },
   accessToken: { type: String, required: true },
+  expiry: { type: Number },
   refreshToken: { type: String }, // For token refresh
   tokenExpiresAt: { type: Date }, // When the token expires
   picture: { type: String }, // Profile picture URL from provider

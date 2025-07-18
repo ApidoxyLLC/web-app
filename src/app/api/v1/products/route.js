@@ -1,18 +1,23 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
+import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { dbConnect } from "@/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
+import { vendorModel } from "@/models/vendor/Vendor";
 import { productModel } from "@/models/shop/product/Product";
+import { categoryModel } from "@/models/shop/product/Category";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
-import rateLimit from "@/app/utils/rateLimit";
 import { headers } from "next/headers";
 import { authOptions } from "../auth/[...nextauth]/option";
 import { productDTOSchema } from './productDTOSchema';
 import { getToken } from 'next-auth/jwt';
 import { userModel } from '@/models/auth/User';
 import slugify from 'slugify';
+import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import securityHeaders from "../utils/securityHeaders";
+import config from "../../../../../config";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
 export const dynamic = 'force-dynamic'; // Ensure dynamic fetching
 
@@ -24,10 +29,10 @@ const apiResponse = (data, status = 200, headers = {}) => {
 };
 
 // Rate limiter configuration
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500, // Max users per minute
-});
+// const limiter = rateLimit({
+//   interval: 60 * 1000, // 1 minute
+//   uniqueTokenPerInterval: 500, // Max users per minute
+// });
 
 export async function GET(request) {
   // Get client IP for rate limiting
@@ -36,8 +41,8 @@ export async function GET(request) {
              headerList.get('x-real-ip') || 'unknown_ip';
 
   // Rate limiting
-  try { await limiter.check(ip, 30); }
-  catch { return apiResponse( { error: "Too many requests" }, 429, { 'Retry-After': '60' } ) }
+  // try { await limiter.check(ip, 30); }
+  // catch { return apiResponse( { error: "Too many requests" }, 429, { 'Retry-After': '60' } ) }
 
   // Get vendor identification
   const vendorId = headerList.get('x-vendor-identifier');
@@ -227,9 +232,11 @@ export async function GET(request) {
 
 
 export async function POST(request) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-             request.headers.get('x-real-ip') || 'unknown_ip';
-  const fingerprint = request.headers.get('x-fingerprint') || null;
+  const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
+
+  // const fingerprint = request.headers.get('x-fingerprint') || null;
 
   let body;
   try { body = await request.json() } 
@@ -240,50 +247,79 @@ export async function POST(request) {
   if (!parsed.success)
     return NextResponse.json({  success: false, error: "Validation failed", details: parsed.error.flatten()}, { status: 422, headers: securityHeaders });
   
-  const { vendorId } = parsed.data;
+  // const { authenticated, error, data } = await getAuthenticatedUser(request);
+  //   if(!authenticated) 
+  //       return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+
+  /** 
+   * fake Authentication for test purpose only 
+   * *******************************************
+   * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+   * *******************************************
+   * *              ***
+   * *              ***
+   * *            *******
+   * *             *****
+   * *              *** 
+   * *               *           
+   * */
+
+  const authDb = await authDbConnect()
+  const User = userModel(authDb);
+  const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje" })
+                         .select('referenceId _id name email phone role isEmailVerified')
+  const data = { sessionId: "686f81d0f3fc7099705e44d7",
+           userReferenceId: user.referenceId,
+                    userId: user._id,
+                      name: user.name,
+                     email: user.email,
+                     phone: user.phone,
+                      role: user.role,
+                isVerified: user.isEmailVerified || user.isPhoneVerified,
+                }
+  
+  /** 
+   * fake Authentication for test purpose only 
+   * *******************************************
+   * *********FAKE AUTHENTICATION END********* *
+   * *******************************************
+  **/
+
+
+
+  const { shop: shopId } = parsed.data;
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
-  if (!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session) || !token.fingerprint || token.fingerprint != fingerprint) 
-    return NextResponse.json({ success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
+  // if (!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session) || !token.fingerprint || token.fingerprint != fingerprint) 
+  //   return NextResponse.json({ success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
   
 
-  const auth_db = await authDbConnect();
-  const User = userModel(auth_db);
-  const ShopModel = shopModel(auth_db);
+  const   auth_db = await authDbConnect();
+  const vendor_db = await vendorDbConnect();
+  const    Vendor = vendorModel(vendor_db)
+  const      Shop = shopModel(auth_db);
 
-  const user = await User.findOne({ activeSessions: new mongoose.Types.ObjectId(token?.session), isDeleted: false })
-                         .select('+_id +activeSessions +shops').lean();
-  if (!user) 
-    return NextResponse.json({ success: false, error: "Authentication failed" }, { status: 400, headers: securityHeaders })
+  const vendor = await Vendor.findOne({ referenceId: shopId })
+                             .select( "+_id +ownerId +dbInfo +secrets +expirations")
+                             .lean();
 
-  const shop = await ShopModel.findOne({ vendorId })
-                              .select("+_id "+
-                                      "+dbInfo +dbInfo.uri +dbInfo.prefix " +
-                                      "+keys.ACCESS_TOKEN_SECRET "+
-                                      "+timeLimitations.ACCESS_TOKEN_EXPIRE_MINUTES")
-                              .lean();
-
-  if (!shop) 
+  if (!vendor) 
     return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404, headers: securityHeaders });
 
-  if (!user?.shops.some(id => id.equals(shop._id))) 
+  console.log(data)
+  console.log(vendor)
+  if (vendor.ownerId.toString() != data.userId.toString()) 
     return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403, headers: securityHeaders });
 
-  const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-  if (!DB_URI_ENCRYPTION_KEY) {
-    console.log(" missing DB_URI_ENCRYPTION_KEY")
-    return NextResponse.json({ success: false, error: "Server configuration error" }, { status: 500, headers: securityHeaders });
-  }
+  const dbUri = await decrypt({   cipherText: vendor.dbInfo.dbUri, 
+                                     options: { secret: config.vendorDbUriEncryptionKey } });
+    console.log(dbUri)
+  // const dbName = `${config.vendorDbPrefix}_${vendor._id}`;
+  const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+  const Product = productModel(shop_db);
 
-  const dbUri = await decrypt({   cipherText: shop.dbInfo.uri, 
-                                     options: { secret: DB_URI_ENCRYPTION_KEY } });
-
-  const shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
-  const vendor_db = await dbConnect({ dbKey: shopDbName, dbUri });
-  const ProductModel = productModel(vendor_db);
-
-  const session = await vendor_db.startSession();
-  session.startTransaction();
+  // const session = await shop_db.startSession();
+  // session.startTransaction();
 
   try {
     const { 
@@ -293,45 +329,35 @@ export async function POST(request) {
       productFormat, digitalAssets, brand, shipping, variants, slug } = parsed.data;
 
 
-      const     slugExist = await ProductModel.exists({ slug });
+      const slugExist = await Product.exists({ slug });
       if (slugExist)
         return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
     // Validate categories exist
+    
     if (categories && categories.length > 0) {
-      const categoryCount = await vendor_db.model('Category').countDocuments({ 
-        _id: { $in: categories } 
-      });
-      if (categoryCount !== categories.length) {
+      const Category = categoryModel(shop_db);
+      const categoriesData = await Category.find({ _id: { $in: categories } }).select("_id").lean();
+      if (categoriesData.length !== categories.length) {
         throw new Error("One or more categories not found");
       }
     }
 
-    const newProduct = new ProductModel({ title, slug, description, tags, gallery,
-                                          otherMediaContents, price, thumbnail, options,
-                                          details, categories, hasVariants, isAvailable,
-                                          warranty, status, approvalStatus, productFormat,
-                                          digitalAssets, brand, shipping, variants });
+    const newProduct = new Product({ title, slug, description, tags, gallery,
+                                      otherMediaContents, price, thumbnail, options,
+                                      details, categories, hasVariants, isAvailable,
+                                      warranty, status, approvalStatus, productFormat,
+                                      digitalAssets, brand, shipping, variants });
 
-    const savedProduct = await newProduct.save({ session });
+    const savedProduct = await newProduct.save();
 
     // Update shop's products reference
-    await ShopModel.updateOne(
-      { _id: shop._id },
-      { $addToSet: { products: savedProduct._id } }
-    );
-
-    await session.commitTransaction();
-    session.endSession();
+    await Shop.updateOne( { _id: vendor._id }, { $addToSet: { products: savedProduct._id } });
+    // await session.commitTransaction();
+    // session.endSession();
 
     const response = NextResponse.json(
-      { 
-        success: true, 
-        data: savedProduct.toObject(), 
-        message: "Product created successfully" 
-      },
-      { status: 201 }
-    );
+      { success: true, data: savedProduct, message: "Product created successfully" }, { status: 201 });
 
     // Add security headers
     Object.entries(securityHeaders).forEach(([key, value]) => {
@@ -341,8 +367,8 @@ export async function POST(request) {
     return response;
 
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
+    // await session.abortTransaction();
+    // session.endSession();
 
     const errorMsg = err.code === 11000
       ? "A product with similar attributes already exists"
@@ -350,11 +376,11 @@ export async function POST(request) {
 
     return NextResponse.json(
       { success: false, error: errorMsg },
-      { status: 400, headers: securityHeaders }
-    );
-  } finally {
-    session.endSession();
-  }
+      { status: 400, headers: securityHeaders });
+  } 
+  // finally {
+  //   session.endSession();
+  // }
 }
 
 // export async function POST(request) {

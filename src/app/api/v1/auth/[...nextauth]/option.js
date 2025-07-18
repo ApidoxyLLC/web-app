@@ -259,6 +259,8 @@ export const authOptions = {
                             }
                         },
             profile(profile) {
+                console.log("************************log from profile************************")
+                console.log(profile)
                 return { id: profile.sub,
                        name: profile.name,
                       email: profile.email,
@@ -289,18 +291,19 @@ export const authOptions = {
     ],
     callbacks: {
         async signIn(params, req) {
-            console.log('******************************************paramssssssssssssss******************************************')
+            console.log('******************************************PARAMS IN SIGN IN CALLBACK******************************************')
             console.log(params)
+            // console.log('******************************************REQUEST IN SIGN IN CALLBACK******************************************')
+            // // console.log(req)
             const { user, account, profile } = params
-            const timezone = req?.headers['x-timezone'] || null;
-            const fingerprint = req?.headers['x-fingerprint'] || null;
             if (account.provider === 'google' || account.provider === 'facebook') {
 
                 // Rate Limit
-                const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
-                const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
-                if (!allowed) return null;                
-                const userAgent = req?.headers['user-agent'] || '';
+                // const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown-ip';
+                // const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
+                // if (!allowed) return null; 
+                            
+                // const userAgent = req?.headers['user-agent'] || '';
 
                 const sessionOptions = { readPreference: 'primary',
                                             readConcern: { level: 'local' },
@@ -314,7 +317,7 @@ export const authOptions = {
                 try {
                     let _user = null;
                     if (!profile.email) {
-                        _user = await getUserByProviderId({ db: auth_db, provider: account.provider, providerId: account.provider === 'google' ? profile.sub : profile.id })
+                        _user = await getUserByProviderId({ provider: account.provider, providerId: account.provider === 'google' ? profile.sub : profile.id })
                     }else {
                         _user = await getUserByEmail({ email: profile.email, 
                                                     fields: ['lock', 'oauth', 'activeSessions', 'email', 'name', 'phone', 'username', 'avatar', 'role', 'theme', 'language', 'currency'] })
@@ -329,16 +332,21 @@ export const authOptions = {
                                                             : account.provider === 'facebook' 
                                                                 ? profile.picture.data.url ?? null
                                                                 : null,
-                                       username: profile.email?.split('@')[0] || cuid(),
-                                     
+                                       username: profile.email?.split('@')[0] || profile.id,
+
                                           oauth: { [account.provider]: { id: account.provider === 'google' ? profile.sub : profile.id,
                                                                 accessToken: account.access_token,
+                                                                     expiry: account.expires_at,
                                                                refreshToken: account.refresh_token,
                                                              tokenExpiresAt: account.expires_at ? new Date(account.expires_at * 1000) : null }  },
 
-                                     isVerified: true,
-                                isEmailVerified: profile.email ? true : false,
-                                           role: ['user'] };
+                                     isVerified: user.verified,
+                                isEmailVerified: account.provider === 'google' 
+                                                                    ? profile.email_verified 
+                                                                    : profile.email
+                                                                        ? true
+                                                                        : false ,
+                                           role: ['user'] }
 
                         const query = new User(payload);
                         _user = await query.save({ session: auth_db_session });
@@ -359,26 +367,27 @@ export const authOptions = {
                     const { accessToken,
                            refreshToken,
                               sessionId,
-                      accessTokenExpiry,
-                                   user: updateUser } = await handleSuccessfulLogin({    user: _user, 
+                      accessTokenExpiry  } = await handleSuccessfulLogin({ auth_db,
+                                                                                         user: _user, 
                                                                                     loginType: 'oauth', 
                                                                                      provider: account.provider, 
                                                                                identifierName: 'email', 
-                                                                                           ip, 
-                                                                                    userAgent, 
-                                                                                     timezone, 
-                                                                                  fingerprint,
+                                                                                           ip: null, 
+                                                                                    userAgent: null, 
+                                                                                     timezone: null, 
+                                                                                  fingerprint: null,                                                                                      
                                                                                       session: auth_db_session,
                                                                                  oauthProfile: account })
 
                     await auth_db_session.commitTransaction();
                                  user.sub = _user.referenceId;
+                            //   user.userId = _user._id
                              user.session = sessionId;
                             user.provider = account.provider;
                          user.accessToken = accessToken;
                    user.accessTokenExpiry = accessTokenExpiry;
                         user.refreshToken = refreshToken;
-                                user.role = updateUser.role;
+                                user.role = _user?.role;
                                 user.name = profile.name || '';
                             user.username = profile.email?.split('@')[0] || profile.id;
                                user.email = profile.email;
@@ -386,7 +395,22 @@ export const authOptions = {
                           user.isVerified = true;
 
                     return true;
+                    // return {
+                    //                       sub: _user.referenceId,
+                    //                   session: sessionId,
+                    //                  provider: account.provider,
+                    //               accessToken,
+                    //         accessTokenExpiry,
+                    //              refreshToken,
+                    //                      role: updateUser.role,
+                    //                      name: profile.name || '',
+                    //                  username: profile.email?.split('@')[0] || profile.id,
+                    //                     email: profile.email,
+                    //                     phone: _user.phone || '',
+                    //                isVerified: true
+                    //     };
                 } catch (err) {
+                    console.log(err)
                     await auth_db_session.abortTransaction();
                     console.error("OAuth signIn error:", err);
                     return false;
@@ -402,28 +426,31 @@ export const authOptions = {
             
             console.log("from jwt callback")
             const { token, user, account, profile } = params
+
+            console.log('******************************************JWT callback ******************************************')
+            console.log(token, user, account, profile)
+
             if (user && account) {
                 return {
                     ...token,
-                    sub: user.sub,
-                    accessToken: user.accessToken,
+                                  sub: user.sub,
+                          accessToken: user.accessToken,
                     accessTokenExpiry: user.accessTokenExpiry,
-                    refreshToken: user.refreshToken,
-                    sessionId: user.session,
-                    provider: user.provider,
-                    user: {
-                        id: user.sub,
-                        name: user.name,
-                        email: user.email,
-                        phone: user.phone,
-                        avatar: user.avatar,
-                        role: user.role,
-                        isVerified: user.isVerified,
-                        timezone: user.timezone,
-                        theme: user.theme,
-                        language: user.language,
-                        currency: user.currency
-                    }
+                         refreshToken: user.refreshToken,
+                            sessionId: user.session,
+                             provider: user.provider,
+                                 user: {        id: user.sub,
+                                              name: user.name,
+                                             email: user.email,
+                                             phone: user.phone,
+                                            avatar: user.avatar,
+                                              role: user.role,
+                                        isVerified: user.isVerified,
+                                          timezone: user.timezone,
+                                             theme: user.theme,
+                                          language: user.language,
+                                          currency: user.currency
+                                       }
                 };
             }
             

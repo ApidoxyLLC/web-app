@@ -32,8 +32,12 @@ export async function handleSuccessfulLogin({ auth_db, session, user, loginType,
             refreshTokenExpiry } = await generateToken({ user, sessionId });
 
     // 2. Encrypt IP (Common)
-    const ipAddressCipherText = await encrypt({    data: ip, 
-                                                options: { secret: config.ipAddressEncryptionKey }  });
+    let ipAddressCipherText = null
+    if(ip){
+        ipAddressCipherText = await encrypt({    data: ip, 
+                                              options: { secret: config.ipAddressEncryptionKey }  });
+    }
+    
 
     // 3. Dynamic User Updates Based on Login Type
     const userUpdate = {
@@ -45,12 +49,17 @@ export async function handleSuccessfulLogin({ auth_db, session, user, loginType,
                                 
                                 // OAuth-specific updates
                                 ...(loginType === 'oauth' && {
-                                                                [`oauth.${provider}`]: {
-                                                                    id: provider === 'google' ? oauthProfile.sub : oauthProfile.id,
-                                                                    accessToken: oauthProfile.access_token,
-                                                                    refreshToken: oauthProfile.refresh_token,
-                                                                    tokenExpiresAt: oauthProfile.expires_at ? new Date(oauthProfile.expires_at * 1000) : null
-                                                                }
+                                                        [`oauth.${provider}`]: {
+                                                                                 id: provider === 'google'
+                                                                                            ? oauthProfile.sub 
+                                                                                            : oauthProfile.id,
+                                                                        accessToken: oauthProfile.access_token,
+                                                                             expiry: oauthProfile.expires_at,
+                                                                       refreshToken: oauthProfile.refresh_token,
+                                                                     tokenExpiresAt: oauthProfile.expires_at 
+                                                                                            ? new Date(oauthProfile.expires_at * 1000) 
+                                                                                            : null
+                                                                    }
                                                             }),
 
                                 // OTP-specific updates
@@ -65,11 +74,9 @@ export async function handleSuccessfulLogin({ auth_db, session, user, loginType,
 
                         };
     if (loginType === 'otp'){  
-        userUpdate.$unset = {
-                            'verification.otp': "",
-                            'verification.otpExpiry': "",
-                            'verification.otpAttempts': ""
-                            } 
+        userUpdate.$unset = { 'verification.otp'        : "",
+                              'verification.otpExpiry'  : "",
+                              'verification.otpAttempts': ""    } 
         }
     // 4. Session/History Payloads
     const sessionPayload = { _id: sessionId,
@@ -86,17 +93,17 @@ export async function handleSuccessfulLogin({ auth_db, session, user, loginType,
                     refreshToken: await bcrypt.hash(refreshToken, 10),
               refreshTokenExpiry,
                             role: user.role,
-                              ip: ipAddressCipherText,
-                       userAgent,
-                        timezone,
+                          ...(ip && { ip: ipAddressCipherText }),
+                   ...(userAgent && { userAgent }),
+                    ...(timezone && { timezone }),
                  ...(fingerprint && { fingerprint }), // Optional for password/OTP
             };
 
     const loginHistoryPayload = {    userId: user._id,
                                   sessionId,
                                    provider: sessionPayload.provider,                                    
-                                         ip: ipAddressCipherText,
-                                  userAgent,
+                                     ...(ip && { ip: ipAddressCipherText }),
+                              ...(userAgent && { userAgent }),
                             ...(fingerprint && { fingerprint }) };
 
     // 5. Execute All DB Operations

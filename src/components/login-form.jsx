@@ -141,7 +141,7 @@ export function LoginForm({ className, ...props }) {
               <div className="grid grid-cols-2 gap-4">
                 <Button
                   onClick={() => {
-                    signIn("google");
+                    signIn("google", { callbackUrl: "http://localhost:3000/api/v1/auth/callback/google",});
                   }}
                   variant="outline"
                   type="button"

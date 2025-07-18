@@ -94,7 +94,7 @@ const productSchema = new mongoose.Schema({
           categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category'}],
          hasVariants: { type: Boolean, default: false },
          isAvailable: { type: Boolean, default: undefined },
-            warranty: { duration: Number, terms: String, default: undefined },
+            warranty: { type: { duration: Number, termsNdConditions: String },  default: undefined },
               status: { type: String, default: 'draft',  enum: ['active', 'draft', 'archived', 'discontinued'] },
       approvalStatus: { type: String, default: 'pending', enum: ['pending', 'approved', 'rejected'] },
        productFormat: { type: String, enum: ['physical', 'digital'],  default: 'physical' },

@@ -5,5 +5,9 @@ const config = {
        refreshTokenDefaultExpireMinutes: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || '10080'),
   emailVerificationDefaultExpireMinutes: Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRE_MINUTES || '10'),
   phoneVerificationDefaultExpireMinutes: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRE_MINUTES || '3'),
+
+
+        // defaultImageStorageProvider: process.env.DEFAULT_IMAGE_STORAGE_PROVIDER,
+
 };
 export default config
