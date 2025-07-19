@@ -5,6 +5,7 @@ import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { shopModel } from "@/models/auth/Shop";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { vendorModel } from "@/models/vendor/Vendor";
+import { patchShopSchema } from "./patchShopDTOSchema";
 
 export async function GET(request, { params  }) {
   const { slug } = await params
@@ -59,6 +60,111 @@ export async function GET(request, { params  }) {
   } catch (error) {
     return NextResponse.json({
       error: error.message || "Failed to retrieve shop",
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+    }, { status: 500 });
+  }
+}
+
+
+export async function PATCH(request, { params }) {
+  const { slug } = params;
+
+  try {
+    // const { authenticated, data: user } = await getAuthenticatedUser(request);
+    // if (!authenticated) 
+    //   return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+
+
+          /** 
+       * fake Authentication for test purpose only 
+       * *******************************************
+       * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+       * *******************************************
+       * *              ***
+       * *              ***
+       * *            *******
+       * *             *****
+       * *              *** 
+       * *               *           
+       * */
+
+      const authDb = await authDbConnect()
+      const User = userModel(authDb);
+      const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje" })
+                             .select('referenceId _id name email phone role isEmailVerified')
+      const userData = { sessionId: "686f81d0f3fc7099705e44d7",
+               userReferenceId: user.referenceId,
+                        userId: user._id,
+                          name: user.name,
+                         email: user.email,
+                         phone: user.phone,
+                          role: user.role,
+                    isVerified: user.isEmailVerified || user.isPhoneVerified,
+                    }
+      
+      /** 
+       * fake Authentication for test purpose only 
+       * *******************************************
+       * *********FAKE AUTHENTICATION END********* *
+       * *******************************************
+      **/
+
+
+
+
+
+    // Parse and validate request body
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const parsed = patchShopSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 422 });
+    }
+
+    const db = await authDbConnect();
+    const vendor_db = await vendorDbConnect();
+
+    const Shop = shopModel(db);
+    const Vendor = vendorModel(vendor_db);
+
+    const shop = await Shop.findOne({ 
+      $or: [{ slug }, { referenceId: slug }] 
+    });
+
+    if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+
+    const vendor = await Vendor.findOne({ _id: shop._id });
+    if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
+    // Check ownership
+    if (userData._id.toString() !== vendor.ownerId.toString()) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const data = parsed.data;
+
+    // Update shop fields if they exist in schema
+    Object.keys(data).forEach(key => {
+      if (key in shop.toObject()) {
+        shop[key] = data[key];
+      } else if (key in vendor.toObject()) {
+        vendor[key] = data[key];
+      }
+    });
+
+    await shop.save();
+    await vendor.save();
+
+    return NextResponse.json({ success: true, message: "Shop updated successfully" });
+
+  } catch (error) {
+    return NextResponse.json({
+      error: error.message || "Failed to update shop",
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
     }, { status: 500 });
   }

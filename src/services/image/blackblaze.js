@@ -7,6 +7,7 @@ import sharp from 'sharp';
 import { bucketModel } from '@/models/auth/Bucket';
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
+import { vendorModel } from '@/models/vendor/Vendor';
 import { dbConnect } from '@/lib/mongodb/db';
 import { bucketModel } from '@/models/auth/Bucket';
 
@@ -34,12 +35,37 @@ const         bucketName = process.env.B2_BUCKET_NAME
 export async function uploadShopImage({ file, vendor, folder, uploadBy, extraData={} }) {
     const b2 = await authorizeB2();
     const { _id, referenceId, ownerId,  dbInfo, bucketInfo } = vendor 
-    const {  bucketName,  bucketId } = bucketInfo
+    
     const { dbName } = dbInfo
 
-    if(!bucketInfo){
+    let bucketName = null
+    let bucketId = null
 
+    if(bucketInfo) {
+        bucketName = bucketInfo.bucketName
+          bucketId = bucketInfo.bucketId
+    }else {
+      let newBucket;
+        try {
+          newBucket = await createBucketIfNotExists({
+                                                      createdBy: uploadBy,
+                                                      shopId: referenceId,
+                                                      bucketName: referenceId,
+                                                      referenceId,
+                                                      bucketType: 'allPrivate',
+                                                    });
+
+          if (newBucket.error) throw new Error('Storage Bucket creation failed');
+
+          bucketName = newBucket.bucketName;
+            bucketId = newBucket.bucketId;
+
+        } catch (error) {
+          throw new Error(newBucket?.message || 'Storage Bucket creation failed');
+        }
     }
+
+    // const {  bucketName,  bucketId } = bucketInfo
 
     // const bucketResponse = await b2.getBucket({ bucketName })
     // if (!bucketResponse) throw new Error(`Bucket "${bucketName}" not found`);
@@ -82,8 +108,8 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
                                          fileName: uploadResponse.data.fileName,
                                            fileId: uploadResponse.data.fileId,
                                          fileInfo: { ...uploadResponse.data.fileInfo, size: buffer.length, width: metadata.width, height: metadata.height, format: metadata.format, ...extraData },
-                                           shopId,
-                                    shopReference,
+                                           shopId: vendor._id,
+                                    shopReference: vendor.referenceId,
                                            folder,
                                      backblazeUrl,
                                          mimeType: file.type,
@@ -103,10 +129,15 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
                 }
 }
 
-async function createBucketIfNotExists(bucketName, bucketType = 'allPrivate', createdBy, shopId) {
+async function createBucketIfNotExists({createdBy, shopId, referenceId, bucketName, bucketType = 'allPrivate'}) {
   const b2 = await authorizeB2();
+  if (!bucketName) {
+    bucketName = `${referenceId}`;
+  }
   const exists = await checkBucketExists(bucketName);
 
+  const vendor_db = await vendorDbConnect();
+  const Bucket = bucketModel(vendor_db)
   if (!exists) {
     const response = await b2.createBucket({
       bucketName,
@@ -115,15 +146,26 @@ async function createBucketIfNotExists(bucketName, bucketType = 'allPrivate', cr
 
     // Save bucket info to MongoDB
     const bucketData = response.data;
-
-    const vendor_db  = await vendorDbConnect()
-    const Bucket = bucketModel(vendor_db)
+  
     const bucketDoc = new Bucket({ bucketName: bucketData.bucketName,
                                      bucketId: bucketData.bucketId,
                                    bucketType: bucketData.bucketType,
                                     createdBy,
                                        shopId             });
+
+    
     await bucketDoc.save();
+
+   
+    const Vendor = vendorModel(vendor_db)
+
+    await Vendor.updateOne({ referenceId }, 
+                           { $set: { bucketInfo: { 
+                                                  bucketName: bucketData.bucketName, 
+                                                    bucketId: bucketData.bucketId  
+                                                } 
+                                    } 
+                            })
 
     // Convert to object and remove _id and __v
     const { _id, __v, ...bucketInfo } = bucketDoc.toObject();

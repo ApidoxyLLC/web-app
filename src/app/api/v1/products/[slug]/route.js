@@ -6,15 +6,8 @@ import { dbConnect } from "@/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
 import { productModel } from "@/models/shop/products/Product";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
-import rateLimit from "@/app/utils/rateLimit";
 
 export const dynamic = 'force-dynamic';
-
-// Rate limiter configuration
-// const limiter = rateLimit({
-//   interval: 60 * 1000, // 1 minute
-//   uniqueTokenPerInterval: 500, // Max users per minute
-// });
 
 export async function GET(request, { params }) {
   const { productId } = params;
@@ -148,5 +141,63 @@ export async function GET(request, { params }) {
       },
       { status: 500 }
     );
+  }
+}
+
+export async function PATCH(request, { params }) {
+  const { id } = params;
+  const updates = await request.json();
+
+  const headerList = headers();
+  const vendorId = headerList.get('x-vendor-identifier');
+  const host = headerList.get('host');
+
+  if (!vendorId && !host)
+    return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
+
+  if (!productId || !mongoose.Types.ObjectId.isValid(productId))
+    return NextResponse.json({ error: "Invalid product ID" }, { status: 400 });
+
+  try {
+    const auth_db = await authDbConnect();
+    const ShopModel = shopModel(auth_db);
+
+    const shop = await ShopModel.findOne({
+      $or: [
+        { vendorId },
+        { domains: { $elemMatch: { domain: host } } }
+      ]
+    }).select('+dbInfo.uri +dbInfo.prefix').lean();
+
+    if (!shop)
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+
+    const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
+    if (!DB_URI_ENCRYPTION_KEY)
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+
+    const dbUri = await decrypt({
+      cipherText: shop.dbInfo.uri,
+      options: { secret: DB_URI_ENCRYPTION_KEY }
+    });
+
+    const shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
+    const vendor_db = await dbConnect({ dbKey: shopDbName, dbUri });
+    const ProductModel = productModel(vendor_db);
+
+    const product = await ProductModel.findById(productId).lean();
+    if (!product)
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+
+    if (vendorId && product.vendor.toString() !== vendorId)
+      return NextResponse.json({ error: "Unauthorized access to product" }, { status: 403 });
+
+    await ProductModel.updateOne({ _id: productId }, { $set: updates });
+
+    return NextResponse.json({ success: true, message: "Product updated successfully." });
+
+  } catch (error) {
+    console.error(`Product update API Error: ${error.message}`);
+    return NextResponse.json({ error: "Failed to update product", details: error.message }, { status: 500 });
   }
 }
