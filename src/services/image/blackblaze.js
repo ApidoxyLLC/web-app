@@ -221,7 +221,7 @@ export async function getPrivateDownloadUrl(fileName, bucketId, bucketName, vali
   return buildPrivateDownloadUrl({ fileName, bucketName, authToken: data.authorizationToken });
 }
 
-export async function createB2Bucket({bucketName, isPublic = false} ) {
+export async function createB2Bucket({bucketName, createdBy, shopId,  isPublic = false} ) {
 
   try {
     await authorizeB2();

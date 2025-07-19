@@ -66,7 +66,7 @@ export async function POST(request) {
     const primaryDomain = _id.toString() + '.' + config.shopDefaultDomain
 
 
-    const bucket = await createB2Bucket({ bucketName });
+    const bucket = await createB2Bucket({ bucketName, createdBy: data.userId , shopId: referenceId });
 
     if (!bucket)
         return NextResponse.json({ message: "bucket creation failed", success: false }, { status: 400 })
