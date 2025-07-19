@@ -4,15 +4,10 @@ import {
   Lock,
   LogOutIcon,
   Shield,
-  TrendingDownIcon,
-  TrendingUpIcon,
   UserCircle2,
 } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -29,10 +24,14 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AlertDialogDemo from "./shop-info-modal";
-
+import logo from "../../public/favicon.ico"
+import { TreePalm, MapPin, User2 } from "lucide-react";
+import Image from "next/image";
+import CreatShop from "./shop-info-modal";
 export function ProjectsCard() {
   const router = useRouter()
   const data = useSession()
+  const [shops,setShops] = useState([])
   useEffect(() => {
     if (data.status === "authenticated" && data.data?.user) {
         router.push("http://localhost:3000/");
@@ -42,12 +41,22 @@ export function ProjectsCard() {
     
   }, [data, data.status, router]);
   
-
+  useEffect(()=>{
+    try{
+      const res = fetch("http://localhost:3000/api/v1/shops/")
+      .then(res => res.json())
+      .then(data => {
+        setShops(data.data)
+      })
+    }catch(err){
+      console.log(err)
+    }
+  },[])
   return (
     <div>
-      <div className="flex flex-row items-center justify-between p-6 gap-4 border-b bg-white dark:bg-background">
+      <div className="flex flex-row items-center justify-between px-6 py-4 gap-4 border-b bg-white dark:bg-background">
         <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="Apidoxy Logo" className="h-8 w-8" />
+          <Image src={logo} width={30} height={30} alt="logo"></Image>
           <span className="font-bold text-lg tracking-tight">
             Apidoxy Appcommerz
           </span>
@@ -107,36 +116,44 @@ export function ProjectsCard() {
           </Popover>
         </div>
       </div>
-      <div className="*:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-4 grid grid-cols-1 gap-6 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card lg:px-6 py-6">
-        <Link href="123/dashboard">
-          <Card className="@container/card cursor-pointer">
+      <div className="*:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-3 grid grid-cols-1 gap-6 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card lg:px-6 py-6">
+        
+         {shops.map((shop)=>(
+          <Link key={shop?.businessName} href={`123/dashboard?${shop?.id}`}>
+            <Card className="@container/card cursor-pointer">
             <CardHeader className="relative">
-              <CardDescription>Total Revenue</CardDescription>
-              <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
-                $1,250.00
-              </CardTitle>
-              <div className="absolute right-4 top-4">
-                <Badge
-                  variant="outline"
-                  className="flex gap-1 rounded-lg text-xs"
-                >
-                  <TrendingUpIcon className="size-3" />
-                  +12.5%
-                </Badge>
+              <div className="flex items-center gap-2">
+                <Avatar className="h-12 w-12 bg-muted/100 rounded-sm">
+                  <AvatarImage src="https://placehold.co/400/png?text=H" alt="Project Icon" />
+                  <AvatarFallback>{shop?.businessName?.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <CardTitle className="@[250px]/card:text-xl text-xl font-semibold tabular-nums">
+                {shop?.businessName}
+                </CardTitle>
               </div>
             </CardHeader>
-            <CardFooter className="flex-col items-start gap-1 text-sm">
-              <div className="line-clamp-1 flex gap-2 font-medium">
-                Trending up this month <TrendingUpIcon className="size-4" />
-              </div>
-              <div className="text-muted-foreground">
-                Visitors for the last 6 months
+            <div className="border border-t -mb-3"></div>
+            <CardFooter className="flex-col items-start gap-1 text-sm ">
+              <div className="border-t border"></div>
+              <div className="flex items-center gap-4 text-sm  ">
+                <div className="flex items-center gap-1">
+                  <TreePalm className="w-4 h-4" />
+                  <span>{shop?.industry}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  <span>{shop?.location}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <User2 className="w-4 h-4" />
+                  <span>{data.data?.user?.name}</span>
+                </div>
               </div>
             </CardFooter>
-          </Card>
-        </Link>
-        
-        <AlertDialogDemo></AlertDialogDemo>
+            </Card>
+          </Link>
+        ))}
+        <CreatShop></CreatShop>
       </div>
     </div>
   );

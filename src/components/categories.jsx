@@ -25,7 +25,6 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
-import PicturePreviewInput from "@/components/picture-preview-input";
 import { Textarea } from './ui/textarea';
 
 export default function Categories() {
@@ -253,9 +252,9 @@ const shopId = "cmd4gkrcb0000ckvh1zi4souv"
                     <Badge key={sug} onClick={() => {
                       setNewCategory(prev => ({ ...prev, slug: sug }))
                       setSlugCheck(prev => ({
-                    ...prev,
-                    isAvailable: true
-                  }));
+                                    ...prev,
+                                    isAvailable: true
+                                  }));
                       
                     }} className="cursor-pointer">
                       {sug}

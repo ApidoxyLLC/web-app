@@ -1,13 +1,5 @@
-"use client"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+"use client";
+
 import {
   Select,
   SelectContent,
@@ -24,168 +16,168 @@ import {
 } from "@/components/ui/input-base";
 
 import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";
-import { useEffect, useState } from "react";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-export default function AlertDialogDemo() {
-    const router = useRouter()
-    const handleSubmit = async (e) => {
+import { useState } from "react";
+
+export default function CreatShop() {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
 
     const formData = {
-                        country: form.get("country"),
-                        industry: form.get("industry"),
-                        businessName: form.get("businessName"),
-                        location: form.get("businessLocation"),
-                      };
+      country: form.get("country"),
+      industry: form.get("industry"),
+      businessName: form.get("businessName"),
+      location: form.get("businessLocation"),
+    };
+    console.log(formData)
 
-    // if(!name){
-    //   return toast.error("Name is required");
-
-    // }
-    // if(!phone){
-    //   return toast.error("Phone is required");
-
-    // }
-    // if(!password){
-    //   return toast.error("Password is required");
-
-    // }
-    try{
-      const res = await fetch("http://localhost:3000/api/v1/shops",{
-        method:"POST",
-        headers:{
-          "Content-type" :"application/json"
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/shops", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
         },
-        body:JSON.stringify(formData)
-      })
-      console.log(res)
-      if(res.ok){
+        body: JSON.stringify(formData),
+      });
 
-        alert("shop created")
-        console.log(res)
-        router.push("http://localhost:3000/123/dashboard")
+      if (res.ok) {
+        alert("Shop created");
+        router.push("http://localhost:3000/123/dashboard");
+      } else {
+        alert("Error creating shop");
       }
-      else{
-        alert("err")
-      }
-    }catch(err){
-      console.log(err)
+    } catch (err) {
+      console.error(err);
     }
   };
+
   return (
-    <AlertDialog >
-      <AlertDialogTrigger asChild>
-        <Button variant="outline">Creat a business</Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader> 
-        <form onSubmit={handleSubmit} className="p-6 md:p-8 w-full">
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col items-center text-center">
-                <h1 className="text-2xl font-bold">Business Info</h1>
-                <p className="text-muted-foreground text-balance">
-                  Set up your business details to continue
-                </p>
-              </div>
-              <ControlGroup className="w-full">
-                <ControlGroupItem>
-                  <InputBase>
-                    <InputBaseAdornment>Country</InputBaseAdornment>
-                  </InputBase>
-                </ControlGroupItem>
-                <ControlGroupItem className="flex-1 h-4">
-                  <InputBase >
-                    <InputBaseControl>
-                      <Select name="country">
-                        <SelectTrigger className="w-full border-none shadow-none">
-                          <SelectValue placeholder="Select Country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="bd">Bangladesh</SelectItem>
-                          <SelectItem value="in">India</SelectItem>
-                          <SelectItem value="us">USA</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </InputBaseControl>
-                  </InputBase>
-                </ControlGroupItem>
-              </ControlGroup>
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        Create a Business
+      </Button>
 
-              <ControlGroup className="w-full">
-                <ControlGroupItem>
-                  <InputBase>
-                    <InputBaseAdornment>Industry</InputBaseAdornment>
-                  </InputBase>
-                </ControlGroupItem>
-                <ControlGroupItem className="flex-1 h-4">
-                  <InputBase>
-                    <InputBaseControl>
-                      <Select name="industry"> 
-                        <SelectTrigger className="w-full border-none shadow-none">
-                          <SelectValue placeholder="Select Industry" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="tech">Tech</SelectItem>
-                          <SelectItem value="retail">Retail</SelectItem>
-                          <SelectItem value="finance">Finance</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </InputBaseControl>
-                  </InputBase>
-                </ControlGroupItem>
-              </ControlGroup>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full p-6 relative">
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute right-4 top-4 text-gray-500 hover:text-black text-xl"
+            >
+              &times;
+            </button>
 
-              {/* Business Name Field */}
-              <ControlGroup className="w-full">
-                <ControlGroupItem>
-                  <InputBase>
-                    <InputBaseAdornment>Business Name</InputBaseAdornment>
-                  </InputBase>
-                </ControlGroupItem>
-                <ControlGroupItem className="flex-1">
-                  <InputBase>
-                    <InputBaseControl>
-                      <InputBaseInput
-                        name="businessName"
-                        placeholder="Enter your business name"
-                      />
-                    </InputBaseControl>
-                  </InputBase>
-                </ControlGroupItem>
-              </ControlGroup>
+            <form onSubmit={handleSubmit} className="p-2 md:p-4 w-full">
+              <div className="flex flex-col gap-6">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold">Business Info</h1>
+                  <p className="text-muted-foreground text-sm">
+                    Set up your business details to continue
+                  </p>
+                </div>
 
-              {/* Business Location Field */}
-              <ControlGroup className="w-full">
-                <ControlGroupItem>
-                  <InputBase>
-                    <InputBaseAdornment>Location</InputBaseAdornment>
-                  </InputBase>
-                </ControlGroupItem>
-                <ControlGroupItem className="flex-1">
-                  <InputBase>
-                    <InputBaseControl>
-                      <InputBaseInput
-                        name="businessLocation"
-                        placeholder="Enter location (Optional)"
-                      />
-                    </InputBaseControl>
-                  </InputBase>
-                </ControlGroupItem>
-              </ControlGroup>
+                {/* Country */}
+                <ControlGroup className="w-full">
+                  <ControlGroupItem>
+                    <InputBase>
+                      <InputBaseAdornment>Country</InputBaseAdornment>
+                    </InputBase>
+                  </ControlGroupItem>
+                  <ControlGroupItem className="flex-1 h-4">
+                    <InputBase>
+                      <InputBaseControl>
+                        <Select name="country">
+                          <SelectTrigger className="w-full border-none shadow-none">
+                            <SelectValue placeholder="Select Country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="bd">Bangladesh</SelectItem>
+                            <SelectItem value="in">India</SelectItem>
+                            <SelectItem value="us">USA</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </InputBaseControl>
+                    </InputBase>
+                  </ControlGroupItem>
+                </ControlGroup>
 
-              {/* Submit Button */}
-              
-              <AlertDialogCancel className="bg-none border-none w-full  px-0">
+                {/* Industry */}
+                <ControlGroup className="w-full">
+                  <ControlGroupItem>
+                    <InputBase>
+                      <InputBaseAdornment>Industry</InputBaseAdornment>
+                    </InputBase>
+                  </ControlGroupItem>
+                  <ControlGroupItem className="flex-1 h-4">
+                    <InputBase>
+                      <InputBaseControl>
+                        <Select name="industry">
+                          <SelectTrigger className="w-full border-none shadow-none">
+                            <SelectValue placeholder="Select Industry" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="tech">Tech</SelectItem>
+                            <SelectItem value="retail">Retail</SelectItem>
+                            <SelectItem value="finance">Finance</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </InputBaseControl>
+                    </InputBase>
+                  </ControlGroupItem>
+                </ControlGroup>
+
+                {/* Business Name */}
+                <ControlGroup className="w-full">
+                  <ControlGroupItem>
+                    <InputBase>
+                      <InputBaseAdornment>Business Name</InputBaseAdornment>
+                    </InputBase>
+                  </ControlGroupItem>
+                  <ControlGroupItem className="flex-1">
+                    <InputBase>
+                      <InputBaseControl>
+                        <InputBaseInput
+                          name="businessName"
+                          placeholder="Enter your business name"
+                        />
+                      </InputBaseControl>
+                    </InputBase>
+                  </ControlGroupItem>
+                </ControlGroup>
+
+                {/* Location */}
+                <ControlGroup className="w-full">
+                  <ControlGroupItem>
+                    <InputBase>
+                      <InputBaseAdornment>Location</InputBaseAdornment>
+                    </InputBase>
+                  </ControlGroupItem>
+                  <ControlGroupItem className="flex-1">
+                    <InputBase>
+                      <InputBaseControl>
+                        <InputBaseInput
+                          name="businessLocation"
+                          placeholder="Enter location (Optional)"
+                        />
+                      </InputBaseControl>
+                    </InputBase>
+                  </ControlGroupItem>
+                </ControlGroup>
+
+                {/* Submit */}
                 <Button type="submit" className="w-full">
                   Next
                 </Button>
-              </AlertDialogCancel>
-            </div>
-        </form>
-        </AlertDialogHeader>
-      </AlertDialogContent>
-    </AlertDialog>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
