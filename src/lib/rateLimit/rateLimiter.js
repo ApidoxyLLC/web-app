@@ -16,57 +16,57 @@ const scopeLimiters = {
   login: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:login',
-    points: 500,
+    points: 10000,
     duration: 60,
-    blockDuration: 60 * 15,
+    blockDuration: 60 * 5,
   }),
   register: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:register',
-    points: 500,
+    points: 10000,
     duration: 60,
-    blockDuration: 60 * 15, 
+    blockDuration: 60 * 5, 
   }),
   otpLogin: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:otp',
-    points: 500,
+    points: 10000,
     duration: 300,
-    blockDuration: 60 * 60,
+    blockDuration: 60 * 5,
   }),
   createShop: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:create_shop',
-    points: 500,               // max 3 project creation attempts
+    points: 10000,               // max 3 project creation attempts
     duration: 3600,          // per 1 hour
-    blockDuration: 60 * 15,  // if exceeded, block for 15 minutes
+    blockDuration: 60 * 5,  // if exceeded, block for 15 minutes
   }),
   getShop: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:get_shop',
-    points: 500,           // Max 60 GET requests
+    points: 10000,           // Max 60 GET requests
     duration: 60,         // per 60 seconds
-    blockDuration: 60 * 10 // Block for 2 minutes if exceeded
+    blockDuration: 60 * 5 // Block for 2 minutes if exceeded
   }),
   getShopDetail: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:get_shop_detail',
-    points: 500,           // Max 60 GET requests
+    points: 10000,           // Max 60 GET requests
     duration: 60,         // per 60 seconds
-    blockDuration: 60 * 10 // Block for 2 minutes if exceeded
+    blockDuration: 60 * 5 // Block for 2 minutes if exceeded
   }),
 // checkSlug
   checkSlug: new RateLimiterRedis({
       storeClient: redis,
       keyPrefix: 'rl:check_slug',
-      points: 500,           // Max 60 GET requests
+      points: 10000,           // Max 60 GET requests
       duration: 60,         // per 60 seconds
       blockDuration: 60 * 10 // Block for 2 minutes if exceeded
     }),
   uploadCategoryImage: new RateLimiterRedis({
       storeClient: redis,
       keyPrefix: 'rl:uld_cat_img',
-      points: 500,           // Max 60 GET requests
+      points: 10000,           // Max 60 GET requests
       duration: 60,         // per 60 seconds
       blockDuration: 60 * 10 // Block for 2 minutes if exceeded
     }),
