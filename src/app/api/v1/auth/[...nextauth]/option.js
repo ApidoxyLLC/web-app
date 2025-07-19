@@ -53,6 +53,14 @@ export const authOptions = {
 
                     // Find user
                     const auth_db = await authDbConnect();
+                    const requiredCollections = ['users', 'sessions', 'login_histories'];
+                    // Get existing collection names in the current database
+                    const existingCollections = (await auth_db.db.listCollections().toArray()).map(col => col.name);
+                    // Create missing collections
+                    for (const name of requiredCollections) {
+                        if (!existingCollections.includes(name)) 
+                            await auth_db.createCollection(name);
+                    }
                     const  fields = ['security', 'lock', 'isEmailVerified', 'isPhoneVerified', 'timezone', 'activeSessions', 'email', 'name', 'phone', 'username', '+avatar', 'role', 'theme', 'language', 'currency']
                     const    user = await getUserByIdentifier({ auth_db, payload:{ [identifierName]: identifier }, fields })
        
@@ -288,6 +296,16 @@ export const authOptions = {
                                            writeConcern: { w: 'majority' } };
 
                 const         auth_db = await authDbConnect();
+
+                const requiredCollections = ['users', 'sessions', 'login_histories'];
+                // Get existing collection names in the current database
+                const existingCollections = (await auth_db.db.listCollections().toArray()).map(col => col.name);
+                // Create missing collections
+                for (const name of requiredCollections) {
+                    if (!existingCollections.includes(name)) {
+                        await auth_db.createCollection(name);
+                    }
+                }
                 const            User = userModel(auth_db);
                 const auth_db_session = await auth_db.startSession(sessionOptions);
                 await auth_db_session.startTransaction();

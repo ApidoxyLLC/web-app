@@ -44,10 +44,10 @@ export async function POST(request) {
     }
 
     try {
-       const image = await uploadShopImage({          file, 
-                                                    vendor,
-                                                  uploadBy: data.userId,
-                                                    folder: 'category' })
+       const image = await uploadShopImage({     file, 
+                                               vendor,
+                                             uploadBy: data.userId,
+                                               folder: 'category' })
 
         if(!image) return NextResponse.json( { error: error }, { status: 400 } );
        return NextResponse.json( { success: true, data: image }, { status: 201 });

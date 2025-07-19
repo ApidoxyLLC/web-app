@@ -33,17 +33,25 @@ export async function POST(request) {
   //   const commonPasswords = ['password', '12345678', 'qwerty123'];
   //   if (commonPasswords.includes(password.toLowerCase())) return NextResponse.json({ error: "Common password provided, change the password" }, { status: 422 });
   // }
-  const db = await authDbConnect();
-  const existingUser = await getUserByIdentifier({ auth_db: db, payload: { email, phone } });
+  const auth_db = await authDbConnect();
+  const requiredCollections = ['users', 'sessions', 'login_histories'];
+  // Get existing collection names in the current database
+  const existingCollections = (await auth_db.db.listCollections().toArray()).map(col => col.name);
+  // Create missing collections
+  for (const name of requiredCollections) {
+      if (!existingCollections.includes(name)) 
+          await auth_db.createCollection(name);
+  }
+  const existingUser = await getUserByIdentifier({ auth_db, payload: { email, phone } });
   if (existingUser)
         return NextResponse.json({ error: "User already Exist" }, { status: 409 });
       
   
-  const session = await db.startSession();
+  const session = await auth_db.startSession();
 
   try {
     session.startTransaction();
-    const user = await createUser({ db, session, data: { name, email, phone, password } });
+    const user = await createUser({ db: auth_db, session, data: { name, email, phone, password } });
     const { role, theme, language, timezone, currency, plan } = user;
     const responseData = { name, email, phone, role, local: { theme, language, timezone, currency, plan },};
     await session.commitTransaction();
