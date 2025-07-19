@@ -63,7 +63,13 @@ const scopeLimiters = {
       duration: 60,         // per 60 seconds
       blockDuration: 60 * 10 // Block for 2 minutes if exceeded
     }),
-
+  uploadCategoryImage: new RateLimiterRedis({
+      storeClient: redis,
+      keyPrefix: 'rl:uld_cat_img',
+      points: 500,           // Max 60 GET requests
+      duration: 60,         // per 60 seconds
+      blockDuration: 60 * 10 // Block for 2 minutes if exceeded
+    }),
 
 
 

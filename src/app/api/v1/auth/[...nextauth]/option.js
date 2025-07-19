@@ -1,23 +1,26 @@
-import CredentialsProvider from 'next-auth/providers/credentials';
+import jwt from "jsonwebtoken";
+import crypto from 'crypto'; 
+import moment from 'moment-timezone';
 import loginDTOSchema from './loginDTOSchema';
 import otpLoginDTOSchema from './otpLoginDTOSchema';
 import { userModel } from '@/models/auth/User';
-import GoogleProvider from 'next-auth/providers/google'
-import FacebookProvider from 'next-auth/providers/facebook'
 import authDbConnect from '@/lib/mongodb/authDbConnect';
-import crypto from 'crypto'; 
-import tokenRefresh from '../utils/tokenRefresh';
+import  tokenRefresh from '../utils/tokenRefresh';
+
+import   CredentialsProvider from 'next-auth/providers/credentials';
+import        GoogleProvider from 'next-auth/providers/google'
+import      FacebookProvider from 'next-auth/providers/facebook'
+
+import   getUserByIdentifier from '@/services/user/getUserByIdentifier';
+import        verifyPassword from '@/services/user/verifyPassword';
+import        getUserByPhone from '@/services/user/getUserByPhone';
+import        getUserByEmail from '@/services/user/getUserByEmail';
+import handleSuccessfulLogin from '@/services/user/handleSuccessfulLogin';
+import   getUserByProviderId from '@/services/user/getUserByProviderId';
+
+import { validateSession } from '@/lib/redis/helpers/session';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import config from '../../../../../../config';
-import getUserByIdentifier from '@/services/user/getUserByIdentifier';
-import verifyPassword from '@/services/user/verifyPassword';
-import moment from 'moment-timezone';
-import getUserByPhone from '@/services/user/getUserByPhone';
-import getUserByEmail from '@/services/user/getUserByEmail';
-import handleSuccessfulLogin from '@/services/user/handleSuccessfulLogin';
-import { validateSession } from '@/lib/redis/helpers/session';
-import jwt from "jsonwebtoken";
-import getUserByProviderId from '@/services/user/getUserByProviderId';
 
 export const authOptions = {
     session: { strategy: "jwt", maxAge:  24 * 60 * 60, updateAge: 60 * 60   },
@@ -36,33 +39,26 @@ export const authOptions = {
                 try {
                     // Input validation
                     const parsed = loginDTOSchema.safeParse(credentials);
-                    if (!parsed.success) 
-                        return null;                    
+                    if (!parsed.success) return null;
                     const { identifier, password, identifierName, fingerprint, timezone } = parsed.data;
 
                     // Rate Limit
                     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
                     const { allowed, remaining, retryAfter } = await applyRateLimit({ key: ip, scope: 'login'      });
                     if (!allowed) return null
+
                     if (!['email', 'phone', 'username'].includes(identifierName)) return null
                     const { phone, email, username } = { [identifierName]: identifier }
                     if (!email && !phone && !username) return null
 
                     // Find user
-                    const        auth_db = await authDbConnect();
-                    
-                    const fields = ['security', 'lock', 'isEmailVerified', 'isPhoneVerified', 'timezone', 'activeSessions', 'email', 'name', 'phone', 'username', '+avatar', 'role', 'theme', 'language', 'currency']
-                    const user = await getUserByIdentifier({ auth_db, payload:{ [identifierName]: identifier }, fields })
+                    const auth_db = await authDbConnect();
+                    const  fields = ['security', 'lock', 'isEmailVerified', 'isPhoneVerified', 'timezone', 'activeSessions', 'email', 'name', 'phone', 'username', '+avatar', 'role', 'theme', 'language', 'currency']
+                    const    user = await getUserByIdentifier({ auth_db, payload:{ [identifierName]: identifier }, fields })
        
-                    if (!user || !user.security?.password) return null
-                        // throw new Error("Invalid credentials");
-                    if(user?.security?.failedAttempts > config.maxLoginAttempt) return null
-                        // throw new Error(`Too Many login atttempt`);
-                    
-                    if ((user.lock?.lockUntil && user.lock.lockUntil > Date.now())) {
-                        const retryAfter = Math.ceil((user.lock.lockUntil - Date.now()) / 1000);                        
-                        return null
-                    }
+                    if (!user || !user.security?.password)                              return null
+                    if ( user?.security?.failedAttempts > config.maxLoginAttempt)       return null
+                    if ((user?.lock?.lockUntil && (user.lock.lockUntil > Date.now())))  return null
                     
                     const passwordVerification = await verifyPassword({ payload:{ user, password } })
                     if(!passwordVerification?.status) return null
@@ -70,13 +66,11 @@ export const authOptions = {
                     const notVerified = (identifierName === 'email'    && !user.isEmailVerified) ||
                                         (identifierName === 'phone'    && !user.isPhoneVerified) ||
                                         (identifierName === 'username' && !(user.isEmailVerified || user.isPhoneVerified));
-                    // if (notVerified) throw new Error("Not verified...");
                     if (notVerified) return null
 
-                    // return null
                     const sessionOptions = { readPreference: 'primary',
                                                 readConcern: { level: 'local' },
-                                                writeConcern: { w: 'majority',j: true }};
+                                               writeConcern: { w: 'majority', j: true }};
                     const auth_db_session = await auth_db.startSession(sessionOptions);
                           auth_db_session.startTransaction()
                     try {
@@ -96,9 +90,9 @@ export const authOptions = {
                                                                                  oauthProfile: null })
                         await auth_db_session.commitTransaction();
 
-                        return {    ...(user.email && { email: user.email }),
-                                    ...(user.phone && { phone: user.phone }),
-                                    ...(user.name && { name: user.name }),
+                        return {    ...(user.email  && {  email: user.email  }),
+                                    ...(user.phone  && {  phone: user.phone  }),
+                                    ...(user.name   && {   name: user.name   }),
                                     ...(user.avatar && { avatar: user.avatar }),
                                                   sub: user.referenceId,
                                               session: sessionId,
@@ -109,7 +103,7 @@ export const authOptions = {
                                                  role: user.role,
                                            isVerified: Boolean(user?.isEmailVerified || user?.isPhoneVerified),
                                              timezone: user.timezone ?? (timezone && moment.tz.zone(timezone) ? timezone : null),
-                                                theme: user.theme ?? null,
+                                                theme: user.theme    ?? null,
                                              language: user.language ?? null,
                                              currency: user.currency ?? null
                                 };
@@ -132,15 +126,12 @@ export const authOptions = {
                    name: 'otp-login',
                      id: 'otp-login',
             credentials: {
-                      phone: { label: 'phone',                type: 'text',     placeholder: 'Phone' },
-                        otp: { label: 'otp',                  type: 'password', placeholder: 'otp' },
-                fingerprint: { label: 'fingureprint-id',      type: 'text',     placeholder: 'Fingureprint' },
-                   timezone: { label: 'timezone',             type: 'text',     placeholder: 'Timezone' },
+                      phone: { label: 'phone',            type: 'text',     placeholder: 'Phone'        },
+                        otp: { label: 'otp',              type: 'password', placeholder: 'otp'          },
+                fingerprint: { label: 'fingureprint-id',  type: 'text',     placeholder: 'Fingureprint' },
+                   timezone: { label: 'timezone',         type: 'text',     placeholder: 'Timezone'     },
                 },
             async authorize(credentials, req) {
-
-                console.log("another authorize method Invoked")
-                console.log(req);
                 try {
                     // Input validations
                     const parsed = otpLoginDTOSchema.safeParse(credentials);
@@ -290,19 +281,7 @@ export const authOptions = {
     ],
     callbacks: {
         async signIn({ user, account, profile, email, credentials }) {
-            console.log('******************************************PARAMS IN SIGN IN CALLBACK******************************************')
-            console.log(params)
-            // console.log('******************************************REQUEST IN SIGN IN CALLBACK******************************************')
-            // // console.log(req)
-            // const { user, account, profile } = params
             if (account.provider === 'google' || account.provider === 'facebook') {
-
-                // Rate Limit
-                // const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown-ip';
-                // const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'login' });
-                // if (!allowed) return null; 
-                            
-                // const userAgent = req?.headers['user-agent'] || '';
 
                 const sessionOptions = { readPreference: 'primary',
                                             readConcern: { level: 'local' },
@@ -380,7 +359,6 @@ export const authOptions = {
 
                     await auth_db_session.commitTransaction();
                                  user.sub = _user.referenceId;
-                            //   user.userId = _user._id
                              user.session = sessionId;
                             user.provider = account.provider;
                          user.accessToken = accessToken;
@@ -394,20 +372,6 @@ export const authOptions = {
                           user.isVerified = true;
 
                     return true;
-                    // return {
-                    //                       sub: _user.referenceId,
-                    //                   session: sessionId,
-                    //                  provider: account.provider,
-                    //               accessToken,
-                    //         accessTokenExpiry,
-                    //              refreshToken,
-                    //                      role: updateUser.role,
-                    //                      name: profile.name || '',
-                    //                  username: profile.email?.split('@')[0] || profile.id,
-                    //                     email: profile.email,
-                    //                     phone: _user.phone || '',
-                    //                isVerified: true
-                    //     };
                 } catch (err) {
                     console.log(err)
                     await auth_db_session.abortTransaction();
@@ -421,14 +385,7 @@ export const authOptions = {
             // return account.provider === 'credentials';
             return true
         },
-        async jwt(params) {
-            
-            console.log("from jwt callback")
-            const { token, user, account, profile } = params
-
-            console.log('******************************************JWT callback ******************************************')
-            console.log(token, user, account, profile)
-
+        async jwt({ token, user, account, profile }) {
             if (user && account) {
                 return {
                     ...token,

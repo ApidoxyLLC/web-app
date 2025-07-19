@@ -6,6 +6,12 @@ const dbInfoSchema = new mongoose.Schema({
      dbUri: { type: String },
 }, { timestamps: false,  _id: false });
 
+const bucketInfoSchema = new mongoose.Schema({
+     accountId: { type: String },
+    bucketName: { type: String },
+      bucketId: { type: String }
+}, { timestamps: false,  _id: false });
+
 const secretKeySchema = new mongoose.Schema({
            accessTokenSecret: { type: String, required: true },
           refreshTokenSecret: { type: String, required: true }, 
@@ -42,6 +48,7 @@ const vendorSchema = new mongoose.Schema({
                                  phone: { type: String, trim: true },
                      maxSessionAllowed: { type: Number, default: () => config.defaultMaxSessions, select: false },
                                 dbInfo: { type: dbInfoSchema, default: null, select: false },
+                            bucketInfo: { type: bucketInfoSchema, default: null, select: false },
                                secrets: { type: secretKeySchema, default: null, select: false },
                            expirations: { type: expirationSchema, default: undefined, select: false },
                          primaryDomain: { type: String, trim: true, unique: true, sparse: true },

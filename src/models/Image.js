@@ -6,12 +6,13 @@ export const imageSchema = new mongoose.Schema({
                     fileId: { type: String, required: true },
                   fileInfo: { type: mongoose.Schema.Types.Mixed },
                     shopId: { type: String },
-               downloadUrl: { type: String },
+             shopReference: { type: String },
+              backblazeUrl: { type: String },
+                  mimeType: { type: String },
                     folder: { type: String },
                   bucketId: { type: String },
                 bucketName: { type: String },
-        authorizationToken: { type: String },
-       authorizationExpiry: { type: Number }
+                  uploadBy: { type: mongoose.Schema.Types.ObjectId },
 }, { collection: 'images', timestamps: true });
 
-export const imageModel = (db) => db.models.Image || db.model('Image', imageSchema);
+export const imageModel = (db) => db.models.Image || db.model('Image', imageSchema);  
