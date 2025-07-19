@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import B2 from 'backblaze-b2';
 import crypto from 'crypto';
-import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { imageModel } from '@/models/Image';
 import sharp from 'sharp';
 import { bucketModel } from '@/models/auth/Bucket';
-import authDbConnect from '@/lib/mongodb/authDbConnect';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { dbConnect } from '@/lib/mongodb/db';
@@ -203,10 +201,8 @@ export async function getImageDetails(fileName, bucketId) {
 export async function deleteImage(fileName, fileId) {
   const b2 = await authorizeB2();
 
-  const response = await b2.deleteFileVersion({
-    fileName,
-    fileId,
-  });
+  const response = await b2.deleteFileVersion({ fileName,
+                                                fileId });
 
   return response.data;
 }
