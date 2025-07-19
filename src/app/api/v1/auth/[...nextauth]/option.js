@@ -353,7 +353,7 @@ export const authOptions = {
                             // const now = new Date();
                             // const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
                         
-                            subscriptionScope = {
+                        const  subscriptionScope = {
                               customDomains: plan.limits?.customDomains,
                               subDomains: plan.limits?.subDomains,
                               shops: plan.limits?.shops,
