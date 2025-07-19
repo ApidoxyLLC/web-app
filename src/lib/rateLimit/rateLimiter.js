@@ -31,14 +31,14 @@ const scopeLimiters = {
     storeClient: redis,
     keyPrefix: 'rl:otp',
     points: 10000,
-    duration: 300,
+    duration: 60,
     blockDuration: 60 * 5,
   }),
   createShop: new RateLimiterRedis({
     storeClient: redis,
     keyPrefix: 'rl:create_shop',
     points: 10000,               // max 3 project creation attempts
-    duration: 3600,          // per 1 hour
+    duration: 60,          // per 1 hour
     blockDuration: 60 * 5,  // if exceeded, block for 15 minutes
   }),
   getShop: new RateLimiterRedis({
