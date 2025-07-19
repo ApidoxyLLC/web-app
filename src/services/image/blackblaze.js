@@ -204,13 +204,14 @@ export async function deleteImage(fileName, fileId) {
                                                 fileId });
 
   return response.data;
-}
+}  
 
 export function buildPrivateDownloadUrl({ bucketName, fileName, authToken }) {
   return `https://f000.backblazeb2.com/file/${bucketName}/${fileName}?Authorization=${authToken}`;
 }
 
 export async function getPrivateDownloadUrl(fileName, bucketId, bucketName, validForSeconds = 300) {
+  
   const b2 = await authorizeB2();
 
   const { data } = await b2.getDownloadAuthorization({  bucketId,
@@ -221,12 +222,20 @@ export async function getPrivateDownloadUrl(fileName, bucketId, bucketName, vali
 }
 
 export async function createB2Bucket({bucketName, isPublic = false} ) {
-  try {
-    const b2 = await authorizeB2();
 
+  try {
+    await authorizeB2();
     const response = await b2.createBucket({  bucketName,
                                               bucketType: isPublic ? 'allPublic' : 'allPrivate' });
-
+    const vendor_db = await vendorDbConnect();
+    const Bucket = bucketModel(vendor_db)
+    const bucketData = response.data;
+    
+    const bucketDoc = new Bucket({ bucketName: bucketData.bucketName,
+                                     bucketId: bucketData.bucketId,
+                                   bucketType: bucketData.bucketType,
+                                    createdBy,
+                                       shopId             });
     return response.data;
 
   } catch (err) {
