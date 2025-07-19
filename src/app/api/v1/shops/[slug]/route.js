@@ -6,8 +6,10 @@ import { shopModel } from "@/models/auth/Shop";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { patchShopSchema } from "./patchShopDTOSchema";
+import { userModel } from "@/models/auth/User";
 
-export async function GET(request, { params  }) {
+
+export async function GET(request, { params }) {
   const { slug } = await params
   // Rate Limit
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || request.ip || '';
@@ -26,36 +28,40 @@ export async function GET(request, { params  }) {
     const Vendor = vendorModel(vendor_db)
 
     // Find the shop by slug or referenceId, with access check
-    const shop = await Shop.findOne({ $or: [ { slug: slug },
-                                             { referenceId: slug }
-                                            ]}).select("-__v");
-    if(shop) return NextResponse.json({ error: "Not Found" }, { status: 404 });
+    const shop = await Shop.findOne({
+      $or: [{ slug: slug },
+      { referenceId: slug }
+      ]
+    }).select("-__v");
+    if (shop) return NextResponse.json({ error: "Not Found" }, { status: 404 });
     console.log(shop)
     const vendor = await Vendor.findOne({ _id: shop._id })
-                               .select("-__v -_id");
-                               
+      .select("-__v -_id");
+
     console.log(vendor)
-    if (!shop) 
+    if (!shop)
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
-    const resultData = {                id: shop.referenceId,
-                                     email: shop.email,
-                                     phone: shop.phone,
-                                   country: shop.country,
-                                  industry: shop.industry,
-                              businessName: shop.businessName,
-                                  location: shop.location,
-                                      slug: shop.slug,
-                                activeApps: shop.activeApps,
-                                       web: shop.web,
-                                   android: shop.android,
-                                       ios: shop.ios,
-                             primaryDomain: vendor.primaryDomain,
-                                   domains: vendor.domains,
-                          facebookDataFeed: vendor.facebookDataFeed,
-                               socialLinks: vendor.socialLinks,       }
+    const resultData = {
+      id: shop.referenceId,
+      email: shop.email,
+      phone: shop.phone,
+      country: shop.country,
+      industry: shop.industry,
+      businessName: shop.businessName,
+      location: shop.location,
+      slug: shop.slug,
+      activeApps: shop.activeApps,
+      web: shop.web,
+      android: shop.android,
+      ios: shop.ios,
+      primaryDomain: vendor.primaryDomain,
+      domains: vendor.domains,
+      facebookDataFeed: vendor.facebookDataFeed,
+      socialLinks: vendor.socialLinks,
+    }
 
-    return NextResponse.json({ success: true, data: resultData}, { status: 200 });
+    return NextResponse.json({ success: true, data: resultData }, { status: 200 });
 
   } catch (error) {
     return NextResponse.json({
@@ -67,7 +73,7 @@ export async function GET(request, { params  }) {
 
 
 export async function PATCH(request, { params }) {
-  const { slug } = params;
+  const { slug } = await params;
 
   try {
     // const { authenticated, data: user } = await getAuthenticatedUser(request);
@@ -75,39 +81,41 @@ export async function PATCH(request, { params }) {
     //   return NextResponse.json({ error: "Not authorized" }, { status: 401 });
 
 
-          /** 
-       * fake Authentication for test purpose only 
-       * *******************************************
-       * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-       * *******************************************
-       * *              ***
-       * *              ***
-       * *            *******
-       * *             *****
-       * *              *** 
-       * *               *           
-       * */
+    /** 
+ * fake Authentication for test purpose only 
+ * *******************************************
+ * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+ * *******************************************
+ * *              ***
+ * *              ***
+ * *            *******
+ * *             *****
+ * *              *** 
+ * *               *           
+ * */
 
-      const authDb = await authDbConnect()
-      const User = userModel(authDb);
-      const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje" })
-                             .select('referenceId _id name email phone role isEmailVerified')
-      const userData = { sessionId: "686f81d0f3fc7099705e44d7",
-               userReferenceId: user.referenceId,
-                        userId: user._id,
-                          name: user.name,
-                         email: user.email,
-                         phone: user.phone,
-                          role: user.role,
-                    isVerified: user.isEmailVerified || user.isPhoneVerified,
-                    }
-      
-      /** 
-       * fake Authentication for test purpose only 
-       * *******************************************
-       * *********FAKE AUTHENTICATION END********* *
-       * *******************************************
-      **/
+    const authDb = await authDbConnect()
+    const User = userModel(authDb);
+    const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
+      .select('referenceId _id name email phone role isEmailVerified')
+    console.log(user)
+    const userData = {
+      sessionId: "cmdags8700000649w6qyzu8xx",
+      userReferenceId: user.referenceId,
+      userId: user?._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isVerified: user.isEmailVerified || user.isPhoneVerified,
+    }
+
+    /** 
+     * fake Authentication for test purpose only 
+     * *******************************************
+     * *********FAKE AUTHENTICATION END********* *
+     * *******************************************
+    **/
 
 
 
@@ -132,8 +140,8 @@ export async function PATCH(request, { params }) {
     const Shop = shopModel(db);
     const Vendor = vendorModel(vendor_db);
 
-    const shop = await Shop.findOne({ 
-      $or: [{ slug }, { referenceId: slug }] 
+    const shop = await Shop.findOne({
+      $or: [{ slug }, { referenceId: slug }]
     });
 
     if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
@@ -141,8 +149,10 @@ export async function PATCH(request, { params }) {
     const vendor = await Vendor.findOne({ _id: shop._id });
     if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
-    // Check ownership
-    if (userData._id.toString() !== vendor.ownerId.toString()) {
+
+
+    // // Check ownership
+    if (userData?.userId.toString() !== vendor.ownerId?.toString()) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

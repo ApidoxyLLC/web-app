@@ -71,15 +71,16 @@ const shopPatchSchema = z.object({
   industry: z.string().optional(),
   businessName: z.string().optional(),
   location: z.string().optional(),
-  slug: z.string().optional(),
+  slug: z.string().nullable().optional(), 
   activeApps: z.array(z.enum(['web', 'android', 'ios'])).optional(),
-  web: webAppSchema.optional(),
-  android: androidAppSchema.optional(),
-  ios: iosAppSchema.optional(),
-  primaryDomain: z.string().optional(),
+  web: webAppSchema.nullable().optional(),      
+  android: androidAppSchema.nullable().optional(), 
+  ios: iosAppSchema.nullable().optional(),  
+  primaryDomain: z.string().nullable().optional(),
   domains: z.array(z.string()).optional(),
   socialLinks: z.array(socialLinkSchema).optional(),
-  facebookDataFeed: z.string().optional()
+  facebookDataFeed: z.string().nullable().optional()
+
 }).partial();
 
 
