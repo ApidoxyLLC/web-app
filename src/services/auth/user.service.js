@@ -105,8 +105,7 @@ export async function createUser({ db, session, data }) {
   // console.log(plan);
   // if (!plan) throw new Error("Free Starter plan not found");
 
-  let subscriptionScope = undefined;
-  let tier = undefined;
+  
 
 
   if (plan) {
@@ -150,10 +149,8 @@ export async function createUser({ db, session, data }) {
       description: plan.description,
     };
 
-    tier = plan.tier;
-  } else {
-    console.warn("Free Starter plan not found. Proceeding without subscriptionScope.");
-  }
+    // tier = plan.tier;
+  } 
 
 
   // console.log('subscriptionScope', subscriptionScope)
@@ -173,8 +170,8 @@ export async function createUser({ db, session, data }) {
     },
     ...(email && { email }),
     ...(phone && { phone }),
-    ...(subscriptionScope && { subscriptionScope }),
-    ...(tier && { tier }), 
+    ...(plan ? { subscriptionScope: plan.scope, tier: plan.slug } : {})
+
   };
 
   // Save user
