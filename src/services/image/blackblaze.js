@@ -7,7 +7,6 @@ import { bucketModel } from '@/models/auth/Bucket';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { dbConnect } from '@/lib/mongodb/db';
-import { bucketModel } from '@/models/auth/Bucket';
 
 const b2 = new B2({ applicationKeyId: process.env.B2_APPLICATION_KEY_ID,
                       applicationKey: process.env.B2_APPLICATION_KEY      });
