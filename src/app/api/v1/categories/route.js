@@ -46,7 +46,6 @@ export async function POST(request) {
   //               }
 
   const parsed = categoryDTOSchema.safeParse(body);
-  console.log("bodttttttttttttttttttttt",body)
   if (!parsed.success)
     return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 

@@ -26,6 +26,7 @@ import {
   InputBaseInput,
 } from "@/components/ui/input-base";
 import { Textarea } from './ui/textarea';
+import { useParams } from 'next/navigation';
 
 export default function Categories() {
   const [collections, setCollections] = useState([]);
@@ -39,48 +40,10 @@ export default function Categories() {
     description: "",
     image: undefined,
   });
+  const params = useParams()
 
-// useEffect(()=>{
-//   try {
-//     const res =  fetch('http://localhost:3000/api/v1/shops/')
-//     .then(res => res.json())
-//     .then(data=>{
-//       // joy
-//     });
-//     // if (json.success) {
-//     //   console.log('All shops:', json.data);
-//     //   const shopId = json.data[0]?.id; 
-//     //   console.log('Shop ID:', shopId);
-//     //   return shopId;
-//     // } else {
-//     //   console.error(json.error);
-//     //   return null;
-//     // }
-//   } catch (err) {
-//     console.error("Fetch shop error:", err);
-//     return null;
-//   }
-// })
-const shopId = "cmd4gkrcb0000ckvh1zi4souv"
 
-  // useEffect(() => {
-  //   const fetchCategories = async () => {
-  //     const res = await fetch(`/api/vendor/category?shop=${shopId}`);
-  //     const data = await res.json();
-  //     if (data.success) {
-  //       setCollections(data.categories);
-  //     }
-  //   };
-  //   fetchCategories();
-  // }, []);
-
-  // useEffect(() => {
-  //   if (newCategory.title && !newCategory.handle) {
-  //     const generated = newCategory.title.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, "");
-  //     setNewCategory(prev => ({ ...prev, handle: generated }));
-  //   }
-  // }, [newCategory.title]);
-
+  const shopId = params.shop
   const checkSlug = async () => {
     if (!newCategory.slug) return;
     setLoading(true);
@@ -101,7 +64,7 @@ const shopId = "cmd4gkrcb0000ckvh1zi4souv"
     const data = await res.json();
     if (data.success) {
       setCollections(prev => [...prev, data.data]);
-      setNewCategory({ title: "", slug: "", description: "", image: "" });
+      setNewCategory({ title: "", slug: "", description: "", image: undefined });
       setSlugCheck({ isAvailable: null, suggestions: [] });
       setIsOpen(false);
     } else {
