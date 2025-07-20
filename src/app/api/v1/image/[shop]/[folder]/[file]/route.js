@@ -1,43 +1,24 @@
 import { NextResponse } from 'next/server';
 import B2 from 'backblaze-b2';
-
-const b2 = new B2({
-  applicationKeyId: process.env.B2_APPLICATION_KEY_ID,
-  applicationKey: process.env.B2_APPLICATION_KEY,
-});
+import { downloadImage } from '@/services/image/blackblaze';
+// import { headers } from 'next/headers';
+export const runtime = 'nodejs';
 
 export async function GET(req, { params }) {
-
-  // console.log(await params)
-  // console.log(req)
   const { shop, folder, file } = await params;
-  console.log(shop)
-  console.log(folder)
-  console.log(file )
-
-  return new NextResponse({ data: "sample data"}, { status: 200 });
-
-  console.log('Store:', store);
-  console.log('Category:', category);
-
-
-  const fileName = params.fileName; // from dynamic route [fileName]
-  const bucketName = process.env.B2_BUCKET_NAME;
-
   try {
-    await b2.authorize(); // Must authorize before every download unless cached
 
-    const response = await b2.downloadFileByName({
-      bucketName,
-      fileName,
-      responseType: 'stream',
-    });
+    const response = await downloadImage({ bucket: shop, folder, file })
+
+    const stream = response.data;
+    const contentType = response.headers['content-type'] || 'image/jpeg';
+    const contentLength = response.headers['content-length'];
 
     const headers = new Headers();
-    headers.set('Content-Type', response.data.headers['content-type'] || 'image/jpeg');
-    headers.set('Content-Length', response.data.headers['content-length']);
+    headers.set('Content-Type', contentType);
+    if (contentLength) headers.set('Content-Length', contentLength);
 
-    return new NextResponse(response.data, { status: 200, headers });
+    return new NextResponse(stream, { status: 200, headers });
   } catch (err) {
     console.error('B2 Download Error:', err.message);
     return new NextResponse('File not found', { status: 404 });

@@ -215,6 +215,23 @@ export async function getImageDetails(fileName, bucketId) {
   return file?.fileName === fileName ? file : null;
 }
 
+export async function downloadImage({bucket, folder, file}) {
+  try {
+    await authorizeB2();
+    return await b2.downloadFileByName({
+                      bucketName: bucket,
+                      fileName: `${folder}/${file}`,
+                      responseType: 'stream',
+                    });
+
+
+  } catch (error) {
+    console.log(error)
+    throw new Error (error)
+  }
+    
+}
+
 export async function deleteImage(fileName, fileId) {
   const b2 = await authorizeB2();
 
