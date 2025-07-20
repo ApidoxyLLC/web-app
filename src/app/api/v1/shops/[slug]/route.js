@@ -76,9 +76,9 @@ export async function PATCH(request, { params }) {
   const { slug } = await params;
 
   try {
-    // const { authenticated, data: user } = await getAuthenticatedUser(request);
-    // if (!authenticated) 
-    //   return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+    const { authenticated, data: userData } = await getAuthenticatedUser(request);
+    if (!authenticated) 
+      return NextResponse.json({ error: "Not authorized" }, { status: 401 });
 
 
     /** 
@@ -94,21 +94,21 @@ export async function PATCH(request, { params }) {
  * *               *           
  * */
 
-    const authDb = await authDbConnect()
-    const User = userModel(authDb);
-    const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
-      .select('referenceId _id name email phone role isEmailVerified')
-    console.log(user)
-    const userData = {
-      sessionId: "cmdags8700000649w6qyzu8xx",
-      userReferenceId: user.referenceId,
-      userId: user?._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      isVerified: user.isEmailVerified || user.isPhoneVerified,
-    }
+    // const authDb = await authDbConnect()
+    // const User = userModel(authDb);
+    // const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
+    //   .select('referenceId _id name email phone role isEmailVerified')
+    // console.log(user)
+    // const userData = {
+    //   sessionId: "cmdags8700000649w6qyzu8xx",
+    //   userReferenceId: user.referenceId,
+    //   userId: user?._id,
+    //   name: user.name,
+    //   email: user.email,
+    //   phone: user.phone,
+    //   role: user.role,
+    //   isVerified: user.isEmailVerified || user.isPhoneVerified,
+    // }
 
     /** 
      * fake Authentication for test purpose only 

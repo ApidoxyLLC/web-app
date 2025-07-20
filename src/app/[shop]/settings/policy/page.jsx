@@ -1,77 +1,92 @@
 "use client";
 
-import { Separator } from "@/components/ui/separator";
-import { BlockquoteToolbar } from "@/components/toolbars/blockquote";
-import { BoldToolbar } from "@/components/toolbars/bold";
-import { BulletListToolbar } from "@/components/toolbars/bullet-list";
-import { CodeToolbar } from "@/components/toolbars/code";
-import { CodeBlockToolbar } from "@/components/toolbars/code-block";
-import { HardBreakToolbar } from "@/components/toolbars/hard-break";
-import { HorizontalRuleToolbar } from "@/components/toolbars/horizontal-rule";
-import { ItalicToolbar } from "@/components/toolbars/italic";
-import { OrderedListToolbar } from "@/components/toolbars/ordered-list";
-import { RedoToolbar } from "@/components/toolbars/redo";
-import { StrikeThroughToolbar } from "@/components/toolbars/strikethrough";
-import { ToolbarProvider } from "@/components/toolbars/toolbar-provider";
-import { UndoToolbar } from "@/components/toolbars/undo";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FontSizeToolbar } from "@/components/toolbars/fontsize";
 
-const extensions = [
-  StarterKit.configure({
-    orderedList: {
-      HTMLAttributes: {
-        class: "list-decimal",
-      },
-    },
-    bulletList: {
-      HTMLAttributes: {
-        class: "list-disc",
-      },
-    },
-    code: {
-      HTMLAttributes: {
-        class: "bg-accent rounded-md p-1",
-      },
-    },
-    horizontalRule: {
-      HTMLAttributes: {
-        class: "my-2",
-      },
-    },
-    codeBlock: {
-      HTMLAttributes: {
-        class: "bg-primary text-primary-foreground p-2 text-sm rounded-md p-1",
-      },
-    },
-    heading: {
-      levels: [1, 2, 3, 4],
-      HTMLAttributes: {
-        class: "tiptap-heading",
-      },
-    },
-  }),
-];
+import { Separator } from "@/components/ui/separator";
+import { UndoToolbar, RedoToolbar,
+  BoldToolbar,
+  ItalicToolbar,
+  StrikeThroughToolbar,
+  BulletListToolbar,
+  OrderedListToolbar,
+  CodeToolbar,
+  CodeBlockToolbar,
+  HorizontalRuleToolbar,
+  BlockquoteToolbar,
+  HardBreakToolbar,
+  ToolbarProvider, } from "@/components/toolbars/undo";
 
-const content = `
-<h2 class="tiptap-heading" style="text-align: center">Hello world 🌍</h2>
-`;
+export default function ShopUpdatePage() {
+  const { slug } = useParams();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-function StarterKitExample() {
   const editor = useEditor({
-    extensions: extensions,
-    content,
-    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        orderedList: { HTMLAttributes: { class: "list-decimal" } },
+        bulletList: { HTMLAttributes: { class: "list-disc" } },
+        code: { HTMLAttributes: { class: "bg-accent rounded-md p-1" } },
+        codeBlock: {
+          HTMLAttributes: {
+            class: "bg-primary text-primary-foreground p-2 text-sm rounded-md",
+          },
+        },
+        horizontalRule: { HTMLAttributes: { class: "my-2" } },
+        heading: {
+          levels: [1, 2, 3, 4],
+          HTMLAttributes: { class: "tiptap-heading" },
+        },
+      }),
+    ],
+    content: "<h2 class='tiptap-heading'>Hello world 🌍</h2>",
+    immediatelyRender: false, // ✅ This solves the SSR hydration issue
+
   });
+
+  const handleSubmit = async () => {
+    if (!editor) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const content = editor.getHTML();
+      const res = await fetch(`/api/shops/${slug}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content, // assuming `patchShopSchema` accepts content
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Something went wrong");
+
+      alert("Shop updated successfully!");
+      router.push("/dashboard"); // or any redirect
+    } catch (err) {
+      setError(err.message || "Error updating shop");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!editor) return null;
 
   return (
-    <div className="w-full relative  overflow-hidden bg-muted/100 p-6 h-full">
-      <Card className="shadow-sm py-0 rounded-lg overflow-hidden">
-        <CardContent className="flex w-full items-center py-2 px-2 justify-between border-b sticky top-0 left-0 bg-background z-20">
+    <div className="max-w-4xl mx-auto mt-10 p-4">
+      <Card>
+        <CardContent className="sticky top-0 bg-white z-10 border-b flex items-center justify-between py-2">
           <ToolbarProvider editor={editor}>
             <div className="flex items-center gap-2">
               <UndoToolbar />
@@ -90,20 +105,23 @@ function StarterKitExample() {
             </div>
           </ToolbarProvider>
         </CardContent>
-        <CardContent
-          onClick={() => {
-            editor.chain().focus().run();
-          }}
-          className="cursor-text min-h-[10rem] bg-background focus:outline-none focus:ring-0 -mt-5 pl-2"
-        >
-          <EditorContent
-            className="outline-none p-0 ring-0 focus:outline-none focus:ring-0 focus:border-transparent"
-            editor={editor}
-          />
+
+        <CardContent className="mt-4 min-h-[300px] cursor-text bg-background">
+          <EditorContent editor={editor} />
         </CardContent>
+
+        <CardContent className="mt-4 flex justify-end">
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Updating..." : "Update Shop"}
+          </Button>
+        </CardContent>
+
+        {error && (
+          <CardContent>
+            <p className="text-red-500 text-sm">{error}</p>
+          </CardContent>
+        )}
       </Card>
     </div>
   );
 }
-
-export default StarterKitExample;
