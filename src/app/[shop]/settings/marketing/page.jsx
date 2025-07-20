@@ -1,0 +1,194 @@
+"use client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TbCopy } from "react-icons/tb";
+import { useState } from "react";
+import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";
+import {
+  InputBase,
+  InputBaseAdornment,
+  InputBaseControl,
+  InputBaseInput,
+} from "@/components/ui/input-base";
+import facebook from "../../../../../../public/image/facebook.png";
+import google from "../../../../../../public/image/google.svg";
+import googleTag from "../../../../../../public/image/google_tag_manager.png";
+import facebookConversion from "../../../../../../public/image/facebookConversion.png";
+import Image from "next/image";
+export default function MarketingSeoTools() {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div
+      className=" bg-muted/100 h-full
+     mx-auto w-full p-6 "
+    >
+      <Card className="space-y-6 rounded-lg p-6 shadow-sm">
+        <div>
+          <h2 className="text-md font-semibold">Marketing & SEO Tools</h2>
+          <p className="text-sm text-red-500 mt-2">
+            To setup GTM or facebook pixel, please setup your shop domain first.
+          </p>
+        </div>
+
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-md ">
+              <Image src={google} alt="Google" width={25} />
+              Sitemaps for Search Engine
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="">
+            <p className="text-sm text-gray-500 -mt-5 mb-5">
+              Add sitemaps to Google Search Console to rank your website.
+            </p>
+            <div className="relative ">
+              <Input
+                value="https://shop.apidoxy.com/api/108627/sitemaps.xml"
+                readOnly
+                className="bg-muted/100 text-center font-semibold"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="absolute border-none right-2 top-1/2 -translate-y-1/2 bg-muted/100"
+                onClick={() =>
+                  handleCopy("https://shop.apidoxy.com/api/108627/sitemaps.xml")
+                }
+              >
+                <TbCopy className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-md">
+              <Image src={facebook} alt="Google" width={25} />
+              Facebook Data Feed
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm  text-gray-500 -mt-5 mb-5">
+              Add/Upload data feed to the Facebook catalog.
+            </p>
+            <div className="relative">
+              <Input
+                value="https://shop.apidoxy.com/api/108627/facebook-product-feed.xml"
+                readOnly
+                className="bg-muted/100 text-center font-semibold"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="absolute border-none right-2 top-1/2 -translate-y-1/2 bg-muted/100"
+                onClick={() =>
+                  handleCopy(
+                    "https://shop.apidoxy.com/api/108627/facebook-product-feed.xml"
+                  )
+                }
+              >
+                <TbCopy />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-md">
+              <Image src={googleTag} alt="Google" width={25} />
+              Setup Google Tag Manager
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ControlGroup>
+              <ControlGroupItem className="shadow-none w-20 h-10 font-semibold">
+                <InputBase>
+                  <InputBaseAdornment>GTM ID</InputBaseAdornment>
+                </InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="w-full shadow-none">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput placeholder="GTM ID" />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-md">
+              <Image src={facebookConversion} alt="Google" width={25} />
+              Setup Facebook Conversion API and Pixel
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <ControlGroup>
+                <ControlGroupItem className="shadow-none w-[86px] h-10 font-semibold">
+                  <InputBase>
+                    <InputBaseAdornment>Pixel ID</InputBaseAdornment>
+                  </InputBase>
+                </ControlGroupItem>
+                <ControlGroupItem className="w-full shadow-none">
+                  <InputBase>
+                    <InputBaseControl>
+                      <InputBaseInput placeholder="Pixel ID" />
+                    </InputBaseControl>
+                  </InputBase>
+                </ControlGroupItem>
+              </ControlGroup>
+            </div>
+            <div>
+              <ControlGroup>
+                <ControlGroupItem className="shadow-none w-[184px] h-10 font-semibold">
+                  <InputBase>
+                    <InputBaseAdornment>Pixel Access Token</InputBaseAdornment>
+                  </InputBase>
+                </ControlGroupItem>
+                <ControlGroupItem className="w-full shadow-none">
+                  <InputBase>
+                    <InputBaseControl>
+                      <InputBaseInput placeholder="Pixel Access Token" />
+                    </InputBaseControl>
+                  </InputBase>
+                </ControlGroupItem>
+              </ControlGroup>
+            </div>
+            <div>
+              <ControlGroup>
+                <ControlGroupItem className="shadow-none w-[180px] h-10 font-semibold">
+                  <InputBase>
+                    <InputBaseAdornment>Pixel Test Event ID</InputBaseAdornment>
+                  </InputBase>
+                </ControlGroupItem>
+                <ControlGroupItem className="w-full shadow-none">
+                  <InputBase>
+                    <InputBaseControl>
+                      <InputBaseInput placeholder="Pixel Test Event ID (Just to test. Clear after testing is done)" />
+                    </InputBaseControl>
+                  </InputBase>
+                </ControlGroupItem>
+              </ControlGroup>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="flex justify-end">
+          <Button>Update</Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
