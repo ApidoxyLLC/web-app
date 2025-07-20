@@ -7,7 +7,15 @@ const b2 = new B2({
 });
 
 export async function GET(req, { params }) {
-  const { shop, folder, file } = params;
+
+  // console.log(await params)
+  // console.log(req)
+  const { shop, folder, file } = await params;
+  console.log(shop)
+  console.log(folder)
+  console.log(file )
+
+  return new NextResponse({ data: "sample data"}, { status: 200 });
 
   console.log('Store:', store);
   console.log('Category:', category);
@@ -29,10 +37,7 @@ export async function GET(req, { params }) {
     headers.set('Content-Type', response.data.headers['content-type'] || 'image/jpeg');
     headers.set('Content-Length', response.data.headers['content-length']);
 
-    return new NextResponse(response.data, {
-      status: 200,
-      headers,
-    });
+    return new NextResponse(response.data, { status: 200, headers });
   } catch (err) {
     console.error('B2 Download Error:', err.message);
     return new NextResponse('File not found', { status: 404 });

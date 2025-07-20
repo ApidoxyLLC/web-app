@@ -79,9 +79,8 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
 
     if (file.size > MAX_FILE_SIZE) 
         throw new Error(`File exceeds limit of ${MAX_FILE_SIZE / 1024 / 1024}MB`);
-    // const         uuid = crypto.randomUUID();
     const          _id = new mongoose.Types.ObjectId();
-    const baseFileName = `${_id}`.replace(/[^\w.-]/g, '_');
+    const baseFileName = `${_id.toString()}`.replace(/[^\w.-]/g, '_');
     const     fileName = `${folder}/${baseFileName+'.'+fileExtension}`
 
     const originalBuffer = Buffer.from(await file.arrayBuffer());
