@@ -11,10 +11,10 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
-import facebook from "../../../../../../public/image/facebook.png";
-import google from "../../../../../../public/image/google.svg";
-import googleTag from "../../../../../../public/image/google_tag_manager.png";
-import facebookConversion from "../../../../../../public/image/facebookConversion.png";
+import facebook from "../../../../../public/images/facebook.png";
+import google from "../../../../../public/images/google.svg";
+import googleTag from "../../../../../public/images/google_tag_manager.png";
+import facebookConversion from "../../../../../public/images/facebookConversion.png";
 import Image from "next/image";
 export default function MarketingSeoTools() {
   const [copied, setCopied] = useState(false);

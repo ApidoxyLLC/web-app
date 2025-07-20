@@ -1,5 +1,5 @@
 "use client";
-import AdvancePaymentCard from "@/components/paymentGateway/paymentGateway";
+import AdvancePaymentCard from "@/components/paymentGateway";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";

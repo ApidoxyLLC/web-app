@@ -19,8 +19,8 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { Trash2 } from "lucide-react";
-import pathao from "../../../../../../public/image/pathao.png";
-import steadfast from "../../../../../../public/image/logo.png";
+import pathao from "../../../../../public/images/pathao.png";
+import steadfast from "../../../../../public/images/steadfast.png";
 import Image from "next/image";
 const markets = {
   bd: {
