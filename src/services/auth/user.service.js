@@ -24,21 +24,21 @@ export async function getUserByIdentifier({ db, session, data }) {
   const UserModel = userModel(db);
   try {
     const query = UserModel.findOne({ $or: [{ email }, { phone }] })
-      .select(
-        "+_id " +
-        "+security " +
-        "+security.password " +
-        "+security.failedAttempts " +
-        "+lock " +
-        "+lock.isLocked " +
-        "+lock.lockReason " +
-        "+lock.lockUntil " +
-        "+verification " +
-        "+isEmailVerified " +
-        "+isPhoneVerified " +
-        "+role "
-      )
-      .lean();
+                           .select(
+                              "+_id " +
+                              "+security " +
+                              "+security.password " +
+                              "+security.failedAttempts " +
+                              "+lock " +
+                              "+lock.isLocked " +
+                              "+lock.lockReason " +
+                              "+lock.lockUntil " +
+                              "+verification " +
+                              "+isEmailVerified " +
+                              "+isPhoneVerified " +
+                              "+role "
+                            )
+                          .lean();
     if (session) query.session(session);
     return await query;
   } catch (error) {

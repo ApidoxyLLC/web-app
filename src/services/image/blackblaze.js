@@ -7,6 +7,9 @@ import { bucketModel } from '@/models/auth/Bucket';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { dbConnect } from '@/lib/mongodb/db';
+import mongoose from 'mongoose';
+import { decrypt } from '@/lib/encryption/cryptoEncryption';
+import config from '../../../config';
 
 const b2 = new B2({ applicationKeyId: process.env.B2_APPLICATION_KEY_ID,
                       applicationKey: process.env.B2_APPLICATION_KEY      });
@@ -31,7 +34,7 @@ const         bucketName = process.env.B2_BUCKET_NAME
 // file, vendor, folder
 export async function uploadShopImage({ file, vendor, folder, uploadBy, extraData={} }) {
     const b2 = await authorizeB2();
-    const { _id, referenceId, ownerId,  dbInfo, bucketInfo } = vendor 
+    const { referenceId, ownerId,  dbInfo, bucketInfo } = vendor 
     
     const { dbName } = dbInfo
 
@@ -44,8 +47,7 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
     }else {
       let newBucket;
         try {
-          newBucket = await createBucketIfNotExists({
-                                                      createdBy: uploadBy,
+          newBucket = await createBucketIfNotExists({ createdBy: uploadBy,
                                                       shopId: referenceId,
                                                       bucketName: referenceId,
                                                       referenceId,
@@ -77,34 +79,51 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
 
     if (file.size > MAX_FILE_SIZE) 
         throw new Error(`File exceeds limit of ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+    // const         uuid = crypto.randomUUID();
+    const          _id = new mongoose.Types.ObjectId();
+    const baseFileName = `${_id}`.replace(/[^\w.-]/g, '_');
+    const     fileName = `${folder}/${baseFileName+'.'+fileExtension}`
 
-    const         uuid = crypto.randomUUID();
-    const baseFileName = `${uuid}`.replace(/[^\w.-]/g, '_');
-    const     fileName = `${folder}/${baseFileName}`
-    const       buffer = Buffer.from(await file.arrayBuffer());
-    const     metadata = await sharp(buffer).metadata();
+    const originalBuffer = Buffer.from(await file.arrayBuffer());
+    const imageSharp = sharp(originalBuffer);
+    // const       buffer = Buffer.from(await file.arrayBuffer());
+    let compressedBuffer;
+    if (file.type === 'image/jpeg') {
+      compressedBuffer = await imageSharp.jpeg({ quality: 75 }).toBuffer();
+    } else if (file.type === 'image/png') {
+      compressedBuffer = await imageSharp.png({ compressionLevel: 9 }).toBuffer();
+    } else if (file.type === 'image/webp') {
+      compressedBuffer = await imageSharp.webp({ quality: 75 }).toBuffer();
+    } else if (file.type === 'image/avif') {
+      compressedBuffer = await imageSharp.avif({ quality: 50 }).toBuffer();
+    } else {
+      throw new Error(`Unsupported file type for compression: ${file.type}`);
+    }
+
+    const     metadata = await sharp(compressedBuffer ).metadata();
 
     const uploadResponse = await b2.uploadFile({       uploadUrl: uploadData.uploadUrl,
                                                  uploadAuthToken: uploadData.authorizationToken,
                                                         fileName,
-                                                            data: buffer,
+                                                            data: compressedBuffer,
                                                             mime: file.type,
-                                                   contentLength: buffer.length     });
+                                                   contentLength: compressedBuffer.length     });
 
     const backblazeUrl = `https://f000.backblazeb2.com/file/${bucketName}/${fileName}`;
 
 
-    const dbUri = await decrypt({ cipherText: dbInfo.dbUri, 
-                                      options: { secret: VENDOR_DB_URI_ENCRYPTION_KEY } });
+    // const dbUri = await decrypt({ cipherText: dbInfo.dbUri, 
+    //                                   options: { secret: config.vendorDbUriEncryptionKey } });
 
     // const shop_db = await dbConnect({ dbKey: dbInfo.dbName, dbUri });
     const vendor_db = await vendorDbConnect();
     const   Image = imageModel(vendor_db)
-    const  result = await Image.create({ provider: 'b2',
+    const  result = await Image.create({      _id,
+                                         provider: 'b2',
                                          uploadBy,
                                          fileName: uploadResponse.data.fileName,
                                            fileId: uploadResponse.data.fileId,
-                                         fileInfo: { ...uploadResponse.data.fileInfo, size: buffer.length, width: metadata.width, height: metadata.height, format: metadata.format, ...extraData },
+                                         fileInfo: { ...uploadResponse.data.fileInfo, size: compressedBuffer.length, width: metadata.width, height: metadata.height, format: metadata.format, ...extraData },
                                            shopId: vendor._id,
                                     shopReference: vendor.referenceId,
                                            folder,
@@ -123,7 +142,7 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
                   backblazeUrl,
                       bucketId: result.bucketId,
                     bucketName: result.bucketName,    
-                }
+        }
 }
 
 async function createBucketIfNotExists({createdBy, shopId, referenceId, bucketName, bucketType = 'allPrivate'}) {

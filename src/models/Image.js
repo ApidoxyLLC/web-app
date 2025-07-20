@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 export const imageSchema = new mongoose.Schema({
+                       _id: { type: mongoose.Schema.Types.ObjectId, required: true },
                   provider: { type: String, enum: ['b2', 's3', 'cloudinary', 'local'], default:'b2' },
                   fileName: { type: String, required: true },
                     fileId: { type: String, required: true },
