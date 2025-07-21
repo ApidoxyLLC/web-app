@@ -154,7 +154,7 @@ export async function GET(request) {
     // Transform products for response
     const transformedProducts = products.map(product => ({
       id: product._id,
-      productId: product.productId,
+      // productId: product.productId,
       title: product.title,
       slug: product.slug,
       description: product.description,

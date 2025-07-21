@@ -10,7 +10,7 @@ import { decrypt } from "@/lib/encryption/cryptoEncryption";
 export const dynamic = 'force-dynamic';
 
 export async function GET(request, { params }) {
-  const { productId } = params;
+  const { slug: productId } = params;
 
   // Get client IP for rate limiting
   const headerList = headers();
@@ -74,7 +74,7 @@ export async function GET(request, { params }) {
     // Transform product for response
     const transformedProduct = {
       id: product._id,
-      productId: product.productId,
+      // productId: product.productId,
       title: product.title,
       slug: product.slug,
       description: product.description,
@@ -145,7 +145,7 @@ export async function GET(request, { params }) {
 }
 
 export async function PATCH(request, { params }) {
-  const { id } = params;
+  const { slug: productId } = params;
   const updates = await request.json();
 
   const headerList = headers();

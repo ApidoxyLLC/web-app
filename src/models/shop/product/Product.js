@@ -80,7 +80,7 @@ const digitalAssetSchema = new mongoose.Schema({
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({
-           productId: { type: String, default: () => cuid(), unique: true },
+         //   productId: { type: String, default: () => cuid(), unique: true },
                 slug: { type: String, required: true, unique: true },
                title: { type: String, required: true, trim: true },
          description: String, 
