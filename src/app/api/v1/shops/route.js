@@ -14,6 +14,7 @@ import config from "../../../../../config";
 import cuid from "@bugsnag/cuid";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { createB2Bucket } from "@/services/image/blackblaze";
+import { addDNSRecord } from "@/services/cloudflare/addDNSRecord";
 
 export async function POST(request) {
   let body;
@@ -33,8 +34,10 @@ export async function POST(request) {
   const auth_db = await authDbConnect()
   const UserModel = userModel(auth_db);
 
-  const user = await UserModel.findOne({ referenceId: data.userReferenceId,
-                                           isDeleted: false }).select('+_id +usage +phone +email');
+  const user = await UserModel.findOne({
+    referenceId: data.userReferenceId,
+    isDeleted: false
+  }).select('+_id +usage +phone +email');
 
 
   if (!user)
@@ -44,7 +47,7 @@ export async function POST(request) {
   const currentShopUsage = user.usage?.shops;
   const allowedShopLimit = user.subscriptionScope?.shops;
 
-  if (currentShopUsage >= allowedShopLimit) 
+  if (currentShopUsage >= allowedShopLimit)
     return NextResponse.json({ warning: `You have reached your shop limit (${allowedShopLimit}) for the current plan.`, success: false }, { status: 403 });
 
   const parsed = createShopDTOSchema.safeParse(body);
@@ -53,77 +56,112 @@ export async function POST(request) {
 
   try {
     const nativeAuthDb = auth_db.db;
-    const  collections = await nativeAuthDb.listCollections({ name: 'shops' }).toArray();
-    
-    if (collections.length === 0) 
+    const collections = await nativeAuthDb.listCollections({ name: 'shops' }).toArray();
+
+    if (collections.length === 0)
       await auth_db.createCollection('shops'); // create outside transaction
 
-    const           _id = new mongoose.Types.ObjectId();
-    const   referenceId = cuid();
-    const          txId = cuid();
-    const        dbName = `${config.vendorDbPrefix}_${_id}_db`
-    const    bucketName = `${_id}`
-    const primaryDomain = _id.toString() + '.' + config.shopDefaultDomain
+    const _id = new mongoose.Types.ObjectId();
+    const referenceId = cuid();
+    const txId = cuid();
+    const dbName = `${config.vendorDbPrefix}_${_id}_db`
+    const bucketName = `${_id}`
+    const primaryDomain = _id.toString() + '.' + process.env.DEFAULT_SHOP_DOMAIN;
 
 
-    const bucket = await createB2Bucket({ bucketName, createdBy: data.userId , shopId: referenceId  });
+    const existingShop = await vendorModel(auth_db).findOne({
+      $or: [
+        { primaryDomain: primaryDomain },
+        { domains: primaryDomain }
+      ]
+    });
+
+    if (existingShop) {
+      return NextResponse.json({
+        error: `Domain ${primaryDomain} already exists in the system.`,
+      }, { status: 409 });
+    }
+
+   
+
+    await addDNSRecord({
+      domain: primaryDomain,
+      zoneId: config.zoneId,
+      template: "shop2" // this points to your Pages or proxy
+    });
+
+
+    const bucket = await createB2Bucket({ bucketName, createdBy: data.userId, shopId: referenceId });
 
     if (!bucket)
-        return NextResponse.json({ message: "bucket creation failed", success: false }, { status: 400 })
+      return NextResponse.json({ message: "bucket creation failed", success: false }, { status: 400 })
 
     const shopPayload = {
-                                        _id,
-                                referenceId,
-                                    ownerId: data.userId,
-                                      email: data.email ? data.email : undefined,
-                                      phone: data.phone ? data.phone : undefined,
-                          ownerLoginSession: data.sessionId,
-                                    country: parsed.data.country.trim(),
-                                   industry: parsed.data.industry?.trim(),
-                               businessName: parsed.data.businessName?.trim(),
-                                   location: parsed.data.location,
-                                transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
-                      }
+      _id,
+      referenceId,
+      ownerId: data.userId,
+      email: data.email ? data.email : undefined,
+      phone: data.phone ? data.phone : undefined,
+      ownerLoginSession: data.sessionId,
+      country: parsed.data.country.trim(),
+      industry: parsed.data.industry?.trim(),
+      businessName: parsed.data.businessName?.trim(),
+      location: parsed.data.location,
+      transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
+    }
 
     const vendorPayload = {
-                                     _id,
-                             referenceId,
-                                 ownerId: data.userId,
-                                   email: data.email ? data.email : undefined,
-                                   phone: data.phone ? data.phone : undefined,
-                                 country: parsed.data.country.trim(),
-                                industry: parsed.data.industry?.trim(),
-                            businessName: parsed.data.businessName?.trim(),
-                                location: parsed.data.location,
-                                  dbInfo: { dbName,
-                                            dbUri: await encrypt({    data: config.vendorDbDefaultUri + '/' + dbName,
-                                                                   options: { secret: config.vendorDbUriEncryptionKey } })
-                                            },
-                              bucketInfo: {  accountId: bucket.accountId,
-                                            bucketName: bucketName,
-                                              bucketId: bucket.bucketId   },
-                                 secrets: {
-                                             accessTokenSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
-                                                                                options: { secret: config.accessTokenSecretEncryptionKey } }),
+      _id,
+      referenceId,
+      ownerId: data.userId,
+      email: data.email ? data.email : undefined,
+      phone: data.phone ? data.phone : undefined,
+      country: parsed.data.country.trim(),
+      industry: parsed.data.industry?.trim(),
+      businessName: parsed.data.businessName?.trim(),
+      location: parsed.data.location,
+      dbInfo: {
+        dbName,
+        dbUri: await encrypt({
+          data: config.vendorDbDefaultUri + '/' + dbName,
+          options: { secret: config.vendorDbUriEncryptionKey }
+        })
+      },
+      bucketInfo: {
+        accountId: bucket.accountId,
+        bucketName: bucketName,
+        bucketId: bucket.bucketId
+      },
+      secrets: {
+        accessTokenSecret: await encrypt({
+          data: crypto.randomBytes(32).toString('base64'),
+          options: { secret: config.accessTokenSecretEncryptionKey }
+        }),
 
-                                            refreshTokenSecret: await encrypt({    data: crypto.randomBytes(64).toString('hex'),
-                                                                                options: { secret: config.refreshTokenSecretEncryptionKey } }),
+        refreshTokenSecret: await encrypt({
+          data: crypto.randomBytes(64).toString('hex'),
+          options: { secret: config.refreshTokenSecretEncryptionKey }
+        }),
 
-                                                nextAuthSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
-                                                                                options: { secret: config.nextAuthSecretEncryptionKey     } }),
-                                          },
-                           primaryDomain,
-                                 domains: [primaryDomain],
-                             transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
-                          }
+        nextAuthSecret: await encrypt({
+          data: crypto.randomBytes(32).toString('base64'),
+          options: { secret: config.nextAuthSecretEncryptionKey }
+        }),
+      },
+      primaryDomain,
+      domains: [primaryDomain],
+      transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
+    }
 
-    const userUpdateQuery = { $push: { shops: _id       },
-                               $inc: { 'usage.shops': 1 }}
+    const userUpdateQuery = {
+      $push: { shops: _id },
+      $inc: { 'usage.shops': 1 }
+    }
 
-    const      vendor_db = await vendorDbConnect()
+    const vendor_db = await vendorDbConnect()
     const authDb_session = await auth_db.startSession()
-    const    VendorModel = vendorModel(vendor_db)
-    const      ShopModel = shopModel(auth_db);
+    const VendorModel = vendorModel(vendor_db)
+    const ShopModel = shopModel(auth_db);
     await authDb_session.startTransaction()
     try {
       const [shop] = await ShopModel.create([{ ...shopPayload }], { session: authDb_session })
@@ -139,12 +177,14 @@ export async function POST(request) {
       VendorModel.updateOne({ _id: vendor._id }, { $set: updateSagaSuccess })]);
 
       await authDb_session.commitTransaction()
-      const result = {          id: shop.referenceId,
-                      businessName: shop.businessName,
-                           country: shop.country,
-                          industry: shop.industry,
-                          location: shop.location,
-                           domains: vendor.domains      }
+      const result = {
+        id: shop.referenceId,
+        businessName: shop.businessName,
+        country: shop.country,
+        industry: shop.industry,
+        location: shop.location,
+        domains: vendor.domains
+      }
 
       if (result)
         return NextResponse.json({ message: "Shop created successfully", success: true, data: result }, { status: 201 })
@@ -152,15 +192,22 @@ export async function POST(request) {
       await authDb_session.abortTransaction()
       try {
         await VendorModel.updateOne({ 'transaction.txId': txId },
-                                    { $set: { 'transaction.sagaStatus'  : 'failed',
-                                              'transaction.lastTxUpdate': new Date()}   });
+          {
+            $set: {
+              'transaction.sagaStatus': 'failed',
+              'transaction.lastTxUpdate': new Date()
+            }
+          });
       } catch (e) { console.error('Failed to mark saga as failed', e) }
 
       try {
         await ShopModel.updateOne({ 'transaction.txId': txId },
-                                  { $set: { 'transaction.sagaStatus': 'failed',
-                                            'transaction.lastTxUpdate': new Date()  }
-                                  });
+          {
+            $set: {
+              'transaction.sagaStatus': 'failed',
+              'transaction.lastTxUpdate': new Date()
+            }
+          });
       } catch (e) { console.error('Failed to mark saga as failed', e) }
 
       await Promise.allSettled([ShopModel.deleteOne({

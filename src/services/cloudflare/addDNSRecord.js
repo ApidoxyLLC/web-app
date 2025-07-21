@@ -1,14 +1,14 @@
 import config from "./config";
 
 const templates = [
-    {
-        "name": "test",
-        "cname": "test-dxi.pages.dev",
-    },
-    {
-        "name": "test2",
-        "cname": "test2-dxi.pages.dev",
-    },
+  {
+    "name": "shop2",
+    "cname": "shop2-dxi.pages.dev",
+  },
+  {
+    "name": "shop3",
+    "cname": "shop3-dxi.pages.dev",
+  },
 ];
 
 export async function addDNSRecord({ domain, template, zoneId, ttl = null }) {
@@ -18,16 +18,16 @@ export async function addDNSRecord({ domain, template, zoneId, ttl = null }) {
 
 
   if (!templates || !Array.isArray(templates)) {
-        throw new Error('Templates configuration is missing or invalid');
-    }
-    const templateConfig = templates.find(t => t && t.name === template);
-    if (!templateConfig) {
-        throw new Error(`Template not found for project: ${template}`);
-    }
+    throw new Error('Templates configuration is missing or invalid');
+  }
+  const templateConfig = templates.find(t => t && t.name === template);
+  if (!templateConfig) {
+    throw new Error(`Template not found for project: ${template}`);
+  }
 
   try {
     const response = await fetch(
-      `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`,
+      `https://api.cloudflare.com/client/v4/zones/${config.zoneId}/dns_records`,
       {
         method: "POST",
         headers: {
