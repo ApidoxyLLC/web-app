@@ -18,37 +18,30 @@ import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import securityHeaders from "../utils/securityHeaders";
 import config from "../../../../../config";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import config from "../../../../../config";
 
 export const dynamic = 'force-dynamic'; // Ensure dynamic fetching
 
 // Helper for API responses
 const apiResponse = (data, status = 200, headers = {}) => {
   const response = NextResponse.json(data, { status });
-  Object.entries(headers).forEach(([key, value]) => response.headers.set(key, value));
+  Object.entries(securityHeaders).forEach(([key, value]) => response.headers.set(key, value));
   return response;
 };
 
-// Rate limiter configuration
-// const limiter = rateLimit({
-//   interval: 60 * 1000, // 1 minute
-//   uniqueTokenPerInterval: 500, // Max users per minute
-// });
-
 export async function GET(request) {
+  const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
+  
   // Get client IP for rate limiting
   const headerList = headers();
-  const ip = headerList.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-             headerList.get('x-real-ip') || 'unknown_ip';
-
-  // Rate limiting
-  // try { await limiter.check(ip, 30); }
-  // catch { return apiResponse( { error: "Too many requests" }, 429, { 'Retry-After': '60' } ) }
 
   // Get vendor identification
   const vendorId = headerList.get('x-vendor-identifier');
   const host = headerList.get('host');
   
-  if (!vendorId && !host) 
+  if (!vendorId && !host)
     return apiResponse( { error: "Missing vendor identifier or host" }, 400 );
 
   // Parse query parameters
@@ -75,34 +68,21 @@ export async function GET(request) {
     return apiResponse({ error: "Limit must be between 1 and 100" }, 400);
 
   try {
-    // Connect to auth database
-    const auth_db = await authDbConnect();
-    const ShopModel = shopModel(auth_db);
-    
-    // Get shop configuration
-    const shop = await ShopModel.findOne({ 
-      $or: [ 
-        { vendorId }, 
-        { domains: { $elemMatch: { domain: host } } } 
-      ]
-    }).select('+dbInfo.uri +dbInfo.prefix').lean();
-    
-    if (!shop) return apiResponse({ error: "Shop not found" }, 404);    
 
-    // Decrypt DB URI
-    const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-    if (!DB_URI_ENCRYPTION_KEY) 
-      return apiResponse({ error: "Server configuration error" }, 500);
-    
-    const dbUri = await decrypt({ 
-      cipherText: shop.dbInfo.uri,
-      options: { secret: DB_URI_ENCRYPTION_KEY } 
-    });
+    const vendor_db = await vendorDbConnect()
+    const Vendor = vendorModel(vendor_db);
+    const vendor = await Vendor.findOne({ referenceId: vendorId })
+                                .select("dbInfo bucketInfo secrets expirations primaryDomain domains")
+                                .lean()
 
-    // Connect to vendor DB
-    const shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
-    const vendor_db = await dbConnect({ dbKey: shopDbName, dbUri });
-    const ProductModel = productModel(vendor_db);
+
+    const dbUri = await decrypt({  cipherText: vendor.dbInfo.dbUri,
+                                        options: { secret: config.vendorDbUriEncryptionKey } 
+                                      });
+
+    const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+
+    const ProductModel = productModel(shop_db);
 
     // Build query
     const query = {};
@@ -245,11 +225,11 @@ export async function POST(request) {
   // Validate input with Zod
   const parsed = productDTOSchema.safeParse(body);
   if (!parsed.success)
-    return NextResponse.json({  success: false, error: "Validation failed", details: parsed.error.flatten()}, { status: 422, headers: securityHeaders });
+    return NextResponse.json({  success: false, error: "Data validation failed", details: parsed.error.flatten()}, { status: 422, headers: securityHeaders });
   
-  // const { authenticated, error, data } = await getAuthenticatedUser(request);
-  //   if(!authenticated) 
-  //       return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+  const { authenticated, error, data } = await getAuthenticatedUser(request);
+    if(!authenticated) 
+        return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
   /** 
    * fake Authentication for test purpose only 
@@ -264,19 +244,19 @@ export async function POST(request) {
    * *               *           
    * */
 
-  const authDb = await authDbConnect()
-  const User = userModel(authDb);
-  const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje" })
-                         .select('referenceId _id name email phone role isEmailVerified')
-  const data = { sessionId: "686f81d0f3fc7099705e44d7",
-           userReferenceId: user.referenceId,
-                    userId: user._id,
-                      name: user.name,
-                     email: user.email,
-                     phone: user.phone,
-                      role: user.role,
-                isVerified: user.isEmailVerified || user.isPhoneVerified,
-                }
+  // const authDb = await authDbConnect()
+  // const User = userModel(authDb);
+  // const user = await User.findOne({ referenceId: "cmda6hrqs0000vwlll4qhy7vw" })
+  //                        .select('referenceId _id name email phone role isEmailVerified')
+  // const data = { sessionId: "686f81d0f3fc7099705e44d7",
+  //          userReferenceId: user.referenceId,
+  //                   userId: user._id,
+  //                     name: user.name,
+  //                    email: user.email,
+  //                    phone: user.phone,
+  //                     role: user.role,
+  //               isVerified: user.isEmailVerified || user.isPhoneVerified,
+  //               }
   
   /** 
    * fake Authentication for test purpose only 
@@ -383,147 +363,115 @@ export async function POST(request) {
   // }
 }
 
-// export async function POST(request) {
-//   let body;
-//   try { body = await request.json(); } 
-//   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-//   // Rate limiting
-//   const headerList = headers();
-//   const ip = headerList.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-//              headerList.get('x-real-ip') || 'unknown_ip';
+export async function PATCH(request) {
+  const ip =
+    request.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+    request.headers["x-real-ip"] ||
+    request.socket?.remoteAddress ||
+    "";
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+  if (!allowed)
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": retryAfter.toString() },
+      }
+    );
 
-//   const limiter = rateLimit({
-//     interval: 60 * 1000, // 1 minute
-//     uniqueTokenPerInterval: 100 // Max 100 requests per minute
-//   });
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Invalid JSON" },
+      { status: 400, headers: securityHeaders }
+    );
+  }
 
-//   try { await limiter.check(ip, 10); } 
-//   catch { return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: { 'Retry-After': '60' } }) }
+  const parsed = productUpdateDTOSchema.safeParse(body);
+  if (!parsed.success)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Data validation failed",
+        details: parsed.error.flatten(),
+      },
+      { status: 422, headers: securityHeaders }
+    );
 
-//   const vendorId = headerList.get('x-vendor-identifier');
-//   const host = headerList.get('host');
-  
-//   if (!vendorId && !host) 
-//     return apiResponse( { error: "Missing vendor identifier or host" }, 400 );
+  const { productId, shop: shopId, ...updateData } = parsed.data;
 
+  const { authenticated, error, data } = await getAuthenticatedUser(request);
+  if (!authenticated)
+    return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
-//   try {
-//     const parsed = registerDTOSchema.safeParse(body);
+  const auth_db = await authDbConnect();
+  const vendor_db = await vendorDbConnect();
+  const Vendor = vendorModel(vendor_db);
+  const Shop = shopModel(auth_db);
 
-//     if (!parsed.success) 
-//       return NextResponse.json({ error: "Invalid data", details: parsed.error.errors}, { status: 422 });
-    
+  const vendor = await Vendor.findOne({ referenceId: shopId })
+    .select("+_id +ownerId +dbInfo +secrets +expirations")
+    .lean();
 
-//     // Connect to auth database to get shop info
-//     const auth_db = await authDbConnect();
-//     const ShopModel = shopModel(auth_db);
+  if (!vendor)
+    return NextResponse.json(
+      { success: false, error: "Shop not found" },
+      { status: 404, headers: securityHeaders }
+    );
 
-//     // Get shop configuration
-//     const shop = await ShopModel.findOne({ $or: [ { vendorId }, { "domains": { $elemMatch: { domain: host } } }]})
-//                                 .select("+_id "+
-//                                         "+dbInfo +dbInfo.uri +dbInfo.prefix "+
-//                                         "+maxSessionAllowed "+
-//                                         "+keys +keys.ACCESS_TOKEN_SECRET +keys.REFRESH_TOKEN_SECRET " +
-//                                         "+timeLimitations.ACCESS_TOKEN_EXPIRE_MINUTES +timeLimitations.REFRESH_TOKEN_EXPIRE_MINUTES" 
-//                                       ).lean();
-//     if (!shop) {
-//       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-//     }
+  if (vendor.ownerId.toString() !== data.userId.toString())
+    return NextResponse.json(
+      { success: false, error: "Not authorized" },
+      { status: 403, headers: securityHeaders }
+    );
 
-//     // Decrypt DB URI
-//     const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-//     if (!DB_URI_ENCRYPTION_KEY) 
-//       return NextResponse.json({ error: "Server configuration error" }, { status: 500 });    
-    
-//     const dbUri = await decrypt({cipherText: shop.dbInfo.uri,
-//                                     options: { secret: DB_URI_ENCRYPTION_KEY }  });
+  const dbUri = await decrypt({
+    cipherText: vendor.dbInfo.dbUri,
+    options: { secret: config.vendorDbUriEncryptionKey },
+  });
 
-//     // Connect to vendor DB
-//     const shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
-//     const vendor_db = await dbConnect({ dbKey: shopDbName, dbUri });
-//     const ProductModel = productModel(vendor_db);
+  const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+  const Product = productModel(shop_db);
 
-//     // Generate slug if not provided
-//     const validatedData = parsed.data;
-//     if (!validatedData.slug) {
-//       validatedData.slug = validatedData.title.toLowerCase()
-//                                               .replace(/[^\w\s-]/g, '')
-//                                               .replace(/\s+/g, '-')
-//                                               .replace(/--+/g, '-')
-//                                               .trim();
-//     }
+  try {
+    const product = await Product.findOneAndUpdate(
+      { _id: productId },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
 
-//     // Process variants if provided
-//     if (validatedData.variants && validatedData.variants.length > 0) {
-//       validatedData.hasVariants = true;
-//       validatedData.variants = validatedData.variants.map(variant => ({
-//         ...variant,
-//         inventory: {
-//           stock: variant.inventory?.stock || 0,
-//           status: variant.inventory?.stock > 0 ? 'in-stock' : 'out-of-stock'
-//         },
-//         isAvailable: variant.inventory?.stock > 0 || false,
-//         taxable: variant.taxable !== false
-//       }));
-//     } else {
-//       // Set default inventory for simple product
-//       validatedData.isAvailable = validatedData.price.base > 0;
-//     }
+    if (!product)
+      return NextResponse.json(
+        { success: false, error: "Product not found" },
+        { status: 404, headers: securityHeaders }
+      );
 
-//     // Set default values
-//     validatedData.productId = cuid();
-//     validatedData.vendor = new mongoose.Types.ObjectId(shop.vendorId);
-//     validatedData.status = validatedData.status || 'draft';
-//     validatedData.type = validatedData.type || 'physical';
-//     validatedData.approvalStatus = 'pending';
-    
-//     if (validatedData.status === 'active' && !validatedData.publishedAt) 
-//       validatedData.publishedAt = new Date();
-    
+    const response = NextResponse.json(
+      {
+        success: true,
+        data: product,
+        message: "Product updated successfully",
+      },
+      { status: 200 }
+    );
 
-//     // Create product
-//     const newProduct = new ProductModel(validatedData);
-//     const savedProduct = await newProduct.save();
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
 
-//     return NextResponse.json(
-//       {
-//         success: true,
-//         message: "Product created successfully",
-//         product: {
-//           id: savedProduct._id,
-//           productId: savedProduct.productId,
-//           title: savedProduct.title,
-//           slug: savedProduct.slug,
-//           status: savedProduct.status,
-//           thumbnail: savedProduct.thumbnail,
-//           price: savedProduct.price,
-//           type: savedProduct.type,
-//           createdAt: savedProduct.createdAt,
-//         }
-//       },
-//       { status: 201 }
-//     );
+    return response;
+  } catch (err) {
+    const errorMsg =
+      err.code === 11000
+        ? "A product with similar attributes already exists"
+        : err.message || "Something went wrong";
 
-//   } catch (error) {
-//     console.error("Product creation error:", error);
-    
-//     let errorMessage = "Failed to create product";
-//     let statusCode = 500;
+    return NextResponse.json(
+      { success: false, error: errorMsg },
+      { status: 400, headers: securityHeaders }
+    );
+  }
+}
 
-//     if (error instanceof mongoose.Error.ValidationError) {
-//       errorMessage = "Validation error";
-//       statusCode = 400;
-//     } else if (error.code === 11000) {
-//       errorMessage = "Product with this title or slug already exists";
-//       statusCode = 409;
-//     } else if (error instanceof z.ZodError) {
-//       errorMessage = "Invalid data format";
-//       statusCode = 422;
-//     }
-
-//     return NextResponse.json(
-//       { error: errorMessage, details: error.message },
-//       { status: statusCode }
-//     );
-//   }
-// }

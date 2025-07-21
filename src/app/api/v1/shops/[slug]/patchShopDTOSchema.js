@@ -14,17 +14,17 @@ const appSettingsSchema = z.object({
   notifications: z.boolean().optional()
 });
 
-const extraPolicySchema = z.object({
-  type: z.string().optional(),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  url: z.string().optional(),
-  status: z.enum(["active", "inactive", "draft"]).optional(),
-  deletedAt: z.union([z.string(), z.null()]).optional(),
-  isDeleted: z.boolean().optional(),
-  deletedBy: z.string().optional(),
-  deletedReason: z.string().nullable().optional()
-}).partial();
+// const extraPolicySchema = z.object({
+//   type: z.string().optional(),
+//   title: z.string().optional(),
+//   description: z.string().optional(),
+//   url: z.string().optional(),
+//   status: z.enum(["active", "inactive", "draft"]).optional(),
+//   deletedAt: z.union([z.string(), z.null()]).optional(),
+//   isDeleted: z.boolean().optional(),
+//   deletedBy: z.string().optional(),
+//   deletedReason: z.string().nullable().optional()
+// }).partial();
 
 const baseAppSchema = z.object({
   appId: z.string(),
@@ -40,7 +40,8 @@ const baseAppSchema = z.object({
   contactUs: z.string().nullable().optional(),
   settings: appSettingsSchema.optional(),
   socialLinks: z.array(socialLinkSchema).optional(),
-  extraPolicies: z.array(extraPolicySchema).optional(),
+  policies:  z.string(),
+  // extraPolicies: z.array(extraPolicySchema).optional(),
   siteMap: z.string().nullable().optional()
 }).partial();
 
@@ -79,8 +80,8 @@ const shopPatchSchema = z.object({
   primaryDomain: z.string().nullable().optional(),
   domains: z.array(z.string()).optional(),
   socialLinks: z.array(socialLinkSchema).optional(),
-  facebookDataFeed: z.string().nullable().optional()
-
+  facebookDataFeed: z.string().nullable().optional(),
+  policies: z.string().optional(),
 }).partial();
 
 

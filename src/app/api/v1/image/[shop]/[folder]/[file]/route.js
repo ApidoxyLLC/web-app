@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
-import B2 from 'backblaze-b2';
 import { downloadImage } from '@/services/image/blackblaze';
-// import { headers } from 'next/headers';
-export const runtime = 'nodejs';
+// export const runtime = 'nodejs';
 
 export async function GET(req, { params }) {
   const { shop, folder, file } = await params;
   try {
+
+    // Need to Implement basic validation 
+    // 
+    // Check bucket is available using Bucket Model
+    // check the folder is valid 
+    // Check the file is valid 
 
     const response = await downloadImage({ bucket: shop, folder, file })
 

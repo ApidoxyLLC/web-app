@@ -13,10 +13,38 @@ const trialSchema = new mongoose.Schema({
     endAt: { type: Date },
 }, { _id: false  });
 
+const subscriptionCouponHistorySchema = new Schema({
+      couponCode: { type: String, required: true, index: true, ref: 'SubscriptionCoupon' },
+          userId: {  type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+          usedAt: {  type: Date,  default: Date.now }, 
+         orderId: {  type: Schema.Types.ObjectId, ref: 'Order',  default: nul },
+  discountAmount: { type: Number, required: true }
+}, {
+  timestamps: true,
+  collection: 'subscription_coupon_histories',
+});
+export const SubscriptionCouponHistoryModel = (db) =>  db.models.SubscriptionCouponHistory || db.model('SubscriptionCouponHistory', subscriptionCouponHistorySchema);
+
+
+const subscriptionCouponSchema = new Schema({
+        code: { type: String, required: true, unique: true },
+    discount: { type: Number, required: true, min: 0 },
+        type: { type: String, enum: ['percentage_off', 'fixed_amount' ], required: true },
+  validUntil: { type: Date, required: true },
+     maxUses: { type: Number, default: 1 },
+   usedCount: { type: Number, default: 0 }
+}, {
+  timestamps: true,
+  collection: 'subscription_coupons',
+});
+export const subscriptionCouponModel = (db) =>  db.models.SubscriptionCoupon || db.model('SubscriptionCoupon', subscriptionCouponSchema);
+
+
 const subscriptionSchema = new mongoose.Schema({
             userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
             planId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan', required: true },
-      planSnapshot: { type: planSnapshotSchema },
+      // planSnapshot: { type: planSnapshotSchema },
+      planSnapshot: { type: mongoose.Schema.Types.Mixed },
          startDate: { type: Date, default: Date.now },
            endDate: { type: Date, default: undefined },
          isDefault: { type: Boolean, default: false }, 

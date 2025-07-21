@@ -56,6 +56,7 @@ const vendorSchema = new mongoose.Schema({
                            socialLinks: { type: [socialLinksSchema], required: false, default: [] },
                       facebookDataFeed: { type: String, default: null },
                            transaction: { type: transactionFieldsSchema },
+                              policies: { type: String, default: null },
 }, { timestamps: true, collection: 'vendors' });
 
 // ───── Status Transitions ─────

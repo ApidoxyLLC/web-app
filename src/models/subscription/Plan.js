@@ -85,7 +85,7 @@ export const metadataSchema = new mongoose.Schema({
 }, { _id: false });
       
 const planSchema = new mongoose.Schema({
-          planId: { type: String, default: ()=> cuid(), select: true},
+     referenceId: { type: String, default: ()=> cuid(), select: true},
   ...basePlanSchema.obj,
         isActive: { type: Boolean, default: true },
          history: { type: [planHistorySchema], default: undefined, select: false },

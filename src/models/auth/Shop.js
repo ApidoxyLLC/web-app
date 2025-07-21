@@ -38,7 +38,8 @@ const baseAppSchema = new mongoose.Schema({
     contactUs: { type: String, default: null },
      settings: appSettingsSchema,
   socialLinks: [socialLinksSchema],
-extraPolicies: [extraPolicySchema], 
+     
+// extraPolicies: [extraPolicySchema], 
   siteMap: { type: String, default: null },
 
 }, { timestamps: true });
@@ -121,6 +122,7 @@ const shopSchema = new mongoose.Schema({
                 ios: { type: iosAppSchema, default: null },           
              stuffs: { type: [stuffSchema], default: undefined },
         transaction: { type: transactionFieldsSchema },
+           policies: { type: String, default: null },
 }, { timestamps: true, collection: 'shops' });
 
 export const shopModel = (db) => db.models.Shop || db.model('Shop', shopSchema);

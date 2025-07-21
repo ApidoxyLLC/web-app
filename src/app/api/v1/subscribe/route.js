@@ -13,10 +13,30 @@ export async function POST(request) {
     try { body = await request.json(); }
     catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
+    // Rate Limit
+    const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createShop' });
+    if (!allowed)
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString(), } });
+
+    const { authenticated, error, data } = await getAuthenticatedUser(request);
+    if (!authenticated)
+      return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+
+
     // 1. Validate input
     const parsed = subscriptionDTOSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
-    const { planId, billingCycle, autoRenew,  invoice, paymentMethodId, discount, metadata } = parsed.data
+    const {         planId,
+              billingCycle,
+                 autoRenew,
+           paymentMethodId,
+                 ipAddress,
+                 userAgent,
+                   invoice,
+                  discount,
+                  metadata } = parsed.data
+    // const { planId, billingCycle, autoRenew,  invoice, paymentMethodId, discount, metadata } = parsed.data
 
     console.log(billingCycle)
 
@@ -58,10 +78,12 @@ export async function POST(request) {
     // ////////////////////////////////////////////////////////////////////////////////////
 
 
+
+
     // 3. Verify Subscription plan 
     const planModel = planModel(db);
-    const plan = await planModel.findOne({ _id: planId, isActive: true  }); //isDeleted: false
-    if (!plan) return NextResponse.json( { error: "Subscription plan not available" }, { status: 400 } );
+    const plan = await planModel.findOne({ referenceId: planId, isActive: true  }); //isDeleted: false
+    if (!plan) return NextResponse.json( { error: "This subscription plan not available" }, { status: 400 } );
     
     // 4. Check for existing active subscriptions
     const Subscription = subscriptionModel(db);
@@ -80,9 +102,9 @@ export async function POST(request) {
     }
 
 
-
 // Need to calculate this payment History
 // const paymentHistory = [];
+
 
 console.log(plan.prices)
     const payload = {
@@ -118,22 +140,11 @@ console.log(plan.prices)
     await subscription.save();
     
     // 11. Return response
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Subscription created successfully",
-        data: subscription
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, message: "Subscription created successfully", data: subscription }, { status: 201 });
     
   } catch (error) {
     console.error("Subscription creation error:", error);
-    
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 } );
   }
 }
 
@@ -160,3 +171,87 @@ function calculateBillingCycle( {billingCycle, trialPeriod}){
 
   return { startDate, endDate };
 }
+
+
+
+// app.post('/api/payforsms', adminsign, gentoken, async(req, res) => {
+//     let price = 0
+//     if(parseInt(req.body.qty) < 2000) {
+//         price = 800
+//     } else if(parseInt(req.body.qty) >= 2000 && parseInt(req.body.qty) <=25000) {
+//         if(Number.isInteger(parseInt(req.body.qty) * 0.40)) {
+//             price = parseInt(req.body.qty) * 0.40
+//         } else {
+//             price = parseInt(parseInt(req.body.qty) * 0.40)+1
+//         }
+//     } else {
+//         price = 0
+//     }
+
+//     //create a 
+//     let trxid = res.eiin + new Date().valueOf();
+//     await TransactionDataModel.create({
+//         trxid: trxid,
+//         eiin: res.eiin,
+//         amount : price,
+//         created : moment().format('DD MMM YYYY H:M A'), 
+//         date : moment().format('DD MMM YYYY H:M A'),
+//         payer : res.email,
+//         payee : 'Shikkhanobish Payment System',
+//         purpose : req.body.for,
+//         approved : false,
+//     });
+
+//     axios.post('https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout/create',
+//         {
+//             mode: '0011',
+//             payerReference: 'refrense',
+//             callbackURL: 'https://shikkhanobish.com/api/executepayment',
+//             amount: price,
+//             currency: 'BDT',
+//             intent: 'sale',
+//             merchantInvoiceNumber: trxid,
+//         },
+//         {
+//             headers: {
+//                 'Content-Type': 'application/json',
+//                 'Accept': 'application/json',
+//                 'X-App-Key': 'xzzIqNMPyuyN39DUtYGB298Ztc',
+//                 'Authorization': res.id_token
+//             }
+//         }
+//     ).then((response) => {
+//         if(response.data.statusCode == '0000') {
+//             res.json({error: false, redirect: response.data.bkashURL})
+//         }
+//     }).catch((err) => {
+//         res.json({error: err, message: 'Payment page loading failed'})
+//     })
+// })
+
+// app.get('/api/executepayment', adminsign, gentoken, async(req, res) => {
+//     async function updateTransaction(invoiceid, trxID, amount) {
+//         await TransactionDataModel.findOneAndUpdate({trxid: invoiceid}, {approved: true, amount: amount, payee: 'Bkash ('+trxID+')'});
+//         await SmsDataModel.findOneAndUpdate({eiin: res.eiin}, {$inc: { quantity: parseInt(parseFloat(amount)/ 0.40)+1 }})
+//     }
+    
+//     axios.post('https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout/execute',{
+//         paymentID : req.query.paymentID
+//     },
+//     {
+//         headers: {
+//             'Accept': 'application/json',
+//             'X-App-Key': 'xzzIqNMPyuyN39DUtYGB298Ztc',
+//             'Authorization': res.id_token
+//         }
+//     }).then(async (response) =>  {
+//         if(response.data.statusCode == '0000') {
+//             await updateTransaction(response.data.merchantInvoiceNumber, response.data.trxID, response.data.amount);
+//             res.redirect('../sms')
+//         } else {
+//             res.send('Payment failed. <a href="https://shikkhanobish.com/sms">Go back to SMS Panel</a>')
+//         }
+//     }).catch((err) => {
+//         res.send('Payment failed. <a href="https://shikkhanobish.com/sms">Go back to SMS Panel</a>')
+//     })
+// })
