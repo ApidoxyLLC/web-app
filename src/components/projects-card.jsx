@@ -28,30 +28,33 @@ import logo from "../../public/favicon.ico"
 import { TreePalm, MapPin, User2 } from "lucide-react";
 import Image from "next/image";
 import CreatShop from "./shop-info-modal";
+import useFetch from "@/hooks/useFetch";
 export function ProjectsCard() {
   const router = useRouter()
-  const data = useSession()
+  const userData = useSession()
   const [shops,setShops] = useState([])
   useEffect(() => {
-    if (data.status === "authenticated" && data.data?.user) {
+    if (userData.status === "authenticated" && userData.data?.user) {
         router.push("http://localhost:3000/");
       } else {
         router.push("http://localhost:3000/signup");
       }
     
-  }, [data, data.status, router]);
+  }, [userData, userData.status, router]);
   
-  useEffect(()=>{
-    try{
-      const res = fetch("http://localhost:3000/api/v1/shops/")
-      .then(res => res.json())
-      .then(data => {
-        setShops(data.data)
-      })
-    }catch(err){
-      console.log(err)
-    }
-  },[])
+  // useEffect(()=>{
+  //   try{
+  //     const res = fetch("http://localhost:3000/api/v1/shops/")
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       setShops(data.data)
+  //     })
+  //   }catch(err){
+  //     console.log(err)
+  //   }
+  // },[])
+    const { data } = useFetch("shops")
+  console.log(data)
   return (
     <div>
       <div className="flex flex-row items-center justify-between px-6 py-4 gap-4 border-b bg-white dark:bg-background">

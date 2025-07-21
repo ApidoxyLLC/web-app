@@ -4,7 +4,7 @@
 
 import { TreeView } from '@/components/tree-view';
 import { PlusCircle, PlusIcon, Trash2, FolderPlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
