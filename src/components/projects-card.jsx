@@ -118,7 +118,7 @@ export function ProjectsCard() {
       </div>
       <div className="*:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-3 grid grid-cols-1 gap-6 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card lg:px-6 py-6">
         
-         {shops.map((shop)=>(
+         {shops?.map((shop)=>(
           <Link key={shop?.businessName} href={`${shop?.id}/dashboard`}>
             <Card className="@container/card cursor-pointer">
             <CardHeader className="relative">

@@ -8,23 +8,24 @@ import StarterKit from "@tiptap/starter-kit";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+import { UndoToolbar,  } from "@/components/toolbars/undo";
+import { RedoToolbar } from "@/components/toolbars/redo";
 import { Separator } from "@/components/ui/separator";
-import { UndoToolbar, RedoToolbar,
-  BoldToolbar,
-  ItalicToolbar,
-  StrikeThroughToolbar,
-  BulletListToolbar,
-  OrderedListToolbar,
-  CodeToolbar,
-  CodeBlockToolbar,
-  HorizontalRuleToolbar,
-  BlockquoteToolbar,
-  HardBreakToolbar,
-  ToolbarProvider, } from "@/components/toolbars/undo";
+import { BoldToolbar } from "@/components/toolbars/bold";
+import { ItalicToolbar } from "@/components/toolbars/italic";
+import { StrikeThroughToolbar } from "@/components/toolbars/strikethrough";
+import { BulletListToolbar } from "@/components/toolbars/bullet-list";
+import { OrderedListToolbar } from "@/components/toolbars/ordered-list";
+import { CodeToolbar } from "@/components/toolbars/code";
+import { CodeBlockToolbar } from "@/components/toolbars/code-block";
+import { HorizontalRuleToolbar } from "@/components/toolbars/horizontal-rule";
+import { BlockquoteToolbar } from "@/components/toolbars/blockquote";
+import { HardBreakToolbar } from "@/components/toolbars/hard-break";
+import { ToolbarProvider } from "@/components/toolbars/toolbar-provider";
 
 export default function ShopUpdatePage() {
-  const { slug } = useParams();
-  const router = useRouter();
+  const  params  = useParams();
+  const slug = params.shop
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -57,14 +58,18 @@ export default function ShopUpdatePage() {
     setError("");
 
     try {
-      const content = editor.getHTML();
-      const res = await fetch(`/api/shops/${slug}`, {
+      const policies = editor.getHTML();
+      const parser = new DOMParser();
+    const doc = parser.parseFromString(policies, 'text/html');
+    const plainText = doc.body.textContent || doc.body.innerText;
+      console.log(plainText)
+      const res = await fetch(`/api/v1/shops/${slug}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          content, // assuming `patchShopSchema` accepts content
+          policies:plainText, // assuming `patchShopSchema` accepts content
         }),
       });
 
@@ -73,7 +78,7 @@ export default function ShopUpdatePage() {
       if (!res.ok) throw new Error(data.error || "Something went wrong");
 
       alert("Shop updated successfully!");
-      router.push("/dashboard"); // or any redirect
+      // router.push("/dashboard"); // or any redirect
     } catch (err) {
       setError(err.message || "Error updating shop");
     } finally {
@@ -84,9 +89,9 @@ export default function ShopUpdatePage() {
   if (!editor) return null;
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-4">
-      <Card>
-        <CardContent className="sticky top-0 bg-white z-10 border-b flex items-center justify-between py-2">
+    <div className="w-full mx-auto p-6">
+      <Card className="pt-0 pb-6">
+        <CardContent className="sticky top-0 -muted/100 z-10 border-b flex items-center justify-between py-2">
           <ToolbarProvider editor={editor}>
             <div className="flex items-center gap-2">
               <UndoToolbar />
@@ -106,7 +111,7 @@ export default function ShopUpdatePage() {
           </ToolbarProvider>
         </CardContent>
 
-        <CardContent className="mt-4 min-h-[300px] cursor-text bg-background">
+        <CardContent className=" min-h-[300px] cursor-text bg-background -mt-2">
           <EditorContent editor={editor} />
         </CardContent>
 
