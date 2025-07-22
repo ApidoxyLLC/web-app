@@ -31,6 +31,18 @@ const transactionFieldsSchema = new mongoose.Schema({
         lastTxUpdate: { type: Date },
 }, { _id: false, timestamps: false });
 
+const socialLinksSchema = new mongoose.Schema({
+    platform: { type: String, enum: ['facebook', 'twitter', 'telegram', 'discord', 'whatsapp', 'instagram', 'linkedin', 'youtube', 'tiktok']  },
+    link: { type: String },
+}, { _id: false });
+
+const appSettingsSchema = new mongoose.Schema({
+  templates: { type: String, enum: ['desiree', 'stylo'], default: 'desiree' },
+  color: { type: String, required: true },
+  notifications: { type: Boolean, default: true },
+}, { _id: false });
+
+
 const baseAppSchema = new mongoose.Schema({
         appId: { type: String, required: true, index: true },
       appSlug: { type: String, default: null},
@@ -75,11 +87,14 @@ const webAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
   domain: { type: String, required: true }
 }); 
+const iosAppSchema = new mongoose.Schema({
+  ...baseAppSchema.obj,
+  buildInfo: [buildInfoSchema],
+  firebaseJSONData: String,
+  bundleId: { type: String, required: true },  
+});
 
-const socialLinksSchema = new mongoose.Schema({
-    platform: { type: String, enum: ['facebook', 'twitter', 'telegram', 'discord', 'whatsapp', 'instagram', 'linkedin', 'youtube', 'tiktok']  },
-    link: { type: String },
-}, { _id: false });
+
 
 const vendorSchema = new mongoose.Schema({
                                    _id: { type: mongoose.Schema.Types.ObjectId, required: true },

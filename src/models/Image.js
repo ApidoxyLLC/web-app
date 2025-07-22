@@ -13,6 +13,7 @@ export const imageSchema = new mongoose.Schema({
                     folder: { type: String },
                   bucketId: { type: String },
                 bucketName: { type: String },
+                   isTaken: { type: Boolean, default: false },
                   uploadBy: { type: mongoose.Schema.Types.ObjectId },
 }, { collection: 'images', timestamps: true });
 

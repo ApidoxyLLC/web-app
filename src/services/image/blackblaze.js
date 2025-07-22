@@ -128,6 +128,7 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
                                            folder,
                                      backblazeUrl,
                                          mimeType: file.type,
+                                         isActive: false,
                                          bucketId: uploadResponse.data.bucketId, 
                                        bucketName: bucketName                    });
 
