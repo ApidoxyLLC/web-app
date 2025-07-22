@@ -10,10 +10,12 @@ import uploadImageFileDTOSchema from './uploadImageFileDTOSchema';
 export async function POST(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'uploadCategoryImage' });
-  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
-
+  if (!allowed)
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
+  
   const { authenticated, error, data } = await getAuthenticatedUser(request);
-  if(!authenticated) return NextResponse.json({ error: "...not authorized" }, { status: 401, headers: securityHeaders });
+  if(!authenticated)
+        return NextResponse.json({ error: "...not authorized" }, { status: 401, headers: securityHeaders });
 
   // Validate content type
   const contentType = request.headers.get('content-type') || '';
@@ -39,7 +41,7 @@ export async function POST(request) {
         const image = await uploadShopImage({     file, 
                                                 vendor,
                                               uploadBy: data.userId,
-                                                folder: 'products' })
+                                                folder: 'logo' })
 
         if(!image) return NextResponse.json( { error: error }, { status: 400 } );
        return NextResponse.json( { success: true, data: image }, { status: 201 });
