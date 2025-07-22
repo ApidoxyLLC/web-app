@@ -31,6 +31,51 @@ const transactionFieldsSchema = new mongoose.Schema({
         lastTxUpdate: { type: Date },
 }, { _id: false, timestamps: false });
 
+const baseAppSchema = new mongoose.Schema({
+        appId: { type: String, required: true, index: true },
+      appSlug: { type: String, default: null},
+      appName: { type: String, required: true },
+      appIcon: { type: String, required: true },
+        email: { type: String, required: false, default: null },
+        phone: { type: String, required: false, default: null },
+      version: { type: String, default: null },
+       status: { type: String, default: 'pending', enum: ['active', 'inactive', 'pending', 'on-build', 'prepared'] },
+     language: { type: String, enum: ['en_US', 'bn_BD' ], default: 'en_US' },
+       appUrl: { type: String, required: false, default: null },  
+    contactUs: { type: String, default: null },
+     settings: appSettingsSchema,
+  socialLinks: [socialLinksSchema],
+     
+// extraPolicies: [extraPolicySchema], 
+  siteMap: { type: String, default: null },
+
+}, { timestamps: true });
+
+const buildInfoSchema = new mongoose.Schema({ 
+  buildNo:{ type:Number, default:0 },
+  versionName: { type: String },
+  buildTime: { type: String },
+  buildDuration: { type: String },
+  gitBranch: { type: String },
+  buildStatus:{ type:String, enum:['success', 'pending', 'queued', 'failed']}
+});
+
+const androidAppSchema = new mongoose.Schema({ 
+    ...baseAppSchema.obj,
+    packageName: { type: String, required: true },
+    buildInfo: [buildInfoSchema],
+    firebaseJSONData: String,
+    buildHistory: [{ 
+                    si_no: { type: String, required: true }, 
+                    version: { type: String, default: "" } 
+                    }]
+});
+
+const webAppSchema = new mongoose.Schema({
+  ...baseAppSchema.obj,
+  domain: { type: String, required: true }
+}); 
+
 const socialLinksSchema = new mongoose.Schema({
     platform: { type: String, enum: ['facebook', 'twitter', 'telegram', 'discord', 'whatsapp', 'instagram', 'linkedin', 'youtube', 'tiktok']  },
     link: { type: String },
@@ -57,6 +102,11 @@ const vendorSchema = new mongoose.Schema({
                       facebookDataFeed: { type: String, default: null },
                            transaction: { type: transactionFieldsSchema },
                               policies: { type: String, default: null },
+
+                            activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
+                                   web: { type: webAppSchema, default: null },
+                               android: { type: androidAppSchema, default: null },
+                                   ios: { type: iosAppSchema, default: null },
 }, { timestamps: true, collection: 'vendors' });
 
 // ───── Status Transitions ─────

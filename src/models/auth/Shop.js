@@ -44,7 +44,6 @@ const baseAppSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-
 const buildInfoSchema = new mongoose.Schema({ 
   buildNo:{ type:Number, default:0 },
   versionName: { type: String },
@@ -72,6 +71,7 @@ const webAppSchema = new mongoose.Schema({
 
 const iosAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
+  buildInfo: [buildInfoSchema],
   firebaseJSONData: String,
   bundleId: { type: String, required: true },  
 });
@@ -116,10 +116,11 @@ const shopSchema = new mongoose.Schema({
            location: { type: String, required: true },
   maxSessionAllowed: { type: Number, default: Number(process.env.END_USER_DEFAULT_MAX_SESSIONS || 5), select: false },
                slug: { type: String, default: null },
+               
          activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                 web: { type: webAppSchema, default: null },
             android: { type: androidAppSchema, default: null },
-                ios: { type: iosAppSchema, default: null },           
+                ios: { type: iosAppSchema, default: null },
              stuffs: { type: [stuffSchema], default: undefined },
         transaction: { type: transactionFieldsSchema },
            policies: { type: String, default: null },
