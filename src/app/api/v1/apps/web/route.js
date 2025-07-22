@@ -16,6 +16,8 @@ import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import config from "../../../../../../config";
 
 // CREATE APP
+// import id 
+// const shopId
 export async function POST(request) {
   let body;
   try { body = await request.json(); }
@@ -31,7 +33,17 @@ export async function POST(request) {
   if (!authenticated)
     return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
-  const vendor_db = await vendorDbConnect()
+  const vendor_db = await vendorDbConnect();
+  const Vendor = vendorModel(vendor_db);
+  const vendor = Vendor.findOne({ referenceId: shopId })
+
+  const payload = {
+                    title,
+                    image,
+                    metaDescription,
+                    metaTags: [],
+                    
+                  }
 
 
   // const auth_db = await authDbConnect()

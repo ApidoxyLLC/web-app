@@ -35,7 +35,7 @@ const domainSchema = new mongoose.Schema({
     referenceId: { type: String, default:()=>cuid(), select: true },
          domain: { type: String, required: true, unique: true, trim: true, lowercase: true, match: /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/ },
            shop: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
-       isActive: { type: Boolean },
+       isActive: { type: Boolean, default: true },
       createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false, default: undefined },
       createdAt: { type: Date, default: Date.now },
 //       isPrimary: { type: Boolean, default: false },

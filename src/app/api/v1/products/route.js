@@ -16,7 +16,6 @@ import { userModel } from '@/models/auth/User';
 import slugify from 'slugify';
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import securityHeaders from "../utils/securityHeaders";
-import config from "../../../../../config";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import config from "../../../../../config";
 
