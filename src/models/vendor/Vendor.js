@@ -54,7 +54,7 @@ const notificationSchema = new mongoose.Schema({
                email: { type: String,  default: null },
                phone: { type: String, default: null },
     preferredChannel: { type: String, enum: ['email', 'sms', 'whatsapp'], default: null },  
-    
+
   hourlyNotification: {       enabled: { type: Boolean, default: false },
                         intervalHours: { type: Number, default: 1, min: 1, max: 24 } },
 
@@ -149,6 +149,8 @@ const vendorSchema = new mongoose.Schema({
                       facebookDataFeed: { type: String, default: null },
                            transaction: { type: transactionFieldsSchema },
                               policies: { type: String, default: null },
+                               support: { type: contactNdSupportSchema, select: true },
+                          notification: { type: contactNdSupportSchema, select: true },
 
                             activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                                    web: { type: webAppSchema, default: null },
@@ -157,6 +159,9 @@ const vendorSchema = new mongoose.Schema({
 
                               metadata: { type: metadataSchema }
 }, { timestamps: true, collection: 'vendors' });
+
+// contactNdSupportSchema
+// notificationSchema
 
 // ───── Status Transitions ─────
 // const allowedStatusTransitions = {
