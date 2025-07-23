@@ -41,7 +41,7 @@ export async function POST(request) {
       if(!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
       // Verify user owns the vendor
-      if (vendor.userId.toString() !== data._id.toString())
+      if (vendor.ownerId.toString() !== data._id.toString())
           return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
 
       let image = null;

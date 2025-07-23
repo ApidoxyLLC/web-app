@@ -20,7 +20,7 @@ export async function POST(request) {
   catch { return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400, headers: securityHeaders });}
 
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
-  const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getShop' });
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createCategory' });
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
 
   const { authenticated, error, data } = await getAuthenticatedUser(request);
@@ -42,9 +42,8 @@ export async function POST(request) {
 
     if (!vendor) 
       return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
-    
 
-    if (data.userId.toString() != vendor.ownerId.toString())
+    if (!vendor.ownerId || data.userId.toString() !== vendor.ownerId.toString())
       return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
 
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
@@ -70,11 +69,11 @@ export async function POST(request) {
             const ShopImage = imageModel(shop_db);
             image = await new ShopImage({ ...imageData.toObject() }).save();
 
-              if (!image) 
-                  return NextResponse.json({ error: "Image not found" }, { status: 404 });
+            if (!image)
+                return NextResponse.json({ error: "Image not found" }, { status: 404 });
             const fileToDelete = await ImageModel.find({ bucketName: imageData.bucketName,
-                                                        folder: imageData.folder,
-                                                        _id: { $ne: imageData._id } // not equal
+                                                             folder: imageData.folder,
+                                                                _id: { $ne: imageData._id } // not equal
                                                       });
               (async () => {
                   try {
@@ -102,9 +101,9 @@ export async function POST(request) {
       if(!parent)
         return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
     }
-      if (parent && ((parent.level || 0) + 1) > MAX_CATEGORY_DEPTH) {
-        return NextResponse.json({ success: false, error: `Category depth exceeds maximum allowed (${MAX_CATEGORY_DEPTH})` }, { status: 422, headers: securityHeaders });
-      }
+    
+    if (parent && ((parent.level || 0) + 1) > MAX_CATEGORY_DEPTH) 
+      return NextResponse.json({ success: false, error: `Category depth exceeds maximum allowed (${MAX_CATEGORY_DEPTH})` }, { status: 422, headers: securityHeaders });
 
     const payload = {                      title: parsed.data.title,
                                             slug: parsed.data.slug,
@@ -112,9 +111,9 @@ export async function POST(request) {
     ...(image                   && {       image: {       _id: image._id, 
                                                     imageName: image.imageName}}),
     ...(parent                  && {      parent: parent._id, 
-                                      ancestors: [...(parent.ancestors || []), parent._id],
-                                          level: (parent.level || 0) + 1}),
-                                      createdBy: vendor.userId }
+                                       ancestors: [...(parent.ancestors || []), parent._id],
+                                           level: (parent.level || 0) + 1}),
+                                       createdBy: vendor.userId }
 
     const session = await shop_db.startSession();
     try {

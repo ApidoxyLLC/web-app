@@ -71,10 +71,15 @@ const scopeLimiters = {
       blockDuration: 60 * 10 // Block for 2 minutes if exceeded
     }),
 
-
+createCategory: new RateLimiterRedis({
+      storeClient: redis,
+      keyPrefix: 'rl:crt_cat',
+      points: 10000,           // Max 60 GET requests
+      duration: 60,         // per 60 seconds
+      blockDuration: 60 * 10 // Block for 2 minutes if exceeded
+    }),
 
 };
-
 
 
 export async function applyRateLimit({ key, scope = null }) {

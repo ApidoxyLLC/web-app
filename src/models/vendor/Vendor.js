@@ -43,14 +43,36 @@ const appSettingsSchema = new mongoose.Schema({
   notifications: { type: Boolean, default: true },
 }, { _id: false });
 
+const contactNdSupportSchema = new mongoose.Schema({
+  email: { type: String, required: false, default: null },
+  phone: { type: String, required: false, default: null },
+  whatsapp: { type: String, required: true },
+  
+}, { _id: false });
+
+const notificationSchema = new mongoose.Schema({
+               email: { type: String,  default: null },
+               phone: { type: String, default: null },
+    preferredChannel: { type: String, enum: ['email', 'sms', 'whatsapp'], default: null },  
+    
+  hourlyNotification: {       enabled: { type: Boolean, default: false },
+                        intervalHours: { type: Number, default: 1, min: 1, max: 24 } },
+
+  orderNotifications: {       enabled: { type: Boolean, default: false },
+                            frequency: { type: Number, default: 1, min: 1 }   },
+
+}, { _id: false });
+
+
+
 
 const baseAppSchema = new mongoose.Schema({
         appId: { type: String, required: true, index: true },
       appSlug: { type: String, default: null},
       appName: { type: String, required: true },
       appIcon: { type: String, required: true },
-        email: { type: String, required: false, default: null },
-        phone: { type: String, required: false, default: null },
+        // email: { type: String, required: false, default: null },
+        // phone: { type: String, required: false, default: null },
       version: { type: String, default: null },
        status: { type: String, default: 'pending', enum: ['active', 'inactive', 'pending', 'on-build', 'prepared'] },
      language: { type: String, enum: ['en_US', 'bn_BD' ], default: 'en_US' },
