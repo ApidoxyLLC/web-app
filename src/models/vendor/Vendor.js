@@ -139,6 +139,79 @@ const metadataSchema = new mongoose.Schema({
     // tags: { type: [{ name: String, content: String, property: String }] },
 }, { timestamps: false,  _id: false });
 
+const googleTagManagerSchema = new mongoose.Schema({
+      provider: { type: String }, 
+  tagManagerId: { type: [{ type:String, trim: true, lowercase: true } ]},
+}, { timestamps: false,  _id: false });
+
+const facebookPixelSchema = new mongoose.Schema({
+          provider: { type: String }, 
+           pixelId: { type: String },
+  pixelAccessToken: { type: String },
+       testEventId: { type: String },
+conversionApiToken: { type: String },
+       dataFeedUrl: { type: String },
+}, { timestamps: false,  _id: false });
+
+const smsProviderSchema = new mongoose.Schema({
+        provider: { type: String, enum: ['bulk-sms-bd', 'twilio', 'nexmo', 'msg91', 'banglalink'] },
+          apiKey: { type: String },
+        senderId: { type: String },
+        clientId: { type: String },
+    clientSecret: { type: String },
+          active: { type: Boolean, default: false }
+}, { timestamps: false,  _id: false });
+
+const emailProviderSchema = new mongoose.Schema({
+        provider: { type: String, enum: ['mailgun', 'sendgrid', 'smtp', 'ses'] },
+        smtpHost: { type: String },
+            port: { type: String },
+        username: { type: String },
+        password: { type: String },
+          active: { type: Boolean, default: false },
+}, { timestamps: false,  _id: false });
+
+const chatSupportSchema = new mongoose.Schema({
+    provider: { type: String, enum: ['facebook', 'whatsapp', 'intercom', 'tawk'] },
+        link: { type: String },
+      active: { type: Boolean, default: false },
+}, { timestamps: true });
+
+const marketingSchema = new mongoose.Schema({
+          sitemapUrl: { type: String },
+    googleTagManager: { type: googleTagManagerSchema },
+       facebookPixel: { type: facebookPixelSchema },
+        smsProviders: { type: smsProviderSchema },
+      emailProviders: { type: emailProviderSchema }
+}, { timestamps: true });
+
+
+// const integrationSchema = new mongoose.Schema({
+//   googleTagManagerId: { type: String },
+//   facebookPixelId: { type: String },
+//   pixelAccessToken: { type: String },
+//   pixelTestEventId: { type: String },
+//   facebookConversionApiToken: { type: String },
+//   sitemapUrl: { type: String },
+//   facebookDataFeedUrl: { type: String },
+//   // add more integrations as needed
+// }, { timestamps: true });
+
+// const smsSchema = new mongoose.Schema({
+//   apiKey: { type: String },
+//   senderId: { type: String },
+//   clientId: { type: String },
+//   clientSecret: { type: String },
+// }, { timestamps: true });
+
+// const emailSchema = new mongoose.Schema({
+//   SMTP: { type: String },
+//   port: { type: String },
+//   username: { type: String },
+//   password: { type: String },
+// }, { timestamps: true });
+
+
 
 
 
@@ -170,6 +243,8 @@ const vendorSchema = new mongoose.Schema({
                           notification: { type: notificationSchema, select: true },
                        deliveryPartner: { type: deliveryPartnerSchema, default: null },
                         paymentPartner: { type: paymentPartnerSchema, default: null },
+                           chatSupport: { type: chatSupportSchema, default: null },
+                             marketing: { type: marketingSchema, default: null },
                             activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                                    web: { type: webAppSchema, default: null },
                                android: { type: androidAppSchema, default: null },
