@@ -150,7 +150,7 @@ const vendorSchema = new mongoose.Schema({
                            transaction: { type: transactionFieldsSchema },
                               policies: { type: String, default: null },
                                support: { type: contactNdSupportSchema, select: true },
-                          notification: { type: contactNdSupportSchema, select: true },
+                          notification: { type: notificationSchema, select: true },
 
                             activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                                    web: { type: webAppSchema, default: null },
