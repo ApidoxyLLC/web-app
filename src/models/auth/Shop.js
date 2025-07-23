@@ -66,6 +66,8 @@ const androidAppSchema = new mongoose.Schema({
 
 const webAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
+    logo: { type: String },
+    title: { type: String },
   domain: { type: String, required: true }
 }); 
 
@@ -103,6 +105,18 @@ const stuffSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const metadataSchema = new mongoose.Schema({
+  description: { type: String }, 
+     keywords: { type: [{ type:String, trim: true, lowercase: true } ]},
+         tags: { type: [{ type:String, trim: true, lowercase: true } ]}
+    // tags: { type: [{ name: String, content: String, property: String }] },
+}, { timestamps: false,  _id: false });
+// const imageSchema = new mongoose.Schema({
+//   name:  { type: String, required: true },
+//     id:  { type: mongoose.Schema.Types.ObjectId, required: true },
+// folder
+// }, { _id: false })
+
 const shopSchema = new mongoose.Schema({
                 _id: { type: mongoose.Schema.Types.ObjectId, required: true },
         referenceId: { type: String, select: true },
@@ -110,6 +124,7 @@ const shopSchema = new mongoose.Schema({
   ownerLoginSession: { type: mongoose.Schema.Types.ObjectId },
               email: { type: String, trim: true },
               phone: { type: String, trim: true },
+               
             country: { type: String, required: true },
            industry: { type: String, required: true },
        businessName: { type: String, required: true },
@@ -124,6 +139,11 @@ const shopSchema = new mongoose.Schema({
              stuffs: { type: [stuffSchema], default: undefined },
         transaction: { type: transactionFieldsSchema },
            policies: { type: String, default: null },
+         activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
+                web: { type: webAppSchema, default: null },
+            android: { type: androidAppSchema, default: null },
+                ios: { type: iosAppSchema, default: null },
+           metadata: { type: metadataSchema }
 }, { timestamps: true, collection: 'shops' });
 
 export const shopModel = (db) => db.models.Shop || db.model('Shop', shopSchema);

@@ -65,7 +65,7 @@ export async function POST(request) {
     const referenceId = cuid();
     const txId = cuid();
     const dbName = `${config.vendorDbPrefix}_${_id}_db`
-    const bucketName = `${_id}`
+    const bucketName = `${referenceId}`
     const primaryDomain = _id.toString() + '.' + process.env.DEFAULT_SHOP_DOMAIN;
 
 

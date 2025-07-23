@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import config from '../config';
+import imageSchema from '../imageSchema';
 
 const dbInfoSchema = new mongoose.Schema({
     dbName: { type: String },
@@ -83,8 +84,11 @@ const androidAppSchema = new mongoose.Schema({
                     }]
 });
 
+
 const webAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
+   logo: { type: String },
+  title: { type: String },
   domain: { type: String, required: true }
 }); 
 const iosAppSchema = new mongoose.Schema({
@@ -94,7 +98,12 @@ const iosAppSchema = new mongoose.Schema({
   bundleId: { type: String, required: true },  
 });
 
-
+const metadataSchema = new mongoose.Schema({
+  description: { type: String }, 
+     keywords: { type: [{ type:String, trim: true, lowercase: true } ]},
+         tags: { type: [{ type:String, trim: true, lowercase: true } ]}
+    // tags: { type: [{ name: String, content: String, property: String }] },
+}, { timestamps: false,  _id: false });
 
 const vendorSchema = new mongoose.Schema({
                                    _id: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -106,6 +115,7 @@ const vendorSchema = new mongoose.Schema({
                               industry: { type: String, required: true },
                                  email: { type: String, trim: true },
                                  phone: { type: String, trim: true },
+                                  logo: { type: imageSchema },
                      maxSessionAllowed: { type: Number, default: () => config.defaultMaxSessions, select: false },
                                 dbInfo: { type: dbInfoSchema, default: null, select: false },
                             bucketInfo: { type: bucketInfoSchema, default: null, select: false },
@@ -122,6 +132,8 @@ const vendorSchema = new mongoose.Schema({
                                    web: { type: webAppSchema, default: null },
                                android: { type: androidAppSchema, default: null },
                                    ios: { type: iosAppSchema, default: null },
+
+                              metadata: { type: metadataSchema }
 }, { timestamps: true, collection: 'vendors' });
 
 // ───── Status Transitions ─────
