@@ -6,9 +6,9 @@ export const pathaoSchema = new mongoose.Schema({
     clientSecret: { type: String, required: true },
     username: { type: String, required: true },
     password: { type: String, required: true },
-}, { timestamps: true, id: false });
+}, { timestamps: true, _id: false });
 
-export const stretFastSchema = new mongoose.Schema({
+export const steadfastSchema = new mongoose.Schema({
     apiKey: { type: String, required: true },
     apiSecret: { type: String, required: true },
-}, { timestamps: true, id: false });
+}, { timestamps: true, _id: false  });

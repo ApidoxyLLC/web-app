@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 import config from '../config';
 import imageSchema from '../imageSchema';
+import { pathaoSchema, steadfastSchema } from './DeliveryPartner';
+import { bkashSchema } from './PaymentPartner';
+
 
 const dbInfoSchema = new mongoose.Schema({
     dbName: { type: String },
@@ -63,6 +66,14 @@ const notificationSchema = new mongoose.Schema({
 
 }, { _id: false });
 
+const deliveryPartnerSchema = new mongoose.Schema({
+  pathao: { type: pathaoSchema, default: undefined }, 
+  steadfast: { type: steadfastSchema, default: undefined }
+}, {  _id: false })
+
+const paymentPartnerSchema = new mongoose.Schema({
+  bkash: { type: bkashSchema, default: undefined }
+}, {  _id: false })
 
 
 
@@ -128,6 +139,11 @@ const metadataSchema = new mongoose.Schema({
     // tags: { type: [{ name: String, content: String, property: String }] },
 }, { timestamps: false,  _id: false });
 
+
+
+
+
+
 const vendorSchema = new mongoose.Schema({
                                    _id: { type: mongoose.Schema.Types.ObjectId, required: true },
                            referenceId: { type: String, required: true, unique: true },
@@ -152,12 +168,12 @@ const vendorSchema = new mongoose.Schema({
                               policies: { type: String, default: null },
                                support: { type: contactNdSupportSchema, select: true },
                           notification: { type: notificationSchema, select: true },
-
+                       deliveryPartner: { type: deliveryPartnerSchema, default: null },
+                        paymentPartner: { type: paymentPartnerSchema, default: null },
                             activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                                    web: { type: webAppSchema, default: null },
                                android: { type: androidAppSchema, default: null },
                                    ios: { type: iosAppSchema, default: null },
-
                               metadata: { type: metadataSchema }
 }, { timestamps: true, collection: 'vendors' });
 

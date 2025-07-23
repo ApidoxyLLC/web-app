@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import cuid from '@bugsnag/cuid';
+import { pathaoSchema, steadfastSchema } from '../vendor/DeliveryPartner';
+import { bkashSchema } from '../vendor/PaymentPartner';
 
 const socialLinksSchema = new mongoose.Schema({
     platform: { type: String, enum: ['facebook', 'twitter', 'telegram', 'discord', 'whatsapp', 'instagram', 'linkedin', 'youtube', 'tiktok']  },
@@ -124,6 +126,18 @@ const stuffSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const deliveryPartnerSchema = new mongoose.Schema({
+  pathao: { type: pathaoSchema, default: undefined }, 
+  steadfast: { type: steadfastSchema, default: undefined }
+})
+
+const paymentPartnerSchema = new mongoose.Schema({
+  bkash: { type: bkashSchema, default: undefined }
+}, {  _id: false })
+
+
+
+
 const metadataSchema = new mongoose.Schema({
   description: { type: String }, 
      keywords: { type: [{ type:String, trim: true, lowercase: true } ]},
@@ -160,6 +174,8 @@ const shopSchema = new mongoose.Schema({
            policies: { type: String, default: null },
             support: { type: contactNdSupportSchema, select: true },
        notification: { type: notificationSchema, select: true },
+    deliveryPartner: { type: deliveryPartnerSchema, default: null },
+     paymentPartner: { type: paymentPartnerSchema, default: null },
          activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                 web: { type: webAppSchema, default: null },
             android: { type: androidAppSchema, default: null },
