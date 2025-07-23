@@ -35,7 +35,7 @@ export async function POST(request) {
 
       // Find vendor with user check
       const vendor = await Vendor.findOne({ referenceId: parsed.data.shop })
-                                 .select("dbInfo bucketInfo secrets expirations primaryDomain domains userId")
+                                 .select("_id ownerId dbInfo bucketInfo secrets expirations primaryDomain domains userId")
                                  .lean();
 
       if(!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
