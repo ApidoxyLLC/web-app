@@ -112,7 +112,8 @@ const webAppSchema = new mongoose.Schema({
    logo: { type: String },
   title: { type: String },
   domain: { type: String, required: true }
-}); 
+});
+
 const iosAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
   buildInfo: [buildInfoSchema],
