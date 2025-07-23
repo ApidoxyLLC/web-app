@@ -84,6 +84,25 @@ const dbSchema = new mongoose.Schema({
       prefix: { type: String, default: 'shop_' }
 }, { timestamps: false });
 
+const contactNdSupportSchema = new mongoose.Schema({
+  email: { type: String, required: false, default: null },
+  phone: { type: String, required: false, default: null },
+  whatsapp: { type: String, required: true },
+  
+}, { _id: false });
+
+const notificationSchema = new mongoose.Schema({
+               email: { type: String,  default: null },
+               phone: { type: String, default: null },
+    preferredChannel: { type: String, enum: ['email', 'sms', 'whatsapp'], default: null },  
+
+  hourlyNotification: {       enabled: { type: Boolean, default: false },
+                        intervalHours: { type: Number, default: 1, min: 1, max: 24 } },
+
+  orderNotifications: {       enabled: { type: Boolean, default: false },
+                            frequency: { type: Number, default: 1, min: 1 }   },
+
+}, { _id: false });
 
 const transactionFieldsSchema = new mongoose.Schema({
                 txId: {  type: String, index: true, required: function() { return this.sagaStatus !== 'success' }},
@@ -139,6 +158,8 @@ const shopSchema = new mongoose.Schema({
              stuffs: { type: [stuffSchema], default: undefined },
         transaction: { type: transactionFieldsSchema },
            policies: { type: String, default: null },
+            support: { type: contactNdSupportSchema, select: true },
+       notification: { type: notificationSchema, select: true },
          activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                 web: { type: webAppSchema, default: null },
             android: { type: androidAppSchema, default: null },
