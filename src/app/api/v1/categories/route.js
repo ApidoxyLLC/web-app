@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import { categoryModel } from '@/models/shop/product/Category';
 import { categoryDTOSchema } from './categoryDTOSchema';
-import authDbConnect from '@/lib/mongodb/authDbConnect';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
 import securityHeaders from '../utils/securityHeaders';
-import { userModel } from '@/models/auth/User';
+import { imageModel } from '@/models/vendor/Image';
 import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
 import config from '../../../../../config';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
+import { deleteImageFile } from '@/services/image/blackblaze';
 
 const MAX_CATEGORY_DEPTH = parseInt(process.env.MAX_CATEGORY_DEPTH || '5', 10);
 
@@ -26,25 +26,7 @@ export async function POST(request) {
   const { authenticated, error, data } = await getAuthenticatedUser(request);
   if(!authenticated) 
       return NextResponse.json({ error: "...not authorized" }, { status: 401 });
-
-  // const authDb = await authDbConnect()
-  // const User = userModel(authDb);
-  // const user = await User.findOne({ referenceId: "cmcr5pq4r0000h4llwx91hmje" })
-  //                         .select('referenceId _id name email phone role isEmailVerified')
-  // const data = { sessionId: "686f81d0f3fc7099705e44d7",
-  //           userReferenceId: user?.referenceId,
-  //                   userId: user?._id,
-  //                     name: user?.name,
-  //                     email: user?.email,
-  //                     phone: user?.phone,
-  //                     role: user?.role,
-  //               isVerified: user?.isEmailVerified || user?.isPhoneVerified,
-  //                 // timezone: token.user?.timezone,
-  //                 //    theme: token.user?.theme,
-  //                 // language: token.user?.language,
-  //                 // currency: token.user?.currency   
-  //               }
-
+ 
   const parsed = categoryDTOSchema.safeParse(body);
   if (!parsed.success)
     return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
@@ -61,20 +43,58 @@ export async function POST(request) {
     if (!vendor) 
       return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
     
-    console.log(vendor)
-    console.log("ddddddddddddddddddddddddddddddd",data)
+
     if (data.userId.toString() != vendor.ownerId.toString())
       return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
 
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
                                     options: { secret: config.vendorDbUriEncryptionKey } });
-console.log(dbUri)
     const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
     const Category = categoryModel(shop_db);
 
     const slugExist = await Category.exists({ slug: inputSlug });
     if (slugExist)
       return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
+
+      // New attach
+    let image = null;
+    if(parsed.data.image){
+        // if (!parsed.data.imageId) 
+        //     return NextResponse.json({ error: "imageId is required when providing an image" }, { status: 400 });
+        const ImageModel = imageModel(vendor_db);
+        const imageData = await ImageModel.findOne({ fileName: parsed.data.image });
+        if (!imageData) 
+            return NextResponse.json({ error: "Image not found" }, { status: 404 });
+
+        try {
+            const ShopImage = imageModel(shop_db);
+            image = await new ShopImage({ ...imageData.toObject() }).save();
+
+              if (!image) 
+                  return NextResponse.json({ error: "Image not found" }, { status: 404 });
+            const fileToDelete = await ImageModel.find({ bucketName: imageData.bucketName,
+                                                        folder: imageData.folder,
+                                                        _id: { $ne: imageData._id } // not equal
+                                                      });
+              (async () => {
+                  try {
+                      await Promise.all([
+                      ...fileToDelete.map(item =>
+                          deleteImageFile({ fileName: item.fileName, fileId: item.fileId })
+                      ),
+                      ImageModel.deleteMany({
+                          bucketName: imageData.bucketName,
+                          folder: imageData.folder
+                      })
+                      ]);
+                  } catch (err) {
+                      console.error("Background deletion failed:", err);
+                  }
+              })();
+        } catch (error) {
+            return NextResponse.json({ error: "Image transfer error" }, { status: 400 });
+        }
+    }
 
     let parent = null 
     if(parsed?.data?.parent){
@@ -89,7 +109,8 @@ console.log(dbUri)
     const payload = {                      title: parsed.data.title,
                                             slug: parsed.data.slug,
     ...(parsed.data.description && { description: parsed.data.description}),
-    ...(parsed.data.image       && {       image: parsed.data.image}),
+    ...(image                   && {       image: {       _id: image._id, 
+                                                    imageName: image.imageName}}),
     ...(parent                  && {      parent: parent._id, 
                                       ancestors: [...(parent.ancestors || []), parent._id],
                                           level: (parent.level || 0) + 1}),

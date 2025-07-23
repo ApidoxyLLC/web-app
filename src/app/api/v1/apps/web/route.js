@@ -64,9 +64,9 @@ export async function POST(request) {
 
                 if (!image) 
                     return NextResponse.json({ error: "Image not found" }, { status: 404 });
-              const fileToDelete = await ImageModel.find({ bucketName: image.bucketName,
-                                                          folder: image.folder,
-                                                          _id: { $ne: image._id } // not equal
+              const fileToDelete = await ImageModel.find({ bucketName: imageData.bucketName,
+                                                          folder: imageData.folder,
+                                                          _id: { $ne: imageData._id } // not equal
                                                         });
                 (async () => {
                     try {
