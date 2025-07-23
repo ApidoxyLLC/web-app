@@ -43,7 +43,7 @@ export default function PicturePreviewInput({ width = 100, height = 100, label, 
             const file = acceptedFiles[0];
             if (file) {
               const imageUrl = URL.createObjectURL(file);
-              onChange(imageUrl);
+              onChange(file);
             }
           }}
           accept={{

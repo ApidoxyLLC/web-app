@@ -14,6 +14,16 @@ import {
 } from "@/components/ui/select";
 import RSPVInput from "@/components/rspv-input";
 
+import {
+  ControlGroup,
+  ControlGroupItem,
+} from "@/components/ui/control-group";
+import {
+  InputBase,
+  InputBaseAdornment,
+  InputBaseControl,
+  InputBaseInput,
+} from "@/components/ui/input-base";
 import * as SelectPrimitive from "@radix-ui/react-select";
 
 import { cn } from "@/lib/utils";
@@ -160,8 +170,8 @@ export default function DeliverySettings() {
   const [country, setCountry] = useState(markets.bd);
   return (
     <div className=" w-full mx-auto p-6 space-y-6 bg-muted/100">
-      <Card>
-        <CardContent className="flex justify-between gap-6 p-6 items-center">
+      <Card >
+        <CardContent className="flex justify-between gap-6 px-6 items-center">
           <Label className="text-md font-semibold">Select Country</Label>
           <Select
             onValueChange={(val) => {
@@ -193,15 +203,28 @@ export default function DeliverySettings() {
         </CardContent>
       </Card>
       <Card>
-        <CardContent className="space-y-4 p-6">
+        <CardContent className="space-y-4">
           <Label className="text-md font-semibold">
             Delivery Charge (Default)
           </Label>
-          <RSPVInput
-            label="Charge"
-            placeholder="Delivery charge"
-            hasError={false}
-          />
+          <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery charge"
+                      // onChange={(e) => setNewCategory(prev => ({
+                      //   ...prev,
+                      //   title: e.target.value,
+                      // }))}
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
 
           <div>
             <div className="flex items-center justify-between">
@@ -247,25 +270,45 @@ export default function DeliverySettings() {
           {deliveryOptions == "zones" && (
             <div className="flex flex-col gap-6">
               <div className="flex flex-col md:flex-row gap-6">
-                <RSPVInput
-                  label="Zones"
-                  placeholder="Delivery Zones"
-                  hasError={false}
-                  onChange={(e) =>
-                    setZoneInput({ ...zoneInput, name: e.target.value })
+                
+                <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Zones</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery Zones"
+                      onChange={(e) =>
+                      setZoneInput({ ...zoneInput, name: e.target.value })
                   }
-                />
-                <RSPVInput
-                  label="Charge"
-                  placeholder="Delivery Charge"
-                  hasError={false}
-                  onChange={(e) =>
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
+                
+                <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery charge"
+                     onChange={(e) =>
                     setZoneInput({
                       ...zoneInput,
                       charge: e.target.value,
                     })
                   }
-                />
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
                 <Button
                   onClick={() => setZonesList([...zonesList, zoneInput])}
                   variant="outline"
@@ -392,17 +435,27 @@ export default function DeliverySettings() {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <RSPVInput
-                  label="Charge"
-                  placeholder="Delivery Charge"
-                  hasError={false}
-                  onChange={(e) =>
+                
+                <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery charge"
+                     onChange={(e) =>
                     setDistrictInput({
                       ...districtInput,
                       charge: e.target.value,
                     })
                   }
-                />
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
                 <Button
                   onClick={() =>
                     setDistrictsList([...districtsList, districtInput])
@@ -507,14 +560,23 @@ export default function DeliverySettings() {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <RSPVInput
-                  label="Charge"
-                  placeholder="Delivery Charge"
-                  hasError={false}
-                  onChange={(e) =>
+                <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery charge"
+                    onChange={(e) =>
                     setUpazilaInput({ ...upazilaInput, charge: e.target.value })
                   }
-                />
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
                 <Button
                   onClick={() => {
                     setUpazilasList([...upazilasList, upazilaInput]);

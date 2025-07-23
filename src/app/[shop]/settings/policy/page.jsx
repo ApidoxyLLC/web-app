@@ -48,7 +48,7 @@ export default function ShopUpdatePage() {
       }),
     ],
     content: "<h2 class='tiptap-heading'>Hello world 🌍</h2>",
-    immediatelyRender: false, // ✅ This solves the SSR hydration issue
+    immediatelyRender: false,
 
   });
 
@@ -69,7 +69,7 @@ export default function ShopUpdatePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          policies:plainText, // assuming `patchShopSchema` accepts content
+          policies:plainText, 
         }),
       });
 
@@ -78,7 +78,6 @@ export default function ShopUpdatePage() {
       if (!res.ok) throw new Error(data.error || "Something went wrong");
 
       alert("Shop updated successfully!");
-      // router.push("/dashboard"); // or any redirect
     } catch (err) {
       setError(err.message || "Error updating shop");
     } finally {
