@@ -32,7 +32,6 @@ import useFetch from "@/hooks/useFetch";
 export function ProjectsCard() {
   const router = useRouter()
   const userData = useSession()
-  const [shops,setShops] = useState([])
   useEffect(() => {
     if (userData.status === "authenticated" && userData.data?.user) {
         router.push("http://localhost:3000/");
@@ -53,8 +52,20 @@ export function ProjectsCard() {
   //     console.log(err)
   //   }
   // },[])
-    const { data } = useFetch("shops")
-  console.log(data)
+    const { data, loading } = useFetch("/shops")
+  // console.log(data)
+  if (loading) {
+  return (
+    <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 gap-6 px-4 py-6 lg:px-6">
+      {[...Array(3)].map((_, idx) => (
+        <div
+          key={idx}
+          className="h-[150px] animate-pulse rounded-xl bg-muted/50 dark:bg-muted"
+        />
+      ))}
+    </div>
+  );
+}
   return (
     <div>
       <div className="flex flex-row items-center justify-between px-6 py-4 gap-4 border-b bg-white dark:bg-background">
@@ -121,7 +132,7 @@ export function ProjectsCard() {
       </div>
       <div className="*:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-3 grid grid-cols-1 gap-6 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card lg:px-6 py-6">
         
-         {shops?.map((shop)=>(
+         {data?.data?.map((shop)=> (
           <Link key={shop?.businessName} href={`${shop?.id}/dashboard`}>
             <Card className="@container/card cursor-pointer">
             <CardHeader className="relative">

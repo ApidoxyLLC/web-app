@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/input-base";
 import { Textarea } from './ui/textarea';
 import { useParams } from 'next/navigation';
+import PicturePreviewInput from './picture-preview-input';
+import useFetch from '@/hooks/useFetch';
 
 export default function Categories() {
   const [collections, setCollections] = useState([]);
@@ -38,11 +40,12 @@ export default function Categories() {
     title: "",
     slug: "",
     description: "",
-    image: undefined,
+    image: "",
   });
+  const [pic, setPic] = useState("")
   const params = useParams()
 
-
+  console.log(pic)
   const shopId = params.shop
   const checkSlug = async () => {
     if (!newCategory.slug) return;
@@ -80,7 +83,31 @@ export default function Categories() {
     };
     deleteRecursive(id);
   };
+const uploadImage = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("shop", shopId);
 
+  const res = await fetch("http://localhost:3000/api/v1/upload-image", {
+    method: "POST",
+    body: formData,
+  });
+  console.log(res)
+
+  const data = await res.json();
+  console.log(data)
+  setPic(data?.data?.fileName)
+  if (!data.success) {
+    throw new Error(data.error || "Image upload failed");
+  }
+  
+  return data?.data?.fileName
+;
+   // return uploaded image URL
+};
+
+  const  { data } = useFetch(`/image/${shopId}/${pic}`)
+  console.log(data)
   const buildTree = (items, parentId = null, visited = new Set()) =>
   items
     .filter((item) => item.parent === parentId)
@@ -161,13 +188,27 @@ export default function Categories() {
           </div>
 
           <div className="grid gap-6 p-6">
-            {/* <PicturePreviewInput
+            <PicturePreviewInput
               width={120}
               height={120}
               label="Upload Category Image"
-              picture={newCategory.image}
-              onChange={(url) => setNewCategory(prev => ({ ...prev, image: url }))}
-            /> */}
+              picture={newCategory?.image}
+              onChange={async (file) => {
+    if (file instanceof File) {
+      try {
+        const uploadedUrl = await uploadImage(file);
+        console.log(uploadedUrl)
+        setNewCategory(prev => ({ ...prev, image: uploadedUrl }));
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Image upload failed");
+      }
+    }else{
+      console.log("nonono")
+    }
+}}
+
+            />
 
             <ControlGroup className="w-full">
               <ControlGroupItem>

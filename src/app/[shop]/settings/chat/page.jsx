@@ -44,7 +44,8 @@ export default function Dashboard() {
           </div>
           <div>
             {selected === "facebook" && (
-              <ControlGroup>
+              <ControlGroup className="h-10">
+
                 <ControlGroupItem className="shadow-none">
                   <InputBase>
                     <InputBaseAdornment className="text-xs w-[100px]">
@@ -66,7 +67,7 @@ export default function Dashboard() {
               </ControlGroup>
             )}
             {selected === "whatsapp" && (
-              <ControlGroup>
+              <ControlGroup className="h-10">
                 <ControlGroupItem className="shadow-none">
                   <InputBase>
                     <InputBaseAdornment className="text-xs w-[105px]">

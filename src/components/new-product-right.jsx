@@ -12,7 +12,6 @@ import {
   InputBaseInput,
 } from "@/components/ui/input-base";
 import { TagInput } from 'emblor';
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -28,7 +27,7 @@ import { Button } from "./ui/button";
 
 export default function NewProductRight() {
   const [tags, setTag] = useState([]);
-  const [activeTagIndex, setActiveTagIndex] = useState(null);
+  const [activeTagIndexx, setActiveTagIndexx] = useState(null);
   return (
    <div className="flex-1 flex flex-col gap-4">
       <Card>
@@ -38,7 +37,7 @@ export default function NewProductRight() {
         <CardContent className="flex flex-col gap-4">
           <Select defaultValue="active">
             <SelectTrigger className="w-full flex-1">
-                <SelectValue placeholder="Select a status" />
+                <SelectValue placeholder="Select a status"/>
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>
@@ -89,8 +88,8 @@ export default function NewProductRight() {
             setTags={(newTags) => {
                 setTag(newTags);
             }}
-            activeTagIndex={activeTagIndex}
-            setActiveTagIndex={setActiveTagIndex}
+            activeTagIndexx={activeTagIndexx}
+            setActiveTagIndexx={setActiveTagIndexx}
         />
         </CardContent>
       </Card>

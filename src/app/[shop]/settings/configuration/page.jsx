@@ -126,7 +126,6 @@ export default function StoreSettings() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              {/* Email */}
               <ControlGroup>
                 <ControlGroupItem className="shadow-none h-10">
                   <InputBase>
@@ -146,7 +145,6 @@ export default function StoreSettings() {
                 </ControlGroupItem>
               </ControlGroup>
 
-              {/* Phone */}
               <div>
                 <ControlGroup>
                   <ControlGroupItem className="shadow-none h-10">
@@ -193,7 +191,6 @@ export default function StoreSettings() {
                 </SelectContent>
               </Select>
 
-              {/* Address */}
               <ControlGroup>
                 <ControlGroupItem className="shadow-none h-10">
                   <InputBase>
