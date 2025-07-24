@@ -9,7 +9,7 @@ import socialLinksDTOSchema from "./socialLinkDTOSchema";
 
 
 
-export async function POST(request, { params }) {
+export async function POST(request) {
       // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
@@ -39,47 +39,46 @@ export async function POST(request, { params }) {
               const Vendor = vendorModel(vendor_db);
 
               // const pipeline = getSocialLinksUpdatePipeline(updatesArray);
-              const pipeline = [  {
-                                    $set: {
-                                      socialLinks: {
-                                        $let: {
-                                          vars: {
-                                            existingMap: {
-                                              $arrayToObject: {
-                                                $map: {
-                                                  input: "$socialLinks",
-                                                  as: "item",
-                                                  in: ["$$item.platform", "$$item.link"]
-                                                }
+              const pipeline = [{ $set: {
+                                    socialLinks: {
+                                      $filter: {
+                                        input: {
+                                          $map: {
+                                            input: {
+                                              $objectToArray: {
+                                                $mergeObjects: [
+                                                  {
+                                                    $arrayToObject: {
+                                                      $map: {
+                                                        input: "$socialLinks",
+                                                        as: "item",
+                                                        in: ["$$item.platform", "$$item.link"]
+                                                      }
+                                                    }
+                                                  },
+                                                  {
+                                                    $literal: Object.fromEntries(
+                                                      updatesArray.map(({ platform, link }) => [platform, link])
+                                                    )
+                                                  }
+                                                ]
                                               }
                                             },
-                                            updatesMap: {
-                                              $arrayToObject: {
-                                                $literal: updatesArray.map(({ platform, link }) => [platform, link])
-                                              }
-                                            }
-                                          },
-                                          in: {
-                                            $map: {
-                                              input: {
-                                                $objectToArray: {
-                                                  $mergeObjects: ["$$existingMap", "$$updatesMap"]
-                                                }
-                                              },
-                                              as: "item",
-                                              in: {
-                                                platform: "$$item.k",
-                                                link: "$$item.v"
-                                              }
+                                            as: "item",
+                                            in: {
+                                              platform: "$$item.k",
+                                              link: "$$item.v"
                                             }
                                           }
-                                        }
+                                        },
+                                        as: "item",
+                                        cond: { $ne: ["$$item.link", ""] } // Filter out links with empty string
                                       }
                                     }
                                   }
-                                ];
-              const [updatedVendor, updatedShop] = await Promise.All([ Vendor.updateOne({ referenceId }, pipeline), 
-                                                                         Shop.updateOne({ referenceId }, pipeline)])
+                                }];
+              const [updatedVendor, updatedShop] = await Promise.all([ Vendor.updateOne({ referenceId, ownerId: data.userId }, pipeline), 
+                                                                         Shop.updateOne({ referenceId, ownerId: data.userId }, pipeline)])
 
               if (updatedVendor.modifiedCount === 0 && updatedShop.modifiedCount === 0) 
                   return NextResponse.json({ success: false, message: "No changes were made to social links" }, { status: 200 });
