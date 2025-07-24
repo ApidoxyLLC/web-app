@@ -82,6 +82,12 @@ const shopPatchSchema = z.object({
   socialLinks: z.array(socialLinkSchema).optional(),
   facebookDataFeed: z.string().nullable().optional(),
   policies: z.string().optional(),
+  support: z.object({}).optional(),
+  notification: z.object({}).optional(),
+  deliveryPartner: z.object({}).optional(),
+  paymentPartner: z.object({}).optional(),
+  chatSupport: z.array({}).optional(),
+  marketing: z.object({}).optional()
 }).partial();
 
 

@@ -4,7 +4,6 @@ import imageSchema from '../imageSchema';
 import { pathaoSchema, steadfastSchema } from './DeliveryPartner';
 import { bkashSchema } from './PaymentPartner';
 
-
 const dbInfoSchema = new mongoose.Schema({
     dbName: { type: String },
      dbUri: { type: String },
@@ -38,20 +37,20 @@ const transactionFieldsSchema = new mongoose.Schema({
 const socialLinksSchema = new mongoose.Schema({
     platform: { type: String, enum: ['facebook', 'twitter', 'telegram', 'discord', 'whatsapp', 'instagram', 'linkedin', 'youtube', 'tiktok']  },
     link: { type: String },
-}, { _id: false });
+}, { _id: false, timestamps: false });
 
 const appSettingsSchema = new mongoose.Schema({
   templates: { type: String, enum: ['desiree', 'stylo'], default: 'desiree' },
   color: { type: String, required: true },
   notifications: { type: Boolean, default: true },
-}, { _id: false });
+}, { _id: false, timestamps: false });
 
 const contactNdSupportSchema = new mongoose.Schema({
   email: { type: String, required: false, default: null },
   phone: { type: String, required: false, default: null },
   whatsapp: { type: String, required: true },
   
-}, { _id: false });
+}, { _id: false, timestamps: false });
 
 const notificationSchema = new mongoose.Schema({
                email: { type: String,  default: null },
@@ -64,18 +63,16 @@ const notificationSchema = new mongoose.Schema({
   orderNotifications: {       enabled: { type: Boolean, default: false },
                             frequency: { type: Number, default: 1, min: 1 }   },
 
-}, { _id: false });
+}, { _id: false, timestamps: false });
 
 const deliveryPartnerSchema = new mongoose.Schema({
      pathao: { type: pathaoSchema, default: undefined }, 
   steadfast: { type: steadfastSchema, default: undefined }
-}, {  _id: false, timestamps: false })
+}, { timestamps: false, _id: false })
 
 const paymentPartnerSchema = new mongoose.Schema({
   bkash: { type: bkashSchema, default: undefined }
-}, {  _id: false })
-
-
+}, { timestamps: facebookPixelSchema, _id: false })
 
 const baseAppSchema = new mongoose.Schema({
         appId: { type: String, required: true, index: true },
@@ -95,7 +92,7 @@ const baseAppSchema = new mongoose.Schema({
 // extraPolicies: [extraPolicySchema], 
   siteMap: { type: String, default: null },
 
-}, { timestamps: true });
+}, { timestamps: true, _id: false });
 
 const buildInfoSchema = new mongoose.Schema({ 
   buildNo:{ type:Number, default:0 },
@@ -104,7 +101,7 @@ const buildInfoSchema = new mongoose.Schema({
   buildDuration: { type: String },
   gitBranch: { type: String },
   buildStatus:{ type:String, enum:['success', 'pending', 'queued', 'failed']}
-});
+}, { timestamps: false,  _id: false });
 
 const androidAppSchema = new mongoose.Schema({ 
     ...baseAppSchema.obj,
@@ -115,22 +112,21 @@ const androidAppSchema = new mongoose.Schema({
                     si_no: { type: String, required: true }, 
                     version: { type: String, default: "" } 
                     }]
-});
-
+}, { timestamps: false,  _id: false });
 
 const webAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
    logo: { type: String },
   title: { type: String },
   domain: { type: String, required: true }
-});
+}, { timestamps: false,  _id: false });
 
 const iosAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
   buildInfo: [buildInfoSchema],
   firebaseJSONData: String,
   bundleId: { type: String, required: true },  
-});
+}, { timestamps: false,  _id: false });
 
 const metadataSchema = new mongoose.Schema({
   description: { type: String }, 
@@ -175,7 +171,7 @@ const chatSupportSchema = new mongoose.Schema({
     provider: { type: String, enum: ['facebook', 'whatsapp', 'intercom', 'tawk'] },
         link: { type: String },
       active: { type: Boolean, default: false },
-}, { timestamps: true });
+}, { timestamps: true, _id: false  });
 
 const marketingSchema = new mongoose.Schema({
           sitemapUrl: { type: String },
@@ -183,7 +179,7 @@ const marketingSchema = new mongoose.Schema({
        facebookPixel: { type: facebookPixelSchema },
         smsProviders: { type: smsProviderSchema },
       emailProviders: { type: emailProviderSchema }
-}, { timestamps: true });
+}, { timestamps: true, _id: false  });
 
 const stuffSchema = new mongoose.Schema(
   {      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -195,7 +191,7 @@ const stuffSchema = new mongoose.Schema(
           notes: [{    date: { type: Date, default: Date.now },
                      author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
                     content: String }],
-},{ timestamps: true });
+},{ timestamps: true, _id: false  });
 
 
 // const integrationSchema = new mongoose.Schema({
