@@ -39,8 +39,7 @@ export async function PATCH(request, { params }) {
               const Vendor = vendorModel(vendor_db);
 
               // const pipeline = getSocialLinksUpdatePipeline(updatesArray);
-              const pipeline = [
-                                  {
+              const pipeline = [  {
                                     $set: {
                                       socialLinks: {
                                         $let: {
