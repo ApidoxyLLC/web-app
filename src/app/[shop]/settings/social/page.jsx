@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/input-base";
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 export default function BusinessInfoForm() {
   
-  const params = useParams()
-  const slug = params.shop
+  const {shop} = useParams()
   const socialLinks = [
     { name: "facebook", label: "Facebook", placeholder: "https://facebook.com/your-page" },
     { name: "telegram", label: "Telegram", placeholder: "https://t.me/your-channel" },
@@ -27,10 +27,7 @@ export default function BusinessInfoForm() {
       label: "Instagram",
       placeholder: "https://www.instagram.com/your-handle",
     },
-    // { name: "amazon", label: "Amazon", placeholder: "https://www.amazon.com/your-storefront" },
     { name: "tiktok", label: "TikTok", placeholder: "https://www.tiktok.com/@your-profile" },
-    // { name: "walmart", label: "Walmart", placeholder: "https://www.walmart.com/your-store" },
-    // { name: "daraz", label: "Daraz", placeholder: "https://www.daraz.com/your-shop" },
   ];
   const [formData, setFormData] = useState({
     facebook:"",
@@ -42,9 +39,9 @@ export default function BusinessInfoForm() {
     discord:"",
     instagram:"",
     tiktok:"",
-    // walmart:"",
-    // daraz:"",
   })
+
+  
   const handleChange =(name,value)=>{
     setFormData((prev)=>({
       ...prev,
@@ -54,28 +51,30 @@ export default function BusinessInfoForm() {
 
   const handleSubmit = async ()=>{
     try{
+       const cleanedSocialLinks = Object.fromEntries(
+      Object.entries(formData).filter(
+        ([_, value]) => value && value.startsWith("http")
+      )
+    );
 
-      const socialLinksArray = Object.entries(formData)
-      .filter(([_, value]) => value.trim() !== "")
-      .map(([key, value]) => ({
-        platform: key,
-        link: value.trim(),
-      }));
-      console.log({socialLinksArray})
-      const res = await fetch(`/api/v1/shops/${slug}`,{
-        method:"PATCH",
+    const finalData = {
+      shop,
+      ...cleanedSocialLinks,
+    };
+      const res = await fetch(`/api/v1/social-links`,{
+        method:"POST",
         headers:{
           "Content-type":"application/json"
         },
-        body: JSON.stringify({ socialLinksArray })
+        body: JSON.stringify( finalData )
       })
       
       const data = await res.json();
       if (res.ok) {
-        alert("Shop updated successfully!");
+        toast.success("Shop updated successfully!");
       } else {
         console.error(data,res);
-        alert(data.error || "Update failed");
+        toast.error(data.error || "Update failed");
       }
 
     }catch(err){
