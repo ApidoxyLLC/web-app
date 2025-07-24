@@ -67,9 +67,9 @@ const notificationSchema = new mongoose.Schema({
 }, { _id: false });
 
 const deliveryPartnerSchema = new mongoose.Schema({
-  pathao: { type: pathaoSchema, default: undefined }, 
+     pathao: { type: pathaoSchema, default: undefined }, 
   steadfast: { type: steadfastSchema, default: undefined }
-}, {  _id: false })
+}, {  _id: false, timestamps: false })
 
 const paymentPartnerSchema = new mongoose.Schema({
   bkash: { type: bkashSchema, default: undefined }
@@ -189,7 +189,7 @@ const stuffSchema = new mongoose.Schema(
   {      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     designation: { type: String, enum: [ 'store_manager', 'assistant_manager', 'cashier', 'sales_associate', 'inventory_clerk', 'security', 'janitor', 'other' ], required: true },
          status: { type: String, enum: ['active', 'terminated', 'on_leave', 'resigned'], default: 'active' },
-     permission: { type: [String], enum: ['r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
+     permission: { type: [String], enum: ['r:delivery-partner', 'w:delivery-partner', 'r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
       startDate: { type: Date, required: true,},
         endDate: { type: Date },
           notes: [{    date: { type: Date, default: Date.now },

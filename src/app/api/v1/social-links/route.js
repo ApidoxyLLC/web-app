@@ -8,8 +8,6 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import socialLinksDTOSchema from "./socialLinkDTOSchema";
 import mongoose from "mongoose";
 
-
-
 export async function POST(request) {
     // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
@@ -29,7 +27,7 @@ export async function POST(request) {
             return NextResponse.json( { error: authError || "Not authorized" }, { status: 401 } );    
 
         try {
-              const { shop: referenceId, ...socialLinks } = parsed.data;
+              const { shop: referenceId, partner, ...socialLinks } = parsed.data;
               const updatesArray = Object.entries(socialLinks)
                                         .map(([platform, link]) => ({ platform, link }));
 
@@ -86,7 +84,7 @@ export async function POST(request) {
                                                                                                 $elemMatch: {
                                                                                                   userId: new mongoose.Types.ObjectId(data.userId),
                                                                                                   status: "active",
-                                                                                                  permission: { $in: ["r:social-link", "r:shop"] },
+                                                                                                  permission: { $in: ["w:social-link", "w:shop"] },
                                                                                                 },
                                                                                               },
                                                                                             },
@@ -98,7 +96,7 @@ export async function POST(request) {
                                                                                                 $elemMatch: {
                                                                                                   userId: new mongoose.Types.ObjectId(data.userId),
                                                                                                   status: "active",
-                                                                                                  permission: { $in: ["r:social-link", "r:shop"] },
+                                                                                                  permission: { $in: ["w:social-link", "w:shop"] },
                                                                                                 },
                                                                                               },
                                                                                             },
