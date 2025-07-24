@@ -41,19 +41,7 @@ export function ProjectsCard() {
     
   }, [userData, userData.status, router]);
   
-  // useEffect(()=>{
-  //   try{
-  //     const res = fetch("http://localhost:3000/api/v1/shops/")
-  //     .then(res => res.json())
-  //     .then(data => {
-  //       setShops(data.data)
-  //     })
-  //   }catch(err){
-  //     console.log(err)
-  //   }
-  // },[])
-    const { data, loading } = useFetch("/shops")
-  // console.log(data)
+  const { data, loading } = useFetch("/shops")
   if (loading) {
   return (
     <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 gap-6 px-4 py-6 lg:px-6">

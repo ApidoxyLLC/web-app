@@ -7,6 +7,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 
 export default function Website() {
   const {shop} = useParams()
@@ -35,10 +36,11 @@ export default function Website() {
     })
     console.log(res)
     if(res.ok){
-      alert("okkkkkkkkkk")
+      toast.success("Website info saved and deployment started!");
     }
     }catch(err){
       console.log(err)
+      toast.error("Something went wrong while submitting. Please try again.");
     }
 
   }
