@@ -32,6 +32,8 @@ import { Trash2 } from "lucide-react";
 import pathao from "../../../../../public/images/pathao.png";
 import steadfast from "../../../../../public/images/steadfast.png";
 import Image from "next/image";
+import { useParams } from "next/navigation";
+import { toast } from "sonner";
 const markets = {
   bd: {
     name: "Bangladesh",
@@ -98,7 +100,7 @@ const markets = {
         fields: [
           {
             name: "Client ID",
-            key: "client-id",
+            key: "clientId",
             required: true,
             regex: "",
             type: "text",
@@ -106,7 +108,7 @@ const markets = {
           },
           {
             name: "Client Secret",
-            key: "client-secret",
+            key: "clientSecret",
             type: "password",
             required: true,
             regex: "",
@@ -137,7 +139,7 @@ const markets = {
         fields: [
           {
             name: "API Key",
-            key: "api-key",
+            key: "apiKey",
             required: true,
             regex: "",
             type: "text",
@@ -145,7 +147,7 @@ const markets = {
           },
           {
             name: "API Secret",
-            key: "api-secret",
+            key: "apiSecret",
             required: true,
             regex: "",
             type: "password",
@@ -168,6 +170,42 @@ export default function DeliverySettings() {
   const [upazilaInput, setUpazilaInput] = useState({ name: "", charge: "" });
   const [upazilasList, setUpazilasList] = useState([]);
   const [country, setCountry] = useState(markets.bd);
+  const [courierForm, setCourierForm] = useState({}); // Example: "Pathao" or "Steadfast"
+  const {shop}=useParams()
+
+
+  const handleCourierSubmit = async () => {
+
+  const payload = {
+    partner: selectedCourier?.toLowerCase(),
+    shop: shop,
+    ...courierForm
+  };
+  console.log(payload)
+
+  try {
+    const res = await fetch(`/api/v1/delivery-partner`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await res.json();
+
+    if (res.ok) {
+      toast.success("Courier credentials updated!");
+      setCourierForm({});
+    } else {
+      toast.error(result?.error || "Failed to update");
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("An error occurred.");
+  }
+};
+
   return (
     <div className=" w-full mx-auto p-6 space-y-6 bg-muted/100">
       <Card >
@@ -654,18 +692,34 @@ export default function DeliverySettings() {
               selectedCourier === courier.name && (
                 <div key={courier.shortCode} className="space-y-6">
                   {courier.fields.map((field) => (
-                    <RSPVInput
-                      key={field.name}
-                      label={field.name}
-                      placeholder={`Enter ${field.name}`}
-                      hasError={false}
-                      type={field.type}
-                      required={field.required}
-                    />
+                    <ControlGroup className="w-full h-10" key={field.name}>
+                      <ControlGroupItem>
+                        <InputBase><InputBaseAdornment>{field.name}</InputBaseAdornment></InputBase>
+                      </ControlGroupItem>
+                      <ControlGroupItem className="flex-1">
+                        <InputBase>
+                          <InputBaseControl>
+                            <InputBaseInput
+                              type={field.type}
+                              required={field.required}
+                              placeholder={`Enter ${field.name}`}
+                              onChange={(e) =>
+                                setCourierForm((prev) => ({
+                                  ...prev,
+                                  [field.key]: e.target.value,
+                              }))}
+                            />
+                         </InputBaseControl>
+                        </InputBase>
+                      </ControlGroupItem>
+                    </ControlGroup>
                   ))}
-                  <Button variant="outline">
+                  <div  className="flex justify-end">
+                    <Button onClick={handleCourierSubmit}>
                     Add <span className="text-xl">+</span>
                   </Button>
+                  </div>
+                
                 </div>
               )
           )}

@@ -37,7 +37,7 @@ export default function Dashboard() {
     <div className="bg-muted/100 h-full p-6 grid grid-cols-3 gap-6">
       <div className="col-span-2 flex flex-col gap-6">
         <Card>
-          <CardContent className="py-6">
+          <CardContent className="">
             <p className="text-md font-semibold pb-2">Notify Me For</p>
             <RadioGroup defaultValue="order">
               <div className="flex items-center space-x-2">
@@ -76,7 +76,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="py-6">
+          <CardContent className="">
             <p className="text-md font-semibold pb-2">Notify With Me</p>
             <RadioGroup defaultValue="email" onValueChange={setNotifyMethod}>
               <div className="flex items-center space-x-2">
@@ -97,7 +97,7 @@ export default function Dashboard() {
       </div>
       <div>
         <Card>
-          <CardContent className="col-span-1 pt-6 flex gap-3 items-end">
+          <CardContent className="col-span-1  flex gap-3 items-end">
             {notifyMethod === "email" && (
               <div className="space-y-2">
                 <h3 className="text-md font-semibold">Email</h3>

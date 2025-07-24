@@ -173,6 +173,7 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ success: true, message: "Shop updated successfully" });
 
   } catch (error) {
+    console.log(error)
     return NextResponse.json({
       error: error.message || "Failed to update shop",
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined

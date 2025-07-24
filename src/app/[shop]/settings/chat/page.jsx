@@ -8,11 +8,45 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 
 export default function Dashboard() {
+  const {shop} =useParams()
   const [selected, setSelected] = useState("facebook");
-  // const
+  const [formData, setFormData] = useState({
+    facebookLink : "",
+    whatsappLink : ""
+  })
+  const mainData = {
+    selected,
+    link: formData,
+    active: true
+  }
+  const handleSubmit =async () =>{
+    try {
+      const res = await fetch(`/api/v1/shops/${shop}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(mainData),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Shop updated successfully!");
+        setFormData({})
+      } else {
+        console.error(data);
+        alert(data.error || "Update failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    }
+  }
   return (
     <div
       className="bg-muted/100 p-6 h-full
@@ -60,6 +94,11 @@ export default function Dashboard() {
                         type="url"
                         placeholder="https://facebook.com/your-page"
                         required
+                        onChange={(e)=>{
+                          setFormData((prev) =>({
+                            ...prev,facebookLink: e.target.value
+                          }))
+                        }}
                       />
                     </InputBaseControl>
                   </InputBase>
@@ -82,6 +121,11 @@ export default function Dashboard() {
                         placeholder={`https://wa.me/8801XXXXXXXXX`}
                         type="number"
                         required
+                         onChange={(e)=>{
+                          setFormData((prev) =>({
+                            ...prev,whatsappLink: e.target.value
+                          }))
+                        }}
                       />
                     </InputBaseControl>
                   </InputBase>
@@ -89,8 +133,8 @@ export default function Dashboard() {
               </ControlGroup>
             )}
           </div>
-          <div>
-            <Button className="mt-4 w-full" variant="outline">
+          <div className="flex justify-end">
+            <Button onClick={handleSubmit}>
               Update Chat Support Info. <span className="text-xl"></span>
             </Button>
           </div>
