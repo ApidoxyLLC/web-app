@@ -1,21 +1,19 @@
-import { z } from "zod";
+const { z } = require("zod");  // For CommonJS (Node.js)
+// OR: import { z } from "zod";  // For ES Modules
 
-// Allowed social platform names
 const socialKeys = [
-                    "facebook",
-                    "linkedin",
-                    "youtube",
-                    "twitter",
-                    "tiktok",
-                    "telegram",
-                    "whatsApp",
-                    "discord",
-                    "instagram",
-                   ];
+  "facebook",
+  "linkedin",
+  "youtube",
+  "twitter",
+  "tiktok",
+  "telegram",
+  "whatsApp",
+  "discord",
+  "instagram",
+];
 
-const socialKeyEnum = z.enum(socialKeys);
-
-// Accept either empty string or a valid URL
+// Schema for a single social link (empty string or valid URL)
 const socialLinkValueSchema = z
   .string()
   .refine(
@@ -28,15 +26,15 @@ const socialLinksDTOSchema = z
   .object({
     shop: z.string().min(1, { message: "Shop is required" }),
   })
-  .merge(
-    z.record(socialKeyEnum, socialLinkValueSchema.optional())
+  .extend(  // `.merge()` also works, but `.extend()` is more explicit
+    Object.fromEntries(
+      socialKeys.map((key) => [key, socialLinkValueSchema.optional()])
+    )
   )
   .refine(
-    (data) =>
-      socialKeys.some((key) => typeof data[key] === "string" && data[key] !== ""),
+    (data) => socialKeys.some((key) => data[key] && data[key] !== ""),
     {
       message: "At least one social link must be provided",
-      path: [""],
     }
   );
 
