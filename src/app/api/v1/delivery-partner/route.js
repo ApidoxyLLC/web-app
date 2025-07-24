@@ -28,8 +28,6 @@ export async function POST(request) {
 
         try {
               const { shop: referenceId, partner, ...inputs } = parsed.data;
-              const updatesArray = Object.entries(socialLinks)
-                                        .map(([platform, link]) => ({ platform, link }));
 
               // Connect to databases
               const auth_db = await authDbConnect();
