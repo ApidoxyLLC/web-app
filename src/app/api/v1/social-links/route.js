@@ -9,7 +9,7 @@ import socialLinksDTOSchema from "./socialLinkDTOSchema";
 
 
 
-export async function PATCH(request, { params }) {
+export async function POST(request, { params }) {
       // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });

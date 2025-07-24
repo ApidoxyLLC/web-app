@@ -2,16 +2,16 @@ import { z } from "zod";
 
 // Allowed social platform names
 const socialKeys = [
-  "facebook",
-  "linkedin",
-  "youtube",
-  "twitter",
-  "tiktok",
-  "telegram",
-  "whatsApp",
-  "discord",
-  "instagram",
-];
+                    "facebook",
+                    "linkedin",
+                    "youtube",
+                    "twitter",
+                    "tiktok",
+                    "telegram",
+                    "whatsApp",
+                    "discord",
+                    "instagram",
+                   ];
 
 const socialKeyEnum  = z.enum(socialKeys);
 
