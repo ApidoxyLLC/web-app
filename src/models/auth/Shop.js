@@ -115,7 +115,7 @@ const stuffSchema = new mongoose.Schema(
   {      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     designation: { type: String, enum: [ 'store_manager', 'assistant_manager', 'cashier', 'sales_associate', 'inventory_clerk', 'security', 'janitor', 'other' ], required: true },
          status: { type: String, enum: ['active', 'terminated', 'on_leave', 'resigned'], default: 'active' },
-     permission: { type: [String], enum: ['r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
+     permission: { type: [String], enum: ['r:social-link', 'w:social-link', 'r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
       startDate: { type: Date, required: true,},
         endDate: { type: Date },
           notes: [{    date: { type: Date, default: Date.now },

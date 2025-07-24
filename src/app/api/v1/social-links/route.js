@@ -6,11 +6,12 @@ import { shopModel } from "@/models/auth/Shop";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { vendorModel } from "@/models/vendor/Vendor";
 import socialLinksDTOSchema from "./socialLinkDTOSchema";
+import mongoose from "mongoose";
 
 
 
 export async function POST(request) {
-      // Rate limiting
+    // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
     if (!allowed) return NextResponse.json( { error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
@@ -77,8 +78,31 @@ export async function POST(request) {
                                     }
                                   }
                                 }];
-              const [updatedVendor, updatedShop] = await Promise.all([ Vendor.updateOne({ referenceId, ownerId: data.userId }, pipeline), 
-                                                                         Shop.updateOne({ referenceId, ownerId: data.userId }, pipeline)])
+              const [updatedVendor, updatedShop] = await Promise.all([ Vendor.updateOne({ referenceId, 
+                                                                                          $or: [
+                                                                                            { ownerId: data.userId },
+                                                                                            {
+                                                                                              stuffs: {
+                                                                                                $elemMatch: {
+                                                                                                  userId: new mongoose.Types.ObjectId(data.userId),
+                                                                                                  status: "active",
+                                                                                                  permission: { $in: ["r:social-link", "r:shop"] },
+                                                                                                },
+                                                                                              },
+                                                                                            },
+                                                                                          ], }, pipeline), 
+                                                                         Shop.updateOne({ referenceId, 
+                                                                                          $or: [
+                                                                                            { ownerId: data.userId },
+                                                                                            { stuffs: {
+                                                                                                $elemMatch: {
+                                                                                                  userId: new mongoose.Types.ObjectId(data.userId),
+                                                                                                  status: "active",
+                                                                                                  permission: { $in: ["r:social-link", "r:shop"] },
+                                                                                                },
+                                                                                              },
+                                                                                            },
+                                                                                          ], }, pipeline)])
 
               if (updatedVendor.modifiedCount === 0 && updatedShop.modifiedCount === 0) 
                   return NextResponse.json({ success: false, message: "No changes were made to social links" }, { status: 200 });

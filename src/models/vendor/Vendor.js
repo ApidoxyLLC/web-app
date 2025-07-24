@@ -185,6 +185,18 @@ const marketingSchema = new mongoose.Schema({
       emailProviders: { type: emailProviderSchema }
 }, { timestamps: true });
 
+const stuffSchema = new mongoose.Schema(
+  {      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    designation: { type: String, enum: [ 'store_manager', 'assistant_manager', 'cashier', 'sales_associate', 'inventory_clerk', 'security', 'janitor', 'other' ], required: true },
+         status: { type: String, enum: ['active', 'terminated', 'on_leave', 'resigned'], default: 'active' },
+     permission: { type: [String], enum: ['r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
+      startDate: { type: Date, required: true,},
+        endDate: { type: Date },
+          notes: [{    date: { type: Date, default: Date.now },
+                     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+                    content: String }],
+},{ timestamps: true });
+
 
 // const integrationSchema = new mongoose.Schema({
 //   googleTagManagerId: { type: String },
@@ -228,6 +240,7 @@ const vendorSchema = new mongoose.Schema({
                                  email: { type: String, trim: true },
                                  phone: { type: String, trim: true },
                                   logo: { type: imageSchema },
+                                stuffs: { type: [stuffSchema], default: undefined },
                      maxSessionAllowed: { type: Number, default: () => config.defaultMaxSessions, select: false },
                                 dbInfo: { type: dbInfoSchema, default: null, select: false },
                             bucketInfo: { type: bucketInfoSchema, default: null, select: false },
@@ -251,6 +264,10 @@ const vendorSchema = new mongoose.Schema({
                                    ios: { type: iosAppSchema, default: null },
                               metadata: { type: metadataSchema }
 }, { timestamps: true, collection: 'vendors' });
+
+
+
+
 
 // contactNdSupportSchema
 // notificationSchema
