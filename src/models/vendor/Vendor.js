@@ -70,6 +70,15 @@ const deliveryPartnerSchema = new mongoose.Schema({
   steadfast: { type: steadfastSchema, default: undefined }
 }, { timestamps: false, _id: false })
 
+const facebookPixelSchema = new mongoose.Schema({
+          provider: { type: String }, 
+           pixelId: { type: String },
+  pixelAccessToken: { type: String },
+       testEventId: { type: String },
+conversionApiToken: { type: String },
+       dataFeedUrl: { type: String },
+}, { timestamps: false,  _id: false });
+
 const paymentPartnerSchema = new mongoose.Schema({
   bkash: { type: bkashSchema, default: undefined }
 }, { timestamps: facebookPixelSchema, _id: false })
@@ -138,15 +147,6 @@ const metadataSchema = new mongoose.Schema({
 const googleTagManagerSchema = new mongoose.Schema({
       provider: { type: String }, 
   tagManagerId: { type: [{ type:String, trim: true, lowercase: true } ]},
-}, { timestamps: false,  _id: false });
-
-const facebookPixelSchema = new mongoose.Schema({
-          provider: { type: String }, 
-           pixelId: { type: String },
-  pixelAccessToken: { type: String },
-       testEventId: { type: String },
-conversionApiToken: { type: String },
-       dataFeedUrl: { type: String },
 }, { timestamps: false,  _id: false });
 
 const smsProviderSchema = new mongoose.Schema({
