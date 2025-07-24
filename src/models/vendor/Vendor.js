@@ -256,7 +256,7 @@ const vendorSchema = new mongoose.Schema({
                           notification: { type: notificationSchema, select: true },
                        deliveryPartner: { type: deliveryPartnerSchema, default: null },
                         paymentPartner: { type: paymentPartnerSchema, default: null },
-                           chatSupport: { type: chatSupportSchema, default: null },
+                           chatSupport: { type: [chatSupportSchema], default: null },
                              marketing: { type: marketingSchema, default: null },
                             activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                                    web: { type: webAppSchema, default: null },

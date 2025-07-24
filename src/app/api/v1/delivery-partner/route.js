@@ -26,6 +26,9 @@ export async function POST(request) {
         if (!authenticated) 
             return NextResponse.json( { error: authError || "Not authorized" }, { status: 401 } );    
 
+        if (!mongoose.Types.ObjectId.isValid(data.userId)) 
+            return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 } );
+
         try {
               const { shop: referenceId, partner, ...inputs } = parsed.data;
 
@@ -48,25 +51,28 @@ export async function POST(request) {
                                         }
                                     }
                                 ];
-                const permissionFilter = {
-                        $or: [ { ownerId: data.userId },
-                               { stuffs: {
-                                    $elemMatch: {
-                                    userId: new mongoose.Types.ObjectId(data.userId),
-                                    status: "active",
-                                    permission: { $in: ["w:delivery-partner", "w:shop"] }
-                                    }
-                                 }
-                               }
-                            ]
-                        };
-              const [updatedVendor, updatedShop] = await Promise.all([ Vendor.updateOne({ referenceId, ...permissionFilter }, pipeline), 
-                                                                         Shop.updateOne({ referenceId, ...permissionFilter }, pipeline)])
+              const permissionFilter = {
+                                            referenceId, 
+                                            $or: [
+                                                    { ownerId: data.userId },
+                                                    { 
+                                                        stuffs: {
+                                                            $elemMatch: {
+                                                                userId: new mongoose.Types.ObjectId(data.userId),
+                                                                status: "active",
+                                                                permission: { $in: ["w:delivery-partner", "w:shop"] }
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                        };
+              const [updatedVendor, updatedShop] = await Promise.all([ Vendor.updateOne(permissionFilter, pipeline), 
+                                                                         Shop.updateOne(permissionFilter, pipeline)])
 
-              if (updatedVendor.modifiedCount === 0 && updatedShop.modifiedCount === 0) 
-                  return NextResponse.json({ success: false, message: "No changes were made to Delivery partner" }, { status: 200 });
+            if (updatedVendor.matchedCount === 0 && updatedShop.matchedCount === 0) 
+                return NextResponse.json({ success: false,  message: "Shop not found or you don't have permission" }, { status: 404 });
 
-              return NextResponse.json({ success: true, message: "Delivery partner updated successfully" }, { status: 200 });
+            return NextResponse.json({ success: true, message: "Delivery partner updated successfully" }, { status: 200 });
           } catch (error) {
               return NextResponse.json({
                   error: error.message || "Failed to update Delivery partner", stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined }, { status: 500 });
