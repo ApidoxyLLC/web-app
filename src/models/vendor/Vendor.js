@@ -41,14 +41,14 @@ const socialLinksSchema = new mongoose.Schema({
 
 const appSettingsSchema = new mongoose.Schema({
   templates: { type: String, enum: ['desiree', 'stylo'], default: 'desiree' },
-  color: { type: String, required: true },
+  color: { type: String },
   notifications: { type: Boolean, default: true },
 }, { _id: false, timestamps: false });
 
 const contactNdSupportSchema = new mongoose.Schema({
   email: { type: String, required: false, default: null },
   phone: { type: String, required: false, default: null },
-  whatsapp: { type: String, required: true },
+  whatsapp: { type: String },
   
 }, { _id: false, timestamps: false });
 
@@ -84,10 +84,10 @@ const paymentPartnerSchema = new mongoose.Schema({
 }, { timestamps: facebookPixelSchema, _id: false })
 
 const baseAppSchema = new mongoose.Schema({
-        appId: { type: String, required: true, index: true },
-      appSlug: { type: String, default: null},
-      appName: { type: String, required: true },
-      appIcon: { type: String, required: true },
+        appId: { type: String, default: null },
+      appSlug: { type: String, default: null },
+      appName: { type: String, default: null },
+      appIcon: { type: String, default: null },
         // email: { type: String, required: false, default: null },
         // phone: { type: String, required: false, default: null },
       version: { type: String, default: null },
@@ -114,12 +114,12 @@ const buildInfoSchema = new mongoose.Schema({
 
 const androidAppSchema = new mongoose.Schema({ 
     ...baseAppSchema.obj,
-    packageName: { type: String, required: true },
+    packageName: { type: String },
     buildInfo: [buildInfoSchema],
     firebaseJSONData: String,
     buildHistory: [{ 
-                    si_no: { type: String, required: true }, 
-                    version: { type: String, default: "" } 
+                    si_no: { type: String, default: null }, 
+                    version: { type: String, default: null } 
                     }]
 }, { timestamps: false,  _id: false });
 
@@ -127,14 +127,14 @@ const webAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
    logo: { type: String },
   title: { type: String },
-  domain: { type: String, required: true }
+  domain: { type: String  }
 }, { timestamps: false,  _id: false });
 
 const iosAppSchema = new mongoose.Schema({
   ...baseAppSchema.obj,
   buildInfo: [buildInfoSchema],
   firebaseJSONData: String,
-  bundleId: { type: String, required: true },  
+  bundleId: { type: String },  
 }, { timestamps: false,  _id: false });
 
 const metadataSchema = new mongoose.Schema({
@@ -182,11 +182,11 @@ const marketingSchema = new mongoose.Schema({
 }, { timestamps: true, _id: false  });
 
 const stuffSchema = new mongoose.Schema(
-  {      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    designation: { type: String, enum: [ 'store_manager', 'assistant_manager', 'cashier', 'sales_associate', 'inventory_clerk', 'security', 'janitor', 'other' ], required: true },
+  {      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+    designation: { type: String, enum: [ 'store_manager', 'assistant_manager', 'cashier', 'sales_associate', 'inventory_clerk', 'security', 'janitor', 'other' ], required: fasle },
          status: { type: String, enum: ['active', 'terminated', 'on_leave', 'resigned'], default: 'active' },
      permission: { type: [String], enum: ['r:delivery-partner', 'w:delivery-partner', 'r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
-      startDate: { type: Date, required: true,},
+      startDate: { type: Date, required: false,},
         endDate: { type: Date },
           notes: [{    date: { type: Date, default: Date.now },
                      author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
