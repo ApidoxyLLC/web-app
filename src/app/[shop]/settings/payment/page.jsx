@@ -82,7 +82,7 @@ export default function Dashboard() {
                   <ControlGroup key={f.name}>
                     <ControlGroupItem className="shadow-none">
                       <InputBase className="h-10">
-                        <InputBaseAdornment className="text-xs w-[115px] ">
+                        <InputBaseAdornment className=" w-[130px] ">
                           {f.label}
                         </InputBaseAdornment>
                       </InputBase>
@@ -116,9 +116,11 @@ export default function Dashboard() {
             </Label>
             <Input id="massage" type="email" className="mt-1" />
           </div>
-          <Button onClick={handleAdd} className="mt-6 w-full" variant="outline">
+          <div className="flex justify-end">
+            <Button onClick={handleAdd}  >
             Add <span className="text-xl">+</span>
           </Button>
+          </div>
 
           {(() => {
             const current = payment.find((p) => p.name === selected);

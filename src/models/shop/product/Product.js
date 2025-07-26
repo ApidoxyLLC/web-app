@@ -79,8 +79,13 @@ const digitalAssetSchema = new mongoose.Schema({
        expiry: Date
 }, { _id: false });
 
+const warrantySchema = new mongoose.Schema({
+            duration: { type: Number } , 
+   termsNdConditions: { type: String }
+}, { _id: false });
+
 const productSchema = new mongoose.Schema({
-           productId: { type: String, default: () => cuid(), unique: true },
+         //   productId: { type: String, default: () => cuid(), unique: true },
                 slug: { type: String, required: true, unique: true },
                title: { type: String, required: true, trim: true },
          description: String, 
@@ -94,7 +99,7 @@ const productSchema = new mongoose.Schema({
           categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category'}],
          hasVariants: { type: Boolean, default: false },
          isAvailable: { type: Boolean, default: undefined },
-            warranty: { type: { duration: Number, termsNdConditions: String },  default: undefined },
+            warranty: { type: warrantySchema,  default: undefined },
               status: { type: String, default: 'draft',  enum: ['active', 'draft', 'archived', 'discontinued'] },
       approvalStatus: { type: String, default: 'pending', enum: ['pending', 'approved', 'rejected'] },
        productFormat: { type: String, enum: ['physical', 'digital'],  default: 'physical' },

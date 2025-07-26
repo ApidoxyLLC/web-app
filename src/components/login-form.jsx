@@ -52,7 +52,7 @@ export function LoginForm({ className, ...props }) {
     } else {
       // Redirect to a protected route
       router.push("http://localhost:3000/")
-      toast.success("Login sucessful", result.error);
+      toast.success("Login sucessful");
     }
 
     async function requestToCreateProduct() {

@@ -7,9 +7,9 @@ export default function Page() {
       <div className="flex-3">
         <NewProduct />
       </div>
-      <div className="flex-2">
+      {/* <div className="flex-2">
         <NewProductRight />
-      </div>
+      </div> */}
     </div>
   );
 }

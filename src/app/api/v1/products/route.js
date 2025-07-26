@@ -16,7 +16,6 @@ import { userModel } from '@/models/auth/User';
 import slugify from 'slugify';
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import securityHeaders from "../utils/securityHeaders";
-import config from "../../../../../config";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import config from "../../../../../config";
 
@@ -154,7 +153,7 @@ export async function GET(request) {
     // Transform products for response
     const transformedProducts = products.map(product => ({
       id: product._id,
-      productId: product.productId,
+      // productId: product.productId,
       title: product.title,
       slug: product.slug,
       description: product.description,
@@ -209,7 +208,6 @@ export async function GET(request) {
     );
   }
 }
-
 
 export async function POST(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';

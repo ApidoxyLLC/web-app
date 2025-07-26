@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import B2 from 'backblaze-b2';
 import crypto from 'crypto';
-import { imageModel } from '@/models/Image';
+import { imageModel } from '@/models/vendor/Image';
 import sharp from 'sharp';
 import { bucketModel } from '@/models/auth/Bucket';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
@@ -34,7 +34,7 @@ const         bucketName = process.env.B2_BUCKET_NAME
 // file, vendor, folder
 export async function uploadShopImage({ file, vendor, folder, uploadBy, extraData={} }) {
     const b2 = await authorizeB2();
-    const { referenceId, ownerId,  dbInfo, bucketInfo } = vendor 
+    const { _id: shopId, referenceId, ownerId,  dbInfo, bucketInfo } = vendor 
     
     const { dbName } = dbInfo
 
@@ -47,12 +47,11 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
     }else {
       let newBucket;
         try {
-          newBucket = await createBucketIfNotExists({ createdBy: uploadBy,
-                                                      shopId: referenceId,
-                                                      bucketName: referenceId,
+          newBucket = await createBucketIfNotExists({   createdBy: uploadBy,
+                                                           shopId,
+                                                       bucketName: referenceId,
                                                       referenceId,
-                                                      bucketType: 'allPrivate',
-                                                    });
+                                                       bucketType: 'allPrivate'     });
 
           if (newBucket.error) throw new Error('Storage Bucket creation failed');
 
@@ -63,13 +62,6 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
           throw new Error(newBucket?.message || 'Storage Bucket creation failed');
         }
     }
-
-    // const {  bucketName,  bucketId } = bucketInfo
-
-    // const bucketResponse = await b2.getBucket({ bucketName })
-    // if (!bucketResponse) throw new Error(`Bucket "${bucketName}" not found`);
-    
-    // const bucketId = bucketResponse.data.buckets[0].bucketId;
 
     const { data: uploadData } = await b2.getUploadUrl({ bucketId });
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
@@ -128,6 +120,7 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
                                            folder,
                                      backblazeUrl,
                                          mimeType: file.type,
+                                         isActive: false,
                                          bucketId: uploadResponse.data.bucketId, 
                                        bucketName: bucketName                    });
 
@@ -232,7 +225,7 @@ export async function downloadImage({bucket, folder, file}) {
     
 }
 
-export async function deleteImage(fileName, fileId) {
+export async function deleteImageFile({fileName, fileId}) {
   const b2 = await authorizeB2();
 
   const response = await b2.deleteFileVersion({ fileName,

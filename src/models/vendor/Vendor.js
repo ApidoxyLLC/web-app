@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import config from '../config';
+import imageSchema from '../imageSchema';
+import { pathaoSchema, steadfastSchema } from './DeliveryPartner';
+import { bkashSchema } from './PaymentPartner';
 
 const dbInfoSchema = new mongoose.Schema({
     dbName: { type: String },
@@ -34,7 +37,193 @@ const transactionFieldsSchema = new mongoose.Schema({
 const socialLinksSchema = new mongoose.Schema({
     platform: { type: String, enum: ['facebook', 'twitter', 'telegram', 'discord', 'whatsapp', 'instagram', 'linkedin', 'youtube', 'tiktok']  },
     link: { type: String },
-}, { _id: false });
+}, { _id: false, timestamps: false });
+
+const appSettingsSchema = new mongoose.Schema({
+  templates: { type: String, enum: ['desiree', 'stylo'], default: 'desiree' },
+  color: { type: String },
+  notifications: { type: Boolean, default: true },
+}, { _id: false, timestamps: false });
+
+const contactNdSupportSchema = new mongoose.Schema({
+  email: { type: String, required: false, default: null },
+  phone: { type: String, required: false, default: null },
+  whatsapp: { type: String },
+  
+}, { _id: false, timestamps: false });
+
+const notificationSchema = new mongoose.Schema({
+               email: { type: String,  default: null },
+               phone: { type: String, default: null },
+    preferredChannel: { type: String, enum: ['email', 'sms', 'whatsapp'], default: null },  
+
+  hourlyNotification: {       enabled: { type: Boolean, default: false },
+                        intervalHours: { type: Number, default: 1, min: 1, max: 24 } },
+
+  orderNotifications: {       enabled: { type: Boolean, default: false },
+                            frequency: { type: Number, default: 1, min: 1 }   },
+
+}, { _id: false, timestamps: false });
+
+const deliveryPartnerSchema = new mongoose.Schema({
+     pathao: { type: pathaoSchema, default: undefined }, 
+  steadfast: { type: steadfastSchema, default: undefined }
+}, { timestamps: false, _id: false })
+
+const facebookPixelSchema = new mongoose.Schema({
+          provider: { type: String }, 
+           pixelId: { type: String },
+  pixelAccessToken: { type: String },
+       testEventId: { type: String },
+conversionApiToken: { type: String },
+       dataFeedUrl: { type: String },
+}, { timestamps: false,  _id: false });
+
+const paymentPartnerSchema = new mongoose.Schema({
+  bkash: { type: bkashSchema, default: undefined }
+}, { timestamps: facebookPixelSchema, _id: false })
+
+const baseAppSchema = new mongoose.Schema({
+        appId: { type: String, default: null },
+      appSlug: { type: String, default: null },
+      appName: { type: String, default: null },
+      appIcon: { type: String, default: null },
+        // email: { type: String, required: false, default: null },
+        // phone: { type: String, required: false, default: null },
+      version: { type: String, default: null },
+       status: { type: String, default: 'pending', enum: ['active', 'inactive', 'pending', 'on-build', 'prepared'] },
+     language: { type: String, enum: ['en_US', 'bn_BD' ], default: 'en_US' },
+       appUrl: { type: String, required: false, default: null },  
+    contactUs: { type: String, default: null },
+     settings: appSettingsSchema,
+  socialLinks: [socialLinksSchema],
+     
+// extraPolicies: [extraPolicySchema], 
+  siteMap: { type: String, default: null },
+
+}, { timestamps: true, _id: false });
+
+const buildInfoSchema = new mongoose.Schema({ 
+  buildNo:{ type:Number, default:0 },
+  versionName: { type: String },
+  buildTime: { type: String },
+  buildDuration: { type: String },
+  gitBranch: { type: String },
+  buildStatus:{ type:String, enum:['success', 'pending', 'queued', 'failed']}
+}, { timestamps: false,  _id: false });
+
+const androidAppSchema = new mongoose.Schema({ 
+    ...baseAppSchema.obj,
+    packageName: { type: String },
+    buildInfo: [buildInfoSchema],
+    firebaseJSONData: String,
+    buildHistory: [{ 
+                    si_no: { type: String, default: null }, 
+                    version: { type: String, default: null } 
+                    }]
+}, { timestamps: false,  _id: false });
+
+const webAppSchema = new mongoose.Schema({
+  ...baseAppSchema.obj,
+   logo: { type: String },
+  title: { type: String },
+  domain: { type: String  }
+}, { timestamps: false,  _id: false });
+
+const iosAppSchema = new mongoose.Schema({
+  ...baseAppSchema.obj,
+  buildInfo: [buildInfoSchema],
+  firebaseJSONData: String,
+  bundleId: { type: String },  
+}, { timestamps: false,  _id: false });
+
+const metadataSchema = new mongoose.Schema({
+  description: { type: String }, 
+     keywords: { type: [{ type:String, trim: true, lowercase: true } ]},
+         tags: { type: [{ type:String, trim: true, lowercase: true } ]}
+    // tags: { type: [{ name: String, content: String, property: String }] },
+}, { timestamps: false,  _id: false });
+
+const googleTagManagerSchema = new mongoose.Schema({
+      provider: { type: String }, 
+  tagManagerId: { type: [{ type:String, trim: true, lowercase: true } ]},
+}, { timestamps: false,  _id: false });
+
+const smsProviderSchema = new mongoose.Schema({
+        provider: { type: String, enum: ['bulk-sms-bd', 'twilio', 'nexmo', 'msg91', 'banglalink'] },
+          apiKey: { type: String },
+        senderId: { type: String },
+        clientId: { type: String },
+    clientSecret: { type: String },
+          active: { type: Boolean, default: false }
+}, { timestamps: false,  _id: false });
+
+const emailProviderSchema = new mongoose.Schema({
+        provider: { type: String, enum: ['mailgun', 'sendgrid', 'smtp', 'ses'] },
+        smtpHost: { type: String },
+            port: { type: String },
+        username: { type: String },
+        password: { type: String },
+          active: { type: Boolean, default: false },
+}, { timestamps: false,  _id: false });
+
+const chatSupportSchema = new mongoose.Schema({
+    provider: { type: String, enum: ['facebook', 'whatsapp', 'intercom', 'tawk'] },
+        link: { type: String },
+      active: { type: Boolean, default: false },
+}, { timestamps: true, _id: false  });
+
+const marketingSchema = new mongoose.Schema({
+          sitemapUrl: { type: String },
+    googleTagManager: { type: googleTagManagerSchema },
+       facebookPixel: { type: facebookPixelSchema },
+        smsProviders: { type: smsProviderSchema },
+      emailProviders: { type: emailProviderSchema }
+}, { timestamps: true, _id: false  });
+
+const stuffSchema = new mongoose.Schema(
+  {      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+    designation: { type: String, enum: [ 'store_manager', 'assistant_manager', 'cashier', 'sales_associate', 'inventory_clerk', 'security', 'janitor', 'other' ], required: false },
+         status: { type: String, enum: ['active', 'terminated', 'on_leave', 'resigned'], default: 'active' },
+     permission: { type: [String], enum: ['r:delivery-partner', 'w:delivery-partner', 'r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category']},
+      startDate: { type: Date, required: false,},
+        endDate: { type: Date },
+          notes: [{    date: { type: Date, default: Date.now },
+                     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+                    content: String }],
+},{ timestamps: true, _id: false  });
+
+
+// const integrationSchema = new mongoose.Schema({
+//   googleTagManagerId: { type: String },
+//   facebookPixelId: { type: String },
+//   pixelAccessToken: { type: String },
+//   pixelTestEventId: { type: String },
+//   facebookConversionApiToken: { type: String },
+//   sitemapUrl: { type: String },
+//   facebookDataFeedUrl: { type: String },
+//   // add more integrations as needed
+// }, { timestamps: true });
+
+// const smsSchema = new mongoose.Schema({
+//   apiKey: { type: String },
+//   senderId: { type: String },
+//   clientId: { type: String },
+//   clientSecret: { type: String },
+// }, { timestamps: true });
+
+// const emailSchema = new mongoose.Schema({
+//   SMTP: { type: String },
+//   port: { type: String },
+//   username: { type: String },
+//   password: { type: String },
+// }, { timestamps: true });
+
+
+
+
+
+
 
 const vendorSchema = new mongoose.Schema({
                                    _id: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -46,6 +235,8 @@ const vendorSchema = new mongoose.Schema({
                               industry: { type: String, required: true },
                                  email: { type: String, trim: true },
                                  phone: { type: String, trim: true },
+                                  logo: { type: imageSchema },
+                                stuffs: { type: [stuffSchema], default: undefined },
                      maxSessionAllowed: { type: Number, default: () => config.defaultMaxSessions, select: false },
                                 dbInfo: { type: dbInfoSchema, default: null, select: false },
                             bucketInfo: { type: bucketInfoSchema, default: null, select: false },
@@ -57,7 +248,25 @@ const vendorSchema = new mongoose.Schema({
                       facebookDataFeed: { type: String, default: null },
                            transaction: { type: transactionFieldsSchema },
                               policies: { type: String, default: null },
+                               support: { type: contactNdSupportSchema, select: true },
+                          notification: { type: notificationSchema, select: true },
+                       deliveryPartner: { type: deliveryPartnerSchema, default: null },
+                        paymentPartner: { type: paymentPartnerSchema, default: null },
+                           chatSupport: { type: [chatSupportSchema], default: null },
+                             marketing: { type: marketingSchema, default: null },
+                            activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
+                                   web: { type: webAppSchema, default: null },
+                               android: { type: androidAppSchema, default: null },
+                                   ios: { type: iosAppSchema, default: null },
+                              metadata: { type: metadataSchema }
 }, { timestamps: true, collection: 'vendors' });
+
+
+
+
+
+// contactNdSupportSchema
+// notificationSchema
 
 // ───── Status Transitions ─────
 // const allowedStatusTransitions = {

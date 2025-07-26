@@ -17,13 +17,14 @@ import {
 
 import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function CreatShop() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-
+  const {shop}= useParams()
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -46,10 +47,10 @@ export default function CreatShop() {
       });
 
       if (res.ok) {
-        alert("Shop created");
-        router.push("http://localhost:3000/123/dashboard");
+        toast.success("Shop created");
+        router.push(`http://localhost:3000/${shop}/dashboard`);
       } else {
-        alert("Error creating shop");
+        toast.error("Error creating shop");
       }
     } catch (err) {
       console.error(err);

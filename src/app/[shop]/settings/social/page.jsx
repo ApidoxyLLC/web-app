@@ -1,3 +1,4 @@
+"use client"
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";
@@ -7,23 +8,79 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
+import { useState } from "react";
+import { useParams } from "next/navigation";
+import { toast } from "sonner";
 export default function BusinessInfoForm() {
+  
+  const {shop} = useParams()
   const socialLinks = [
-    { label: "Facebook", placeholder: "https://facebook.com/your-page" },
-    { label: "Telegram", placeholder: "https://t.me/your-channel" },
-    { label: "LinkedIn", placeholder: "https://www.linkedin.com/in/your-name" },
-    { label: "WhatsApp", placeholder: "https://wa.me/8801XXXXXXXXX" },
-    { label: "YouTube", placeholder: "https://www.youtube.com/your-channel" },
-    { label: "Discord", placeholder: "https://discord.gg/your-server" },
+    { name: "facebook", label: "Facebook", placeholder: "https://facebook.com/your-page" },
+    { name: "telegram", label: "Telegram", placeholder: "https://t.me/your-channel" },
+    { name: "linkedin", label: "LinkedIn", placeholder: "https://www.linkedin.com/in/your-name" },
+    { name: "whatsapp", label: "WhatsApp", placeholder: "https://wa.me/8801XXXXXXXXX" },
+    { name: "youtube", label: "YouTube", placeholder: "https://www.youtube.com/your-channel" },
+    { name: "discord", label: "Discord", placeholder: "https://discord.gg/your-server" },
+    { name: "twitter", label: "Twitter", placeholder: "https://twitter.com/your-handle" },
     {
+      name: "instagram", 
       label: "Instagram",
       placeholder: "https://www.instagram.com/your-handle",
     },
-    { label: "Amazon", placeholder: "https://www.amazon.com/your-storefront" },
-    { label: "TikTok", placeholder: "https://www.tiktok.com/@your-profile" },
-    { label: "Walmart", placeholder: "https://www.walmart.com/your-store" },
-    { label: "Daraz", placeholder: "https://www.daraz.com/your-shop" },
+    { name: "tiktok", label: "TikTok", placeholder: "https://www.tiktok.com/@your-profile" },
   ];
+  const [formData, setFormData] = useState({
+    facebook:"",
+    telegram:"",
+    twitter:"",
+    linkedin:"",
+    whatsapp:"",
+    youtube:"",
+    discord:"",
+    instagram:"",
+    tiktok:"",
+  })
+
+  
+  const handleChange =(name,value)=>{
+    setFormData((prev)=>({
+      ...prev,
+      [name]:value
+    }))
+  }
+
+  const handleSubmit = async ()=>{
+    try{
+       const cleanedSocialLinks = Object.fromEntries(
+      Object.entries(formData).filter(
+        ([_, value]) => value && value.startsWith("http")
+      )
+    );
+
+    const finalData = {
+      shop,
+      ...cleanedSocialLinks,
+    };
+      const res = await fetch(`/api/v1/social-links`,{
+        method:"POST",
+        headers:{
+          "Content-type":"application/json"
+        },
+        body: JSON.stringify( finalData )
+      })
+      
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Shop updated successfully!");
+      } else {
+        console.error(data,res);
+        toast.error(data.error || "Update failed");
+      }
+
+    }catch(err){
+      console.log(err)
+    }
+  }
 
   return (
     <CardContent className="p-6 pt-5">
@@ -39,7 +96,9 @@ export default function BusinessInfoForm() {
             <ControlGroupItem className="w-full">
               <InputBase>
                 <InputBaseControl>
-                  <InputBaseInput placeholder={link.placeholder} />
+                  <InputBaseInput placeholder={link.placeholder}
+                    value={formData[link.name]}
+                    onChange={(e) => handleChange(link.name, e.target.value)}/>
                 </InputBaseControl>
               </InputBase>
             </ControlGroupItem>
@@ -47,7 +106,7 @@ export default function BusinessInfoForm() {
         ))}
       </div>
       <div className="flex justify-end pt-6">
-        <Button>Update Shop Info</Button>
+        <Button onClick={handleSubmit}>Update Shop Info</Button>
       </div>
     </CardContent>
   );

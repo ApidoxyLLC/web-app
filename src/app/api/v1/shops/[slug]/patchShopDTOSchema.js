@@ -27,10 +27,10 @@ const appSettingsSchema = z.object({
 // }).partial();
 
 const baseAppSchema = z.object({
-  appId: z.string(),
+  appId: z.string().optional(),
   appSlug: z.string().nullable().optional(),
-  appName: z.string(),
-  appIcon: z.string(),
+  appName: z.string().optional(),
+  appIcon: z.string().optional(),
   email: z.string().email().nullable().optional(),
   phone: z.string().nullable().optional(),
   version: z.string().nullable().optional(),
@@ -50,11 +50,11 @@ const webAppSchema = baseAppSchema.extend({
 });
 
 const androidAppSchema = baseAppSchema.extend({
-  packageName: z.string(),
+  packageName: z.string().optional(),
   firebaseJSONData: z.string().optional(),
   buildInfo: z.array(z.any()).optional(),
   buildHistory: z.array(z.object({
-    si_no: z.string(),
+    si_no: z.string().optional(),
     version: z.string().optional()
   })).optional()
 });
@@ -82,6 +82,12 @@ const shopPatchSchema = z.object({
   socialLinks: z.array(socialLinkSchema).optional(),
   facebookDataFeed: z.string().nullable().optional(),
   policies: z.string().optional(),
+  support: z.object({}).optional(),
+  notification: z.object({}).optional(),
+  deliveryPartner: z.object({}).optional(),
+  paymentPartner: z.object({}).optional(),
+  chatSupport: z.array({}).optional(),
+  marketing: z.object({}).optional()
 }).partial();
 
 

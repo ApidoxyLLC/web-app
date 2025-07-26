@@ -14,6 +14,16 @@ import {
 } from "@/components/ui/select";
 import RSPVInput from "@/components/rspv-input";
 
+import {
+  ControlGroup,
+  ControlGroupItem,
+} from "@/components/ui/control-group";
+import {
+  InputBase,
+  InputBaseAdornment,
+  InputBaseControl,
+  InputBaseInput,
+} from "@/components/ui/input-base";
 import * as SelectPrimitive from "@radix-ui/react-select";
 
 import { cn } from "@/lib/utils";
@@ -22,6 +32,8 @@ import { Trash2 } from "lucide-react";
 import pathao from "../../../../../public/images/pathao.png";
 import steadfast from "../../../../../public/images/steadfast.png";
 import Image from "next/image";
+import { useParams } from "next/navigation";
+import { toast } from "sonner";
 const markets = {
   bd: {
     name: "Bangladesh",
@@ -88,7 +100,7 @@ const markets = {
         fields: [
           {
             name: "Client ID",
-            key: "client-id",
+            key: "clientId",
             required: true,
             regex: "",
             type: "text",
@@ -96,7 +108,7 @@ const markets = {
           },
           {
             name: "Client Secret",
-            key: "client-secret",
+            key: "clientSecret",
             type: "password",
             required: true,
             regex: "",
@@ -127,7 +139,7 @@ const markets = {
         fields: [
           {
             name: "API Key",
-            key: "api-key",
+            key: "apiKey",
             required: true,
             regex: "",
             type: "text",
@@ -135,7 +147,7 @@ const markets = {
           },
           {
             name: "API Secret",
-            key: "api-secret",
+            key: "apiSecret",
             required: true,
             regex: "",
             type: "password",
@@ -158,10 +170,46 @@ export default function DeliverySettings() {
   const [upazilaInput, setUpazilaInput] = useState({ name: "", charge: "" });
   const [upazilasList, setUpazilasList] = useState([]);
   const [country, setCountry] = useState(markets.bd);
+  const [courierForm, setCourierForm] = useState({}); // Example: "Pathao" or "Steadfast"
+  const {shop}=useParams()
+
+
+  const handleCourierSubmit = async () => {
+
+  const payload = {
+    partner: selectedCourier?.toLowerCase(),
+    shop: shop,
+    ...courierForm
+  };
+  console.log(payload)
+
+  try {
+    const res = await fetch(`/api/v1/delivery-partner`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await res.json();
+
+    if (res.ok) {
+      toast.success("Courier credentials updated!");
+      setCourierForm({});
+    } else {
+      toast.error(result?.error || "Failed to update");
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("An error occurred.");
+  }
+};
+
   return (
     <div className=" w-full mx-auto p-6 space-y-6 bg-muted/100">
-      <Card>
-        <CardContent className="flex justify-between gap-6 p-6 items-center">
+      <Card >
+        <CardContent className="flex justify-between gap-6 px-6 items-center">
           <Label className="text-md font-semibold">Select Country</Label>
           <Select
             onValueChange={(val) => {
@@ -193,15 +241,28 @@ export default function DeliverySettings() {
         </CardContent>
       </Card>
       <Card>
-        <CardContent className="space-y-4 p-6">
+        <CardContent className="space-y-4">
           <Label className="text-md font-semibold">
             Delivery Charge (Default)
           </Label>
-          <RSPVInput
-            label="Charge"
-            placeholder="Delivery charge"
-            hasError={false}
-          />
+          <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery charge"
+                      // onChange={(e) => setNewCategory(prev => ({
+                      //   ...prev,
+                      //   title: e.target.value,
+                      // }))}
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
 
           <div>
             <div className="flex items-center justify-between">
@@ -247,25 +308,45 @@ export default function DeliverySettings() {
           {deliveryOptions == "zones" && (
             <div className="flex flex-col gap-6">
               <div className="flex flex-col md:flex-row gap-6">
-                <RSPVInput
-                  label="Zones"
-                  placeholder="Delivery Zones"
-                  hasError={false}
-                  onChange={(e) =>
-                    setZoneInput({ ...zoneInput, name: e.target.value })
+                
+                <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Zones</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery Zones"
+                      onChange={(e) =>
+                      setZoneInput({ ...zoneInput, name: e.target.value })
                   }
-                />
-                <RSPVInput
-                  label="Charge"
-                  placeholder="Delivery Charge"
-                  hasError={false}
-                  onChange={(e) =>
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
+                
+                <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery charge"
+                     onChange={(e) =>
                     setZoneInput({
                       ...zoneInput,
                       charge: e.target.value,
                     })
                   }
-                />
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
                 <Button
                   onClick={() => setZonesList([...zonesList, zoneInput])}
                   variant="outline"
@@ -392,17 +473,27 @@ export default function DeliverySettings() {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <RSPVInput
-                  label="Charge"
-                  placeholder="Delivery Charge"
-                  hasError={false}
-                  onChange={(e) =>
+                
+                <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery charge"
+                     onChange={(e) =>
                     setDistrictInput({
                       ...districtInput,
                       charge: e.target.value,
                     })
                   }
-                />
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
                 <Button
                   onClick={() =>
                     setDistrictsList([...districtsList, districtInput])
@@ -507,14 +598,23 @@ export default function DeliverySettings() {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <RSPVInput
-                  label="Charge"
-                  placeholder="Delivery Charge"
-                  hasError={false}
-                  onChange={(e) =>
+                <ControlGroup className="w-full h-10">
+              <ControlGroupItem>
+                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+              </ControlGroupItem>
+              <ControlGroupItem className="flex-1">
+                <InputBase>
+                  <InputBaseControl>
+                    <InputBaseInput
+                      placeholder="Delivery charge"
+                    onChange={(e) =>
                     setUpazilaInput({ ...upazilaInput, charge: e.target.value })
                   }
-                />
+                    />
+                  </InputBaseControl>
+                </InputBase>
+              </ControlGroupItem>
+            </ControlGroup>
                 <Button
                   onClick={() => {
                     setUpazilasList([...upazilasList, upazilaInput]);
@@ -592,18 +692,34 @@ export default function DeliverySettings() {
               selectedCourier === courier.name && (
                 <div key={courier.shortCode} className="space-y-6">
                   {courier.fields.map((field) => (
-                    <RSPVInput
-                      key={field.name}
-                      label={field.name}
-                      placeholder={`Enter ${field.name}`}
-                      hasError={false}
-                      type={field.type}
-                      required={field.required}
-                    />
+                    <ControlGroup className="w-full h-10" key={field.name}>
+                      <ControlGroupItem>
+                        <InputBase><InputBaseAdornment>{field.name}</InputBaseAdornment></InputBase>
+                      </ControlGroupItem>
+                      <ControlGroupItem className="flex-1">
+                        <InputBase>
+                          <InputBaseControl>
+                            <InputBaseInput
+                              type={field.type}
+                              required={field.required}
+                              placeholder={`Enter ${field.name}`}
+                              onChange={(e) =>
+                                setCourierForm((prev) => ({
+                                  ...prev,
+                                  [field.key]: e.target.value,
+                              }))}
+                            />
+                         </InputBaseControl>
+                        </InputBase>
+                      </ControlGroupItem>
+                    </ControlGroup>
                   ))}
-                  <Button variant="outline">
+                  <div  className="flex justify-end">
+                    <Button onClick={handleCourierSubmit}>
                     Add <span className="text-xl">+</span>
                   </Button>
+                  </div>
+                
                 </div>
               )
           )}

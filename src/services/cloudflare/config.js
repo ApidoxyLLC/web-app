@@ -15,8 +15,6 @@ const envSchema = z.object({
   DEFAULT_CUSTOM_DOMAIN: z.string().optional(),
 });
 
-const env = envSchema.parse(process.env);
-
 const config = {
   cloudflare: {
     accountId: env.CLOUDFLARE_ACCOUNT_ID,
@@ -31,6 +29,7 @@ const config = {
     siteId: env.NETLIFY_SITE_ID,
     defaultDomain: env.DEFAULT_CUSTOM_DOMAIN || null,
   },
+
 };
 
 export default config;

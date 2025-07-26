@@ -149,8 +149,6 @@ export async function PATCH(request, { params }) {
     const vendor = await Vendor.findOne({ _id: shop._id });
     if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
-
-
     // // Check ownership
     if (userData?.userId.toString() !== vendor.ownerId?.toString()) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -173,6 +171,7 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ success: true, message: "Shop updated successfully" });
 
   } catch (error) {
+    console.log(error)
     return NextResponse.json({
       error: error.message || "Failed to update shop",
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined

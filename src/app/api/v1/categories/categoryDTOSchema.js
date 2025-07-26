@@ -13,11 +13,7 @@ export const categoryDTOSchema = z.object({
                   .trim().transform(val => val.toLowerCase()).optional(),
   description: z.string().max(500, { message: "Description cannot exceed 500 characters" }).trim().optional(),
 
-  image: z.object({ url: z.string().url({ message: "Invalid image URL" }).optional(),
-                    alt: z.string().max(125, { message: "Alt text cannot exceed 125 characters" }).optional(),
-                    width: z.number().int().positive().optional(),
-                    height: z.number().int().positive().optional()
-                }).optional(),
+  image: z.string().optional(),
   parent: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), { message: "Invalid parent category ID" }).optional().nullable(),
 })
 // .superRefine(async (data, ctx) => {

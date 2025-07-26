@@ -22,13 +22,13 @@ import {
   DropzoneUploadIcon,
   DropzoneZone,
 } from "@/components/ui/dropzone";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select";
 import {
   FileList,
   FileListDescription,
@@ -52,6 +52,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectGroup,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { Label } from "./ui/label";
@@ -80,7 +88,35 @@ export default function NewProduct() {
     { id: "123445456789", title: "Chemicals", handle: "chemicals", description: "Chemical products and materials.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
   ]);
   const [selectedCategory, setSelectedCategory] = useState("All Products");
-
+  const [tags, setTag] = useState([]);
+  const [activeTagIndexx, setActiveTagIndexx] = useState(null);
+  const [productData, setProductData] = useState({
+  title: "",
+  description: "",
+  price: "",
+  compareAtPrice: "",
+  cost: "",
+  profit: "",
+  margin: "",
+  sku: "",
+  barcode: "",
+  weight: "",
+  unit: "kg",
+  selectedCategory: "",
+  variants: [],
+  type: "",
+  vendor: "",
+  tags: [],
+  status: "active",
+  files: [],
+  outOfStock: false,
+  physicalProduct: true,
+  freeShipment: false,
+  chargeTax: true,
+});
+  const handleChange = (key,value)=>{
+    setProductData((prev) => ({...prev, [key]: value}))
+  }
   const handleDragEnd = (event) => {
     const { active, over } = event;
     
@@ -165,7 +201,8 @@ export default function NewProduct() {
   };
 
   return (
-    <div className="flex-1 flex flex-col gap-4">
+    <div className="grid grid-cols-10 gap-4">
+      <div className="flex-1 flex flex-col gap-4 col-span-6">
       <Card>
         <CardHeader>
           <CardTitle>Product basic information</CardTitle>
@@ -180,13 +217,14 @@ export default function NewProduct() {
             <ControlGroupItem className="flex-1">
               <InputBase>
                 <InputBaseControl>
-                  <InputBaseInput placeholder="Short sleeve t-shirt"/>
+                  <InputBaseInput placeholder="Short sleeve t-shirt" 
+                  onChange={()=> handleChange('title', e.target.value)} />
                 </InputBaseControl>
               </InputBase>
             </ControlGroupItem>
           </ControlGroup>
 
-            <Textarea placeholder="Product description" />
+            <Textarea placeholder="Product description" onChange={()=> handleChange('discription', e.target.value)} />
 
 
             <Dropzone
@@ -506,6 +544,76 @@ export default function NewProduct() {
         </Sortable>
         </CardContent>
       </Card>
+      </div>
+      <div className="flex-1 flex flex-col gap-4 col-span-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Status</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Select defaultValue="active">
+            <SelectTrigger className="w-full flex-1">
+                <SelectValue placeholder="Select a status" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectGroup>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                </SelectGroup>
+            </SelectContent>
+            </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Product organization</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ControlGroup>
+            <ControlGroupItem>
+              <InputBase>
+                <InputBaseAdornment>Type</InputBaseAdornment>
+              </InputBase>
+            </ControlGroupItem>
+            <ControlGroupItem className="flex-1">
+              <InputBase>
+                <InputBaseControl>
+                  <InputBaseInput/>
+                </InputBaseControl>
+              </InputBase>
+            </ControlGroupItem>
+          </ControlGroup>
+          <ControlGroup>
+            <ControlGroupItem>
+              <InputBase>
+                <InputBaseAdornment>Vendor</InputBaseAdornment>
+              </InputBase>
+            </ControlGroupItem>
+            <ControlGroupItem className="flex-1">
+              <InputBase>
+                <InputBaseControl>
+                  <InputBaseInput/>
+                </InputBaseControl>
+              </InputBase>
+            </ControlGroupItem>
+          </ControlGroup>
+          <TagInput
+            placeholder="Add tag"
+            tags={tags}
+            setTags={(newTags) => {
+                setTag(newTags);
+            }}
+            activeTagIndexx={activeTagIndexx}
+            setActiveTagIndexx={setActiveTagIndexx}
+        />
+        </CardContent>
+      </Card>
+
+      <Button className="cursor-pointer w-full">
+        Save product
+      </Button>
+      </div>
     </div>
   );
 }

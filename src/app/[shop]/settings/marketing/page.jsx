@@ -53,7 +53,7 @@ export default function MarketingSeoTools() {
               <Input
                 value="https://shop.apidoxy.com/api/108627/sitemaps.xml"
                 readOnly
-                className="bg-muted/100 text-center font-semibold"
+                className="bg-muted/100 text-center font-semibold h-10"
               />
               <Button
                 variant="outline"
@@ -84,7 +84,7 @@ export default function MarketingSeoTools() {
               <Input
                 value="https://shop.apidoxy.com/api/108627/facebook-product-feed.xml"
                 readOnly
-                className="bg-muted/100 text-center font-semibold"
+                className="bg-muted/100 text-center font-semibold h-10"
               />
               <Button
                 variant="outline"

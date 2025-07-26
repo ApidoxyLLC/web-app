@@ -2,47 +2,65 @@ import config from "./config";
 
 const templates = [
   {
-    "name": "shop2",
-    "cname": "shop2-dxi.pages.dev",
+    name: "shop2",
+    cname: "shop2-dxi.pages.dev",
   },
   {
-    "name": "shop3",
-    "cname": "shop3-dxi.pages.dev",
+    name: "shop3",
+    cname: "shop3-dxi.pages.dev",
   },
 ];
 
-export async function addDNSRecord({ domain, template, zoneId, ttl = null }) {
+export async function addDNSRecord({
+  domain,
+  template,
+  type = "CNAME",
+  content,
+  ttl = null,
+  proxied = true,
+}) {
   const controller = new AbortController();
   const timeout = 10000;
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+  let recordContent = content;
 
-  if (!templates || !Array.isArray(templates)) {
-    throw new Error('Templates configuration is missing or invalid');
-  }
-  const templateConfig = templates.find(t => t && t.name === template);
-  if (!templateConfig) {
-    throw new Error(`Template not found for project: ${template}`);
+  if (type === "CNAME") {
+    if (!recordContent) {
+      if (!templates || !Array.isArray(templates)) {
+        throw new Error("Templates configuration is missing or invalid");
+      }
+      const templateConfig = templates.find((t) => t?.name === template);
+      if (!templateConfig) {
+        throw new Error(`Template not found for project: ${template}`);
+      }
+      recordContent = templateConfig.cname;
+    }
+  } else if (type === "TXT") {
+    if (!recordContent) {
+      throw new Error("TXT record requires 'content' parameter");
+    }
+    proxied = false;
+  } else {
+    throw new Error(`Unsupported DNS record type: ${type}`);
   }
 
   try {
     const response = await fetch(
-      `https://api.cloudflare.com/client/v4/zones/${config.zoneId}/dns_records`,
+      `https://api.cloudflare.com/client/v4/zones/${config.cloudflare.zoneId}/dns_records`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Auth-Email": config.email,
-          "X-Auth-Key": config.apiKey,
-          // If you prefer token auth:
-          // Authorization: `Bearer ${config.apiToken}`
+          "X-Auth-Email": config.cloudflare.email,
+          "X-Auth-Key": config.cloudflare.apiKey,
         },
         body: JSON.stringify({
-          type: "CNAME",
+          type,
           name: domain,
-          content: templateConfig.cname,
-          proxied: true,
-          ttl: ttl ? ttl : config.dnsTtlMs,
+          content: recordContent,
+          proxied,
+          ttl: ttl || config.cloudflare.dnsTtlMs,
         }),
         signal: controller.signal,
       }
@@ -62,7 +80,7 @@ export async function addDNSRecord({ domain, template, zoneId, ttl = null }) {
       throw new Error(`API error: ${errorMsg}`);
     }
 
-    console.log(`Successfully added DNS record for ${domain}`);
+    console.log(`Successfully added ${type} DNS record for ${domain}`);
     return {
       success: true,
       record: data.result,
