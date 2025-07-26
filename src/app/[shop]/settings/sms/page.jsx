@@ -46,12 +46,40 @@ export default function Dashboard() {
   const [formData, setFormData] = useState({});
   const [savedData, setSavedData] = useState({});
 
-  const handleAdd = () => {
-    const provider = smsProviders.find((p) => p.name === selected);
-    if (!provider) return;
+  const handleAdd = async () => {
+  const provider = smsProviders.find((p) => p.name === selected);
+  if (!provider) return;
+
+  const payload = {
+    providerId: provider.id,
+    providerName: provider.name,
+    fields: formData,
+  };
+
+  try {
+    const response = await fetch("/api/v1/sms", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to save SMS provider");
+    }
+
+    const result = await response.json();
+
+    // Update local state on success
     setSavedData((prev) => ({ ...prev, [provider.id]: formData }));
     setFormData({});
-  };
+    console.log("Success:", result);
+  } catch (error) {
+    console.error("Error saving provider:", error);
+  }
+};
+
 
   const handleDelete = (id) => {
     const newSaved = { ...savedData };
