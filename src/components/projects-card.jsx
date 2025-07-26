@@ -38,7 +38,6 @@ export function ProjectsCard() {
       } else {
         router.push("http://localhost:3000/signup");
       }
-    
   }, [userData, userData.status, router]);
   
   const { data, loading } = useFetch("/shops")

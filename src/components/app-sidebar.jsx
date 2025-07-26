@@ -87,10 +87,6 @@ const data = {
           url: "/settings",
         },
         {
-          title: "Coupons",
-          url: "/coupons",
-        },
-        {
           title: "Users & Permissions",
           url: "/permissions",
         },
