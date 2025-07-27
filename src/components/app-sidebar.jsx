@@ -79,10 +79,6 @@ const data = {
       icon: Settings2,
       items: [
         {
-          title: "Templates",
-          url: "/templates",
-        },
-        {
           title: "Settings",
           url: "/settings",
         },

@@ -19,7 +19,7 @@ export const smsProviderDTOSchema = z.discriminatedUnion("provider", [
     apiKey: z.string().min(1, "API Key is required"),
     senderId: z.string().min(1, "Sender ID is required"),
     clientId: z.string().min(1, "Client ID is required"),
-    secretId: z.string().min(1, "Secret ID is required"),
+    clientSecret: z.string().min(1, "Secret ID is required"),
   }),
 ]);
 

@@ -67,9 +67,11 @@ export default function EmailConfigDashboard() {
                   </ControlGroupItem>
                 </ControlGroup>
               ))}
-              <Button onClick={handleAdd} className="mt-4" variant="outline">
+              <div className="flex justify-end">
+                <Button onClick={handleAdd} className="mt-4" >
                 Add <span className="text-xl">+</span>
               </Button>
+              </div>
             </div>
           )}
 

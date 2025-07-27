@@ -10,33 +10,34 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 
 const smsProviders = [
   {
     name: "Balk SMS BD",
-    id: "balksmsbd",
+    id: "bulk_sms_bd",
     fields: [
-      { label: "API Key", name: "api_key", type: "text" },
-      { label: "Sender ID", name: "sender_id", type: "text" },
+      { label: "API Key", name: "apiKey", type: "text" },
+      { label: "Sender ID", name: "senderId", type: "text" },
     ],
   },
   {
     name: "Alpha Net BD",
-    id: "alphanetbd",
+    id: "alpha_net_bd",
     fields: [
-      { label: "API Key", name: "api_key", type: "text" },
-      { label: "Sender ID", name: "sender_id", type: "text" },
+      { label: "API Key", name: "apiKey", type: "text" },
+      { label: "Sender ID", name: "senderId", type: "text" },
     ],
   },
   {
     name: "ADN Diginet",
-    id: "adndiginet",
+    id: "adn_diginet_bd",
     fields: [
-      { label: "API Key", name: "api_key", type: "text" },
-      { label: "Sender ID", name: "sender_id", type: "text" },
-      { label: "Client ID", name: "client_id", type: "text" },
-      { label: "Client Secret", name: "client_secret", type: "password" },
+      { label: "API Key", name: "apiKey", type: "text" },
+      { label: "Sender ID", name: "senderId", type: "text" },
+      { label: "Client ID", name: "clientId", type: "text" },
+      { label: "Client Secret", name: "clientSecret", type: "password" },
     ],
   },
 ];
@@ -45,19 +46,20 @@ export default function Dashboard() {
   const [selected, setSelected] = useState("Balk SMS BD");
   const [formData, setFormData] = useState({});
   const [savedData, setSavedData] = useState({});
-
+  const {shop} = useParams()
   const handleAdd = async () => {
   const provider = smsProviders.find((p) => p.name === selected);
   if (!provider) return;
 
   const payload = {
-    providerId: provider.id,
-    providerName: provider.name,
-    fields: formData,
+    provider: provider.id,
+    shop,
+    ...formData
   };
+  console.log(payload)
 
   try {
-    const response = await fetch("/api/v1/sms", {
+    const response = await fetch("/api/v1/sms-services", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -79,7 +81,6 @@ export default function Dashboard() {
     console.error("Error saving provider:", error);
   }
 };
-
 
   const handleDelete = (id) => {
     const newSaved = { ...savedData };
@@ -130,7 +131,7 @@ export default function Dashboard() {
                             onChange={(e) =>
                               setFormData((prev) => ({
                                 ...prev,
-                                [f.label]: e.target.value,
+                                [f.name]: e.target.value,
                               }))
                             }
                             placeholder={`Enter ${f.label}`}
@@ -143,26 +144,29 @@ export default function Dashboard() {
                   </ControlGroup>
                 ))}
               </div>
-              <Button
+              <div className="flex justify-end">
+                <Button
                 onClick={handleAdd}
-                className="mt-4 w-full"
-                variant="outline"
+                className="mt-4"
               >
                 Add <span className="text-xl">+</span>
               </Button>
+              </div>
             </div>
           )}
 
           {(() => {
             const current = smsProviders.find((p) => p.name === selected);
+            console.log("cur",current)
             if (!current) return null;
 
             const info = savedData[current.id];
+            console.log(info)
             if (!info) return null;
 
             return (
               <div key={current.id} className="mt-6 border p-4 rounded-md">
-                <h4 className="font-semibold mb-4">{current.name}</h4>
+                <h4 className="font-semibold mb-4">{current.label}</h4>
 
                 <div className={`grid grid-cols-2 items-center gap-6`}>
                   {Object.entries(info).map(([fieldName, value]) => (
