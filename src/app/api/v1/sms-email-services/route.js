@@ -6,7 +6,7 @@ import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 // import { userModel } from "@/models/auth/user";
-import smsProviderDTOSchema from "./smsServicesDTOSchema";
+import { smsProviderDTOSchema, emailProviderDTOSchema } from "./smsAndEmailServicesDTOSchema"; // ✅ NEW: added email schema import
 import mongoose from "mongoose";
 
 export async function POST(request) {
@@ -26,7 +26,26 @@ export async function POST(request) {
     let body;
     try {
         body = await request.json();
-        const parsed = smsProviderDTOSchema.safeParse(body);
+
+        const { provider } = body;
+
+        let parsed;
+        let providerType;
+        if (["bulk_sms_bd", "alpha_net_bd", "adn_diginet_bd"].includes(provider)) {
+            parsed = smsProviderDTOSchema.safeParse(body);
+            providerType = "smsProvider";
+        } 
+        else if (provider === "smtp") {
+            parsed = emailProviderDTOSchema.safeParse(body);
+            providerType = "emailProvider";
+        } 
+        else {
+            return NextResponse.json(
+                { error: "Unsupported provider" },
+                { status: 400 }
+            );
+        }
+
         if (!parsed.success) {
             return NextResponse.json(
                 { error: "Invalid input", issues: parsed.error.flatten() },
@@ -37,12 +56,11 @@ export async function POST(request) {
         // Authentication
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
         if (!authenticated) {
-          return NextResponse.json(
-            { error: authError || "Not authorized" },
-            { status: 401 }
-          );
+            return NextResponse.json(
+                { error: authError || "Not authorized" },
+                { status: 401 }
+            );
         }
-
 
         /** 
      * fake Authentication for test purpose only 
@@ -87,8 +105,7 @@ export async function POST(request) {
             );
         }
 
-        // Proceed with DB update
-        const { provider, shop: referenceId, ...inputs } = parsed.data;
+        const { provider: _provider, shop: referenceId, ...inputs } = parsed.data;
 
         const auth_db = await authDbConnect();
         const vendor_db = await vendorDbConnect();
@@ -98,10 +115,10 @@ export async function POST(request) {
         const pipeline = [
             {
                 $set: {
-                    smsProvider: {
+                    [providerType]: {
                         $mergeObjects: [
-                            { $ifNull: ["$smsProvider", {}] },
-                            { [provider]: inputs }
+                            { $ifNull: [`$${providerType}`, {}] },
+                            { [_provider]: inputs }
                         ]
                     }
                 }
@@ -117,13 +134,12 @@ export async function POST(request) {
                         $elemMatch: {
                             userId: new mongoose.Types.ObjectId(data.userId),
                             status: "active",
-                            permission: { $in: ["w:sms-provider", "w:shop"] }
+                            permission: { $in: ["w:sms-provider", "w:email-provider", "w:shop"] }
                         }
                     }
                 }
             ]
         };
-
 
         const [updatedVendor, updatedShop] = await Promise.all([
             Vendor.updateOne(permissionFilter, pipeline),
@@ -138,7 +154,7 @@ export async function POST(request) {
         }
 
         return NextResponse.json(
-            { success: true, message: "SMS provider updated successfully" },
+            { success: true, message: `${providerType} updated successfully` },
             { status: 200 }
         );
 
@@ -146,7 +162,7 @@ export async function POST(request) {
         console.log("Internal error:", error);
         return NextResponse.json(
             {
-                error: error.message || "Failed to update SMS provider",
+                error: error.message || "Failed to update provider",
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
             },
             { status: 500 }

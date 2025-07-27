@@ -16,3 +16,11 @@ export const adnDiginetBdSchema = new mongoose.Schema({
     clientId: { type: String, required: true },
     secretId: { type: String, required: true },
 }, { timestamps: true, _id: false });
+
+export const smtpSchema = new mongoose.Schema({
+    host: { type: String, required: true },
+    port: { type: Number, required: true },
+    user: { type: String, required: true },
+    password: { type: String, required: true },
+    fromEmail: { type: String, required: true },
+}, { timestamps: true, _id: false });

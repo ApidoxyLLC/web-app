@@ -3,7 +3,7 @@ import config from '../config';
 import imageSchema from '../imageSchema';
 import { pathaoSchema, steadfastSchema } from './DeliveryPartner';
 import { bkashSchema } from './PaymentPartner';
-import { alphaNetBdSchema, bulkSmsBdSchema, adnDiginetBdSchema } from './SmsServices';
+import { alphaNetBdSchema, bulkSmsBdSchema, adnDiginetBdSchema, smtpSchema } from './SmsAndEmailServices';
 
 const dbInfoSchema = new mongoose.Schema({
   dbName: { type: String },
@@ -80,8 +80,14 @@ const smsProviderSchema = new mongoose.Schema({
   bulk_sms_bd: { type: bulkSmsBdSchema, default: undefined },
   alpha_net_bd: { type: alphaNetBdSchema, default: undefined },
   adn_diginet_bd: { type: adnDiginetBdSchema, default: undefined },
-}, { _id: false });
+}, { timestamps: false, _id: false });
 
+
+const emailProviderSchema = new mongoose.Schema({
+  // provider: { type: String, enum: ['mailgun', 'sendgrid', 'smtp', 'ses'] },
+  smtp: { type: smtpSchema, default: undefined },
+  active: { type: Boolean, default: false },
+}, { timestamps: false, _id: false });
 
 const facebookPixelSchema = new mongoose.Schema({
   provider: { type: String },
@@ -171,14 +177,14 @@ const googleTagManagerSchema = new mongoose.Schema({
 //           active: { type: Boolean, default: false }
 // }, { timestamps: false,  _id: false });
 
-const emailProviderSchema = new mongoose.Schema({
-  provider: { type: String, enum: ['mailgun', 'sendgrid', 'smtp', 'ses'] },
-  smtpHost: { type: String },
-  port: { type: String },
-  username: { type: String },
-  password: { type: String },
-  active: { type: Boolean, default: false },
-}, { timestamps: false, _id: false });
+// const emailProviderSchema = new mongoose.Schema({
+//   provider: { type: String, enum: ['mailgun', 'sendgrid', 'smtp', 'ses'] },
+//   smtpHost: { type: String },
+//   port: { type: String },
+//   username: { type: String },
+//   password: { type: String },
+//   active: { type: Boolean, default: false },
+// }, { timestamps: false, _id: false });
 
 const chatSupportSchema = new mongoose.Schema({
   provider: { type: String, enum: ['facebook', 'whatsapp', 'intercom', 'tawk'] },
