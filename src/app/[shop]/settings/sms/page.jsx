@@ -10,13 +10,17 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-
+import bulk from "../../../../../public/images/bulk.png"
+import alpha from "../../../../../public/images/alpha.png"
+import adn from "../../../../../public/images/adn.png"
 const smsProviders = [
   {
     name: "Balk SMS BD",
     id: "bulk_sms_bd",
+    logo: bulk,
     fields: [
       { label: "API Key", name: "apiKey", type: "text" },
       { label: "Sender ID", name: "senderId", type: "text" },
@@ -25,6 +29,7 @@ const smsProviders = [
   {
     name: "Alpha Net BD",
     id: "alpha_net_bd",
+    logo: alpha,
     fields: [
       { label: "API Key", name: "apiKey", type: "text" },
       { label: "Sender ID", name: "senderId", type: "text" },
@@ -33,6 +38,7 @@ const smsProviders = [
   {
     name: "ADN Diginet",
     id: "adn_diginet_bd",
+    logo: adn,
     fields: [
       { label: "API Key", name: "apiKey", type: "text" },
       { label: "Sender ID", name: "senderId", type: "text" },
@@ -56,10 +62,9 @@ export default function Dashboard() {
     shop,
     ...formData
   };
-  console.log(payload)
-
+  
   try {
-    const response = await fetch("/api/v1/sms-services", {
+    const response = await fetch("/api/v1/sms-email-services", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -99,14 +104,14 @@ export default function Dashboard() {
 
           <div className="flex gap-4">
             {smsProviders.map((p) => (
-              <Button
+                <Button
                 key={p.id}
                 variant="outline"
                 onClick={() => setSelected(p.name)}
-                className={`border-2 rounded-md ${
+                className={`border-2 rounded-md flex ${
                   selected === p.name ? "border-foreground" : ""
                 }`}
-              >
+              > <Image src={p.logo} alt="logo" width={30} height={30}></Image>
                 {p.name}
               </Button>
             ))}
@@ -119,7 +124,7 @@ export default function Dashboard() {
                   <ControlGroup key={f.name}>
                     <ControlGroupItem className="shadow-none">
                       <InputBase className="h-10">
-                        <InputBaseAdornment className="text-xs w-[70px] ">
+                        <InputBaseAdornment className=" w-[70px] ">
                           {f.label}
                         </InputBaseAdornment>
                       </InputBase>
@@ -157,11 +162,9 @@ export default function Dashboard() {
 
           {(() => {
             const current = smsProviders.find((p) => p.name === selected);
-            console.log("cur",current)
             if (!current) return null;
 
             const info = savedData[current.id];
-            console.log(info)
             if (!info) return null;
 
             return (

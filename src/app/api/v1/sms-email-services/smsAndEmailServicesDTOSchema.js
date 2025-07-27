@@ -27,11 +27,11 @@ export const smsProviderDTOSchema = z.discriminatedUnion("provider", [
 export const emailProviderDTOSchema = z.object({
   provider: z.literal("smtp"),
   shop: z.string().min(1, "Shop ID is required"),
-  host: z.string().min(1, "SMTP Host is required"),
+  smtp: z.string().min(1, "SMTP Host is required"),
   port: z.coerce.number().min(1, "SMTP Port is required"),
-  user: z.string().min(1, "SMTP Username is required"),
-  pass: z.string().min(1, "SMTP Password is required"),
-  fromEmail: z.string().email("Valid From Email is required"),
+  username: z.string().min(1, "SMTP Username is required"),
+  password: z.string().min(1, "SMTP Password is required"),
+  // fromEmail: z.string().email("Valid From Email is required"),
 });
 
 
