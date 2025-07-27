@@ -5,12 +5,11 @@ import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
-import { userModel } from "@/models/auth/user";
+// import { userModel } from "@/models/auth/user";
 import smsProviderDTOSchema from "./smsServicesDTOSchema";
 import mongoose from "mongoose";
 
 export async function POST(request) {
-    console.log("hello*******************************************")
     // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
@@ -36,13 +35,13 @@ export async function POST(request) {
         }
 
         // Authentication
-        // const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        // if (!authenticated) {
-        //   return NextResponse.json(
-        //     { error: authError || "Not authorized" },
-        //     { status: 401 }
-        //   );
-        // }
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+          return NextResponse.json(
+            { error: authError || "Not authorized" },
+            { status: 401 }
+          );
+        }
 
 
         /** 
@@ -58,21 +57,21 @@ export async function POST(request) {
      * *               *           
      * */
 
-        const authDb = await authDbConnect()
-        const User = userModel(authDb);
-        const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
-            .select('referenceId _id name email phone role isEmailVerified')
-        console.log(user)
-        const userData = {
-            sessionId: "cmdags8700000649w6qyzu8xx",
-            userReferenceId: user.referenceId,
-            userId: user?._id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-            isVerified: user.isEmailVerified || user.isPhoneVerified,
-        }
+        // const authDb = await authDbConnect()
+        // const User = userModel(authDb);
+        // const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
+        //     .select('referenceId _id name email phone role isEmailVerified')
+        // console.log(user)
+        // const data = {
+        //     sessionId: "cmdags8700000649w6qyzu8xx",
+        //     userReferenceId: user.referenceId,
+        //     userId: user?._id,
+        //     name: user.name,
+        //     email: user.email,
+        //     phone: user.phone,
+        //     role: user.role,
+        //     isVerified: user.isEmailVerified || user.isPhoneVerified,
+        // }
 
         /** 
          * fake Authentication for test purpose only 
@@ -81,12 +80,12 @@ export async function POST(request) {
          * *******************************************
         **/
 
-        // if (!mongoose.Types.ObjectId.isValid(data.userId)) {
-        //     return NextResponse.json(
-        //         { error: "Invalid user ID format" },
-        //         { status: 400 }
-        //     );
-        // }
+        if (!mongoose.Types.ObjectId.isValid(data.userId)) {
+            return NextResponse.json(
+                { error: "Invalid user ID format" },
+                { status: 400 }
+            );
+        }
 
         // Proceed with DB update
         const { provider, shop: referenceId, ...inputs } = parsed.data;
@@ -112,11 +111,11 @@ export async function POST(request) {
         const permissionFilter = {
             referenceId,
             $or: [
-                { ownerId: userData.userId },
+                { ownerId: data.userId },
                 {
                     stuffs: {
                         $elemMatch: {
-                            userId: new mongoose.Types.ObjectId(userData.userId),
+                            userId: new mongoose.Types.ObjectId(data.userId),
                             status: "active",
                             permission: { $in: ["w:sms-provider", "w:shop"] }
                         }
@@ -124,11 +123,6 @@ export async function POST(request) {
                 }
             ]
         };
-
-
-        console.log("referenceId:", referenceId);
-        console.log("userId:", userData.userId);
-        console.log("Filter being used:", JSON.stringify(permissionFilter, null, 2));
 
 
         const [updatedVendor, updatedShop] = await Promise.all([
