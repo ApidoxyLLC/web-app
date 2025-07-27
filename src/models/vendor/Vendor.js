@@ -89,14 +89,25 @@ const emailProviderSchema = new mongoose.Schema({
   active: { type: Boolean, default: false },
 }, { timestamps: false, _id: false });
 
-const facebookPixelSchema = new mongoose.Schema({
-  provider: { type: String },
-  pixelId: { type: String },
-  pixelAccessToken: { type: String },
-  testEventId: { type: String },
-  conversionApiToken: { type: String },
-  dataFeedUrl: { type: String },
-}, { timestamps: false, _id: false });
+ const googleTagManagerSchema = new mongoose.Schema({
+    gtmId: { type: String, required: true },
+}, { timestamps: true, _id: false });
+
+ const facebookPixelSchema = new mongoose.Schema({
+    pixelId: { type: String, required: true },
+    accessToken: { type: String, required: true },
+    testEventId: { type: String, required: false },
+}, { timestamps: true, _id: false });
+
+
+// const facebookPixelSchema = new mongoose.Schema({
+//   provider: { type: String },
+//   pixelId: { type: String },
+//   pixelAccessToken: { type: String },
+//   testEventId: { type: String },
+//   conversionApiToken: { type: String },
+//   dataFeedUrl: { type: String },
+// }, { timestamps: false, _id: false });
 
 const paymentPartnerSchema = new mongoose.Schema({
   bkash: { type: bkashSchema, default: undefined }
@@ -163,10 +174,10 @@ const metadataSchema = new mongoose.Schema({
   // tags: { type: [{ name: String, content: String, property: String }] },
 }, { timestamps: false, _id: false });
 
-const googleTagManagerSchema = new mongoose.Schema({
-  provider: { type: String },
-  tagManagerId: { type: [{ type: String, trim: true, lowercase: true }] },
-}, { timestamps: false, _id: false });
+// const googleTagManagerSchema = new mongoose.Schema({
+//   provider: { type: String },
+//   tagManagerId: { type: [{ type: String, trim: true, lowercase: true }] },
+// }, { timestamps: false, _id: false });
 
 // const smsProviderSchema = new mongoose.Schema({
 //         provider: { type: String, enum: ['bulk-sms-bd', 'twilio', 'nexmo', 'msg91', 'banglalink'] },
