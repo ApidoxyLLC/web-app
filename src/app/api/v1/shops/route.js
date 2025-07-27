@@ -82,7 +82,7 @@ export async function POST(request) {
       }, { status: 409 });
     }
 
-   
+
 
     await addDNSRecord({
       domain: primaryDomain,
@@ -107,7 +107,9 @@ export async function POST(request) {
       industry: parsed.data.industry?.trim(),
       businessName: parsed.data.businessName?.trim(),
       location: parsed.data.location,
-      transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
+      transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() },
+      paymentMethod: "Cash on Delivery"
+
     }
 
     const vendorPayload = {

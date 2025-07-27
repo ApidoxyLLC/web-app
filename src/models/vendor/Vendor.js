@@ -269,6 +269,7 @@ const vendorSchema = new mongoose.Schema({
   deliveryPartner: { type: deliveryPartnerSchema, default: null },
   smsProvider: { type: smsProviderSchema, default: {} },
   paymentPartner: { type: paymentPartnerSchema, default: null },
+  paymentMethod: { type: String, enum: ['Cash on Delivery'], default: 'Cash on Delivery'},
   chatSupport: { type: [chatSupportSchema], default: null },
   marketing: { type: marketingSchema, default: null },
   activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },

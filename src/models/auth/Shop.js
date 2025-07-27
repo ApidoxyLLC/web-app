@@ -223,7 +223,10 @@ const shopSchema = new mongoose.Schema({
                 web: { type: webAppSchema, default: null },
             android: { type: androidAppSchema, default: null },
                 ios: { type: iosAppSchema, default: null },
-           metadata: { type: metadataSchema }
+           metadata: { type: metadataSchema },
+      paymentMethod: {type: String, enum: ['Cash on Delivery'],default: 'Cash on Delivery'},
+
+
 }, { timestamps: true, collection: 'shops' });
 
 export const shopModel = (db) => db.models.Shop || db.model('Shop', shopSchema);
