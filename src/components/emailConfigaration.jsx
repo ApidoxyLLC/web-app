@@ -42,14 +42,15 @@ export default function EmailConfigDashboard() {
     const result = await response.json();
     if (response.ok) {
       toast.success("Configured Email Service");
-      setSavedData(formData);
-      setFormData({});
     } else {
       toast.error(result?.error || "Failed to update");
     }
   } catch (error) {
     console.error("Error saving provider:", error);
   }
+
+      setSavedData(formData);
+      setFormData({});
   };
 
   const handleDelete = () => {

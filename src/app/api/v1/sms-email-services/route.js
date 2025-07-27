@@ -48,7 +48,7 @@ export async function POST(request) {
 
         if (!parsed.success) {
             return NextResponse.json(
-                { error: "Invalid input", issues: parsed.error.flatten() },
+                { error: "Invalid input", issues: parsed.error.flatten()},
                 { status: 422 }
             );
         }
