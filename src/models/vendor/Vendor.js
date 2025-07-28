@@ -66,8 +66,8 @@ const notificationSchema = new mongoose.Schema({
 }, { _id: false, timestamps: false });
 
 const deliveryPartnerSchema = new mongoose.Schema({
-     pathao: { type: pathaoSchema, default: undefined }, 
-  steadfast: { type: steadfastSchema, default: undefined }
+     pathao: { type: pathaoSchema, default: null }, 
+  steadfast: { type: steadfastSchema, default: null }
 }, { timestamps: false, _id: false })
 
 const facebookPixelSchema = new mongoose.Schema({
@@ -80,7 +80,7 @@ conversionApiToken: { type: String },
 }, { timestamps: false,  _id: false });
 
 const paymentPartnerSchema = new mongoose.Schema({
-  bkash: { type: bkashSchema, default: undefined }
+  bkash: { type: bkashSchema, default: null }
 }, { timestamps: facebookPixelSchema, _id: false })
 
 const baseAppSchema = new mongoose.Schema({
@@ -118,7 +118,7 @@ const androidAppSchema = new mongoose.Schema({
     buildInfo: [buildInfoSchema],
     firebaseJSONData: String,
     buildHistory: [{ 
-                    si_no: { type: String, default: null }, 
+                      si_no: { type: String, default: null }, 
                     version: { type: String, default: null } 
                     }]
 }, { timestamps: false,  _id: false });
@@ -236,12 +236,12 @@ const vendorSchema = new mongoose.Schema({
                                  email: { type: String, trim: true },
                                  phone: { type: String, trim: true },
                                   logo: { type: imageSchema },
-                                stuffs: { type: [stuffSchema], default: undefined },
+                                stuffs: { type: [stuffSchema], default: null },
                      maxSessionAllowed: { type: Number, default: () => config.defaultMaxSessions, select: false },
                                 dbInfo: { type: dbInfoSchema, default: null, select: false },
                             bucketInfo: { type: bucketInfoSchema, default: null, select: false },
                                secrets: { type: secretKeySchema, default: null, select: false },
-                           expirations: { type: expirationSchema, default: undefined, select: false },
+                           expirations: { type: expirationSchema, default: null, select: false },
                          primaryDomain: { type: String, trim: true, unique: true, sparse: true },
                                domains: { type: [String], default: [] },
                            socialLinks: { type: [socialLinksSchema], required: false, default: [] },
@@ -251,8 +251,8 @@ const vendorSchema = new mongoose.Schema({
                                support: { type: contactNdSupportSchema, select: true },
                           notification: { type: notificationSchema, select: true },
                        deliveryPartner: { type: deliveryPartnerSchema, default: null },
-                        paymentPartner: { type: paymentPartnerSchema, default: null },
-                           chatSupport: { type: [chatSupportSchema], default: null },
+                        paymentPartner: { type: paymentPartnerSchema, default: null  },
+                           chatSupport: { type: [chatSupportSchema], default: [] },
                              marketing: { type: marketingSchema, default: null },
                             activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
                                    web: { type: webAppSchema, default: null },
@@ -289,7 +289,7 @@ const vendorSchema = new mongoose.Schema({
 //       stepName,
 //       status,
 //       details,
-//       completedAt: status === 'completed' ? new Date() : undefined
+//       completedAt: status === 'completed' ? new Date() : null
 //     });
 //   } else {
 //     const currentStatus = this.transaction.sagaSteps[stepIndex].status;
