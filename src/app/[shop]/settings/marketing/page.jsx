@@ -16,15 +16,61 @@ import google from "../../../../../public/images/google.svg";
 import googleTag from "../../../../../public/images/google_tag_manager.png";
 import facebookConversion from "../../../../../public/images/facebookConversion.png";
 import Image from "next/image";
+import { useParams } from "next/navigation";
+import { toast } from "sonner";
 export default function MarketingSeoTools() {
   const [copied, setCopied] = useState(false);
+  const [formData, setFormData]  = useState({
+    googleTagManager:{
+      gtmId:""
+    },
+    facebookPixel:{
+      pixelId:"",
+      accessToken:"",
+      testEventId:""
+    }
+  })
+  const {shop} = useParams()
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+  const handleSubmit = async () => {
+  const payload = {
+    shop,
+    googleTagManager:
+      formData.googleTagManager.gtmId.trim() !== ""
+        ? { gtmId: formData.googleTagManager.gtmId }
+        : undefined,
+    facebookPixel:
+      formData.facebookPixel.pixelId.trim() !== "" &&
+      formData.facebookPixel.accessToken.trim() !== ""
+        ? {
+            pixelId: formData.facebookPixel.pixelId,
+            accessToken: formData.facebookPixel.accessToken,
+            testEventId:
+              formData.facebookPixel.testEventId.trim() || undefined,
+          }
+        : undefined,
+  };
 
+  try {
+    const res = await fetch("/api/v1/seo-marketing", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error("Failed to submit marketing data");
+    toast.success("Marketing data updated successfully!");
+  } catch (err) {
+    toast.error(err.message);
+  }
+};
   return (
     <div
       className=" bg-muted/100 h-full
@@ -119,7 +165,14 @@ export default function MarketingSeoTools() {
               <ControlGroupItem className="w-full shadow-none">
                 <InputBase>
                   <InputBaseControl>
-                    <InputBaseInput placeholder="GTM ID" />
+                    <InputBaseInput placeholder="GTM ID" onChange={(e)=>{
+                      setFormData((prev) => ({
+                        ...prev,
+                        googleTagManager: {
+                          gtmId: e.target.value,
+                        },
+                      }));
+                    }} />
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
@@ -145,7 +198,15 @@ export default function MarketingSeoTools() {
                 <ControlGroupItem className="w-full shadow-none">
                   <InputBase>
                     <InputBaseControl>
-                      <InputBaseInput placeholder="Pixel ID" />
+                      <InputBaseInput placeholder="Pixel ID" onChange={(e) =>
+    setFormData((prev) => ({
+      ...prev,
+      facebookPixel: {
+        ...prev.facebookPixel,
+        pixelId: e.target.value,
+      },
+    }))
+  }/>
                     </InputBaseControl>
                   </InputBase>
                 </ControlGroupItem>
@@ -161,7 +222,15 @@ export default function MarketingSeoTools() {
                 <ControlGroupItem className="w-full shadow-none">
                   <InputBase>
                     <InputBaseControl>
-                      <InputBaseInput placeholder="Pixel Access Token" />
+                      <InputBaseInput placeholder="Pixel Access Token" onChange={(e) =>
+    setFormData((prev) => ({
+      ...prev,
+      facebookPixel: {
+        ...prev.facebookPixel,
+        accessToken: e.target.value,
+      },
+    }))
+  }/>
                     </InputBaseControl>
                   </InputBase>
                 </ControlGroupItem>
@@ -177,7 +246,15 @@ export default function MarketingSeoTools() {
                 <ControlGroupItem className="w-full shadow-none">
                   <InputBase>
                     <InputBaseControl>
-                      <InputBaseInput placeholder="Pixel Test Event ID (Just to test. Clear after testing is done)" />
+                      <InputBaseInput placeholder="Pixel Test Event ID (Just to test. Clear after testing is done)" onChange={(e) =>
+    setFormData((prev) => ({
+      ...prev,
+      facebookPixel: {
+        ...prev.facebookPixel,
+        testEventId: e.target.value,
+      },
+    }))
+  }/>
                     </InputBaseControl>
                   </InputBase>
                 </ControlGroupItem>
@@ -186,7 +263,7 @@ export default function MarketingSeoTools() {
           </CardContent>
         </Card>
         <div className="flex justify-end">
-          <Button>Update</Button>
+          <Button onClick={handleSubmit}>Update</Button>
         </div>
       </Card>
     </div>

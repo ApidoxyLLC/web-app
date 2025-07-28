@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Settings,
   Zap,
+  Smartphone, Globe, Link, Users
 } from "lucide-react";
 
 const invoices = [
@@ -31,6 +32,50 @@ const invoices = [
     amount: "$29.00",
     status: "Paid",
   },
+];
+const limitations = [
+  {
+    name: "Basic",
+    price: 10,
+    progresslimit: [
+      {
+        icon: "smartphone",
+        title: "App Builds",
+        value: 1,
+        limit: 1
+      },
+      {
+        icon: "globe",
+        title: "Subdomains",
+        value: 1,
+        limit: 1
+      },
+      {
+        icon: "link",
+        title: "Custom Domains",
+        value: 0,
+        limit: 0
+      },
+      {
+        icon: "users",
+        title: "Users",
+        value: 1,
+        limit: 1
+      },
+      {
+        icon: <Zap className="text-primary size-4" ></Zap>,
+        title: "Push Notifications",
+        value: 100,
+        limit: 500
+      },
+      {
+        icon: "package",
+        title: "Products",
+        value: 10,
+        limit: 15
+      }
+    ]
+  }
 ];
 
 export default function UserBilling() {
@@ -58,11 +103,11 @@ export default function UserBilling() {
               <div>
                 <div className="flex items-center gap-2">
                   <Package className="text-primary size-5" />
-                  <h2 className="text-lg font-semibold">Pro Plan</h2>
+                  <h2 className="text-lg font-semibold">{limitations[0]?.name} Plan</h2>
                   <Badge>Current Plan</Badge>
                 </div>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  $29/month • Renews on April 1, 2024
+                 {limitations[0]?.price} BDT/month • Renews on April 1, 2024
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -72,28 +117,35 @@ export default function UserBilling() {
             </div>
 
             <div className="mt-6 space-y-4">
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Zap className="text-primary size-4" />
-                    <span className="text-sm font-medium">API Requests</span>
-                  </div>
-                  <span className="text-sm">8,543 / 10,000</span>
-                </div>
-                <Progress value={85.43} className="h-2" />
-              </div>
+  {limitations[0]?.progresslimit?.map((item, idx) => {
+    const percent = (item.limit > 0) ? (item.value / item.limit) * 100 : 100;
 
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="text-primary size-4" />
-                    <span className="text-sm font-medium">Monthly Syncs</span>
-                  </div>
-                  <span className="text-sm">143 / 200</span>
-                </div>
-                <Progress value={71.5} className="h-2" />
-              </div>
-            </div>
+    const iconMap = {
+      smartphone: <Smartphone className="text-primary size-4" />,
+      globe: <RefreshCw className="text-primary size-4" />,
+      link: <Link className="text-primary size-4" />,
+      users: <Settings className="text-primary size-4" />,
+      zap: <Zap className="text-primary size-4" />,
+      package: <Package className="text-primary size-4" />,
+    };
+
+    return (
+      <div key={idx}>
+        <div className="mb-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {typeof item.icon === "string" ? iconMap[item.icon] : item.icon}
+            <span className="text-sm font-medium">{item.title}</span>
+          </div>
+          <span className="text-sm">
+            {item.value} / {item.limit}
+          </span>
+        </div>
+        <Progress value={percent} className="h-2" />
+      </div>
+    );
+  })}
+</div>
+
           </CardContent>
         </Card>
 

@@ -142,9 +142,11 @@ export default function Dashboard() {
                       <strong>{fieldName}</strong>: {value}
                     </p>
                   ))}
+                  
+                </div>
+                <div className="flex justify-end mt-6">
                   <Button
                     variant="destructive"
-                    className="col-span-2"
                     onClick={() => handleDelete(current.id)}
                   >
                     Delete
