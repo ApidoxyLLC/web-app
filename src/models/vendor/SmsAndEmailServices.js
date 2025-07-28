@@ -22,5 +22,5 @@ export const smtpSchema = new mongoose.Schema({
     port: { type: Number, required: true },
     user: { type: String, required: true },
     password: { type: String, required: true },
-    fromEmail: { type: String, required: true },
+    // fromEmail: { type: String, required: true },
 }, { timestamps: true, _id: false });

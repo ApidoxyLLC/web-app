@@ -6,7 +6,7 @@ import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 // import { userModel } from "@/models/auth/user";
-import { smsProviderDTOSchema, emailProviderDTOSchema } from "./smsAndEmailServicesDTOSchema"; // ✅ NEW: added email schema import
+import { smsProviderDTOSchema, emailProviderDTOSchema } from "./smsAndEmailServicesDTOSchema";
 import mongoose from "mongoose";
 
 export async function POST(request) {
@@ -118,7 +118,12 @@ export async function POST(request) {
                     [providerType]: {
                         $mergeObjects: [
                             { $ifNull: [`$${providerType}`, {}] },
-                            { [_provider]: inputs }
+                            {
+                                [_provider]: {
+                                    ...inputs,
+                                    updatedAt: new Date()
+                                }
+}
                         ]
                     }
                 }

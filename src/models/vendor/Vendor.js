@@ -80,7 +80,7 @@ const smsProviderSchema = new mongoose.Schema({
   bulk_sms_bd: { type: bulkSmsBdSchema, default: undefined },
   alpha_net_bd: { type: alphaNetBdSchema, default: undefined },
   adn_diginet_bd: { type: adnDiginetBdSchema, default: undefined },
-}, { timestamps: false, _id: false });
+}, { timestamps: true, _id: false });
 
 
 const emailProviderSchema = new mongoose.Schema({
