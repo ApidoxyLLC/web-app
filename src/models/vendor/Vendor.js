@@ -72,7 +72,7 @@ const notificationSchema = new mongoose.Schema({
 
 const deliveryPartnerSchema = new mongoose.Schema({
   pathao: { type: pathaoSchema, default: undefined },
-  steadfast: { type: steadfastSchema, default: undefined }
+  steadfast: { type: steadfastSchema, default: undefined },
      pathao: { type: pathaoSchema, default: null }, 
   steadfast: { type: steadfastSchema, default: null }
 }, { timestamps: false, _id: false })
