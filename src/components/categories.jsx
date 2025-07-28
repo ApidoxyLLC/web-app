@@ -35,7 +35,7 @@ export default function Categories() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [slugCheck, setSlugCheck] = useState({ isAvailable: null, suggestions: [] });
-  const [loading, setLoading] = useState(false);
+  const [loadingState, setloadingState] = useState(false);
   const [newCategory, setNewCategory] = useState({
     title: "",
     slug: "",
@@ -44,16 +44,15 @@ export default function Categories() {
   });
   const [pic, setPic] = useState("")
   const params = useParams()
-
-  console.log(pic)
   const shopId = params.shop
+
   const checkSlug = async () => {
     if (!newCategory.slug) return;
-    setLoading(true);
+    setloadingState(true);
     const res = await fetch(`http://localhost:3000/api/v1/categories/slug?slug=${newCategory.slug}&title=${newCategory.title}&shop=${shopId}`);
     const data = await res.json();
     setSlugCheck({ isAvailable: data.isAvailable, suggestions: data.recommendations || [] });
-    setLoading(false);
+    setloadingState(false);
   };
 
   const handleCreateCategory = async () => {
@@ -83,7 +82,8 @@ export default function Categories() {
     };
     deleteRecursive(id);
   };
-const uploadImage = async (file) => {
+
+  const uploadImage = async (file) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("shop", shopId);
@@ -106,8 +106,7 @@ const uploadImage = async (file) => {
    // return uploaded image URL
 };
 
-  const  { data } = useFetch(`/image/${shopId}/${pic}`)
-  console.log(data)
+  // const  { data } = useFetch(`/image/${shopId}/${pic}`)
   const buildTree = (items, parentId = null, visited = new Set()) =>
   items
     .filter((item) => item.parent === parentId)
@@ -160,9 +159,12 @@ const uploadImage = async (file) => {
     })
     .filter(Boolean);
 
-
   const itemsTree = buildTree(collections);
 
+  // categori fetched
+  const {data, loading} = useFetch(`/${shopId}/categories`)
+  console.log("hooooooo",shopId)
+  console.log(data)
   return (
     <div className="space-y-4 p-6">
       <div className="flex justify-between items-center gap-2">
@@ -245,7 +247,7 @@ const uploadImage = async (file) => {
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
-              <Button size="sm" onClick={checkSlug} disabled={loading}>Check</Button>
+              <Button size="sm" onClick={checkSlug} disabled={loadingState}>Check</Button>
             </ControlGroup>
 
             {slugCheck.isAvailable === false && (

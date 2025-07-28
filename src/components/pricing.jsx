@@ -22,50 +22,65 @@ const tooltipContent = {
 const YEARLY_DISCOUNT = 20;
 const plans = [
   {
-    name: "Starter",
-    price: 20,
-    description:
-      "Get 20 AI-generated portraits with 2 unique styles and filters.",
+    name: "Basic",
+    price: 0,
+    description: "Perfect for individuals or startups to explore essential features.",
     features: [
-      { title: "5 hours turnaround time" },
-      { title: "20 AI portraits" },
-      { title: "Choice of 2 styles", tooltip: tooltipContent.styles },
-      { title: "Choice of 2 filters", tooltip: tooltipContent.filters },
-      { title: "2 retouch credits", tooltip: tooltipContent.credits },
+      { title: "1 Website Hosting" },
+      { title: "1 Subdomain Included" },
+      { title: "No Custom Domain Support" },
+      { title: "1 Android App Build" },
+      { title: "1 Payment Gateway Integration" },
+      { title: "1 Delivery Partner Integration" },
+      { title: "1 SMS Gateway Integration" },
+      { title: "Single User Access (1 Total User)" },
+      { title: "500 Push Notifications per Month" },
+      { title: "Up to 15 Products Listed" },
     ],
-    buttonText: "Get 20 portraits in 5 hours",
+    buttonText: "Start with Basic",
   },
   {
-    name: "Advanced",
-    price: 40,
+    name: "Standard",
+    price: 1000,
     isRecommended: true,
-    description:
-      "Get 50 AI-generated portraits with 5 unique styles and filters.",
+    description: "Ideal for small to medium businesses with growing demands.",
     features: [
-      { title: "3 hours turnaround time" },
-      { title: "50 AI portraits" },
-      { title: "Choice of 5 styles", tooltip: tooltipContent.styles },
-      { title: "Choice of 5 filters", tooltip: tooltipContent.filters },
-      { title: "5 retouch credits", tooltip: tooltipContent.credits },
+      { title: "1 Website Hosting" },
+      { title: "1 Subdomain Included" },
+      { title: "1 Custom Domain Support" },
+      { title: "2 Android App Builds" },
+      { title: "2 Payment Gateway Integrations" },
+      { title: "2 Delivery Partner Integrations" },
+      { title: "2 SMS Gateway Integrations" },
+      { title: "Multi-User Access (Up to 4 Users)" },
+      { title: "5,000 Push Notifications per Month" },
+      { title: "Up to 100 Products Listed" },
     ],
-    buttonText: "Get 50 portraits in 3 hours",
+    buttonText: "Upgrade to Standard",
     isPopular: true,
   },
   {
     name: "Premium",
-    price: 80,
-    description:
-      "Get 100 AI-generated portraits with 10 unique styles and filters.",
+    price: 2000,
+    description: "All-inclusive access with advanced scalability and control.",
     features: [
-      { title: "1-hour turnaround time" },
-      { title: "100 AI portraits" },
-      { title: "Choice of 10 styles", tooltip: tooltipContent.styles },
-      { title: "Choice of 10 filters", tooltip: tooltipContent.filters },
-      { title: "10 retouch credits", tooltip: tooltipContent.credits },
+      { title: "1 Website Hosting" },
+      { title: "2 Subdomains Included" },
+      { title: "3 Custom Domains Support" },
+      { title: "3 Android App Builds" },
+      { title: "3 Payment Gateway Integrations" },
+      { title: "3 Delivery Partner Integrations" },
+      { title: "3 SMS Gateway Integrations" },
+      { title: "Advanced User Access (Up to 10 Users)" },
+      { title: "Unlimited Push Notifications" },
+      { title: "Unlimited Product Listings" },
     ],
-    buttonText: "Get 100 portraits in 1 hour",
+    buttonText: "Go Premium",
   },
 ];
+
+
+
 
 const Pricing = () => {
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState("monthly");
@@ -101,12 +116,12 @@ const Pricing = () => {
             )}
             <h3 className="text-lg font-medium">{plan.name}</h3>
             <p className="mt-2 text-4xl font-bold">
-              $
+              
               {selectedBillingPeriod === "monthly"
                 ? plan.price
-                : plan.price * ((100 - YEARLY_DISCOUNT) / 100)}
+                : plan.price * ((100 - YEARLY_DISCOUNT) / 100) *12} BDT
               <span className="ml-1.5 text-sm text-muted-foreground font-normal">
-                /month
+                {selectedBillingPeriod === "monthly" ? "/month" : "/year"}
               </span>
             </p>
             <p className="mt-4 font-medium text-muted-foreground">

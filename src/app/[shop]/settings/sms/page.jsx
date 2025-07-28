@@ -10,33 +10,40 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
+import Image from "next/image";
+import { useParams } from "next/navigation";
 import { useState } from "react";
-
+import bulk from "../../../../../public/images/bulk.png"
+import alpha from "../../../../../public/images/alpha.png"
+import adn from "../../../../../public/images/adn.png"
 const smsProviders = [
   {
     name: "Balk SMS BD",
-    id: "balksmsbd",
+    id: "bulk_sms_bd",
+    logo: bulk,
     fields: [
-      { label: "API Key", name: "api_key", type: "text" },
-      { label: "Sender ID", name: "sender_id", type: "text" },
+      { label: "API Key", name: "apiKey", type: "text" },
+      { label: "Sender ID", name: "senderId", type: "text" },
     ],
   },
   {
     name: "Alpha Net BD",
-    id: "alphanetbd",
+    id: "alpha_net_bd",
+    logo: alpha,
     fields: [
-      { label: "API Key", name: "api_key", type: "text" },
-      { label: "Sender ID", name: "sender_id", type: "text" },
+      { label: "API Key", name: "apiKey", type: "text" },
+      { label: "Sender ID", name: "senderId", type: "text" },
     ],
   },
   {
     name: "ADN Diginet",
-    id: "adndiginet",
+    id: "adn_diginet_bd",
+    logo: adn,
     fields: [
-      { label: "API Key", name: "api_key", type: "text" },
-      { label: "Sender ID", name: "sender_id", type: "text" },
-      { label: "Client ID", name: "client_id", type: "text" },
-      { label: "Client Secret", name: "client_secret", type: "password" },
+      { label: "API Key", name: "apiKey", type: "text" },
+      { label: "Sender ID", name: "senderId", type: "text" },
+      { label: "Client ID", name: "clientId", type: "text" },
+      { label: "Client Secret", name: "clientSecret", type: "password" },
     ],
   },
 ];
@@ -45,13 +52,40 @@ export default function Dashboard() {
   const [selected, setSelected] = useState("Balk SMS BD");
   const [formData, setFormData] = useState({});
   const [savedData, setSavedData] = useState({});
+  const {shop} = useParams()
+  const handleAdd = async () => {
+  const provider = smsProviders.find((p) => p.name === selected);
+  if (!provider) return;
 
-  const handleAdd = () => {
-    const provider = smsProviders.find((p) => p.name === selected);
-    if (!provider) return;
+  const payload = {
+    provider: provider.id,
+    shop,
+    ...formData
+  };
+  
+  try {
+    const response = await fetch("/api/v1/sms-email-services", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to save SMS provider");
+    }
+
+    const result = await response.json();
+
+    // Update local state on success
     setSavedData((prev) => ({ ...prev, [provider.id]: formData }));
     setFormData({});
-  };
+    console.log("Success:", result);
+  } catch (error) {
+    console.error("Error saving provider:", error);
+  }
+};
 
   const handleDelete = (id) => {
     const newSaved = { ...savedData };
@@ -70,14 +104,14 @@ export default function Dashboard() {
 
           <div className="flex gap-4">
             {smsProviders.map((p) => (
-              <Button
+                <Button
                 key={p.id}
                 variant="outline"
                 onClick={() => setSelected(p.name)}
-                className={`border-2 rounded-md ${
+                className={`border-2 rounded-md flex ${
                   selected === p.name ? "border-foreground" : ""
                 }`}
-              >
+              > <Image src={p.logo} alt="logo" width={30} height={30}></Image>
                 {p.name}
               </Button>
             ))}
@@ -90,7 +124,7 @@ export default function Dashboard() {
                   <ControlGroup key={f.name}>
                     <ControlGroupItem className="shadow-none">
                       <InputBase className="h-10">
-                        <InputBaseAdornment className="text-xs w-[70px] ">
+                        <InputBaseAdornment className=" w-[70px] ">
                           {f.label}
                         </InputBaseAdornment>
                       </InputBase>
@@ -102,7 +136,7 @@ export default function Dashboard() {
                             onChange={(e) =>
                               setFormData((prev) => ({
                                 ...prev,
-                                [f.label]: e.target.value,
+                                [f.name]: e.target.value,
                               }))
                             }
                             placeholder={`Enter ${f.label}`}
@@ -115,13 +149,14 @@ export default function Dashboard() {
                   </ControlGroup>
                 ))}
               </div>
-              <Button
+              <div className="flex justify-end">
+                <Button
                 onClick={handleAdd}
-                className="mt-4 w-full"
-                variant="outline"
+                className="mt-4"
               >
                 Add <span className="text-xl">+</span>
               </Button>
+              </div>
             </div>
           )}
 
@@ -134,7 +169,7 @@ export default function Dashboard() {
 
             return (
               <div key={current.id} className="mt-6 border p-4 rounded-md">
-                <h4 className="font-semibold mb-4">{current.name}</h4>
+                <h4 className="font-semibold mb-4">{current.label}</h4>
 
                 <div className={`grid grid-cols-2 items-center gap-6`}>
                   {Object.entries(info).map(([fieldName, value]) => (

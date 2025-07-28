@@ -34,6 +34,7 @@ export async function GET(request, { params }) {
     // Get shop reference from query params
     const { searchParams } = new URL(request.url);
     const { shop: shopReferenceId } = await params;
+    console.log(shopReferenceId)
     // const shop = searchParams.get('shop');
     
     if (!shopReferenceId) 

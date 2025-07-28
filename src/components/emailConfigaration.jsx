@@ -10,6 +10,8 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
+import { useParams } from "next/navigation";
+import { toast } from "sonner";
 
 const emailFields = [
   { label: "SMTP", name: "smtp", type: "text" },
@@ -21,10 +23,34 @@ const emailFields = [
 export default function EmailConfigDashboard() {
   const [formData, setFormData] = useState({});
   const [savedData, setSavedData] = useState(null);
+  const {shop} = useParams()
+  const handleAdd = async () => {
+    const payload = {
+      shop,
+      provider: "smtp",
+      ...formData
+    }
+    try {
+    const response = await fetch("/api/v1/sms-email-services", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    const result = await response.json();
+    if (response.ok) {
+      toast.success("Configured Email Service");
+    } else {
+      toast.error(result?.error || "Failed to update");
+    }
+  } catch (error) {
+    console.error("Error saving provider:", error);
+  }
 
-  const handleAdd = () => {
-    setSavedData(formData);
-    setFormData({});
+      setSavedData(formData);
+      setFormData({});
   };
 
   const handleDelete = () => {
@@ -42,7 +68,7 @@ export default function EmailConfigDashboard() {
                 <ControlGroup key={f.name}>
                   <ControlGroupItem className="shadow-none">
                     <InputBase className="h-10">
-                      <InputBaseAdornment className="text-xs w-[80px]">
+                      <InputBaseAdornment className=" w-[80px]">
                         {f.label}
                       </InputBaseAdornment>
                     </InputBase>
@@ -67,9 +93,11 @@ export default function EmailConfigDashboard() {
                   </ControlGroupItem>
                 </ControlGroup>
               ))}
-              <Button onClick={handleAdd} className="mt-4" variant="outline">
+              <div className="flex justify-end">
+                <Button onClick={handleAdd} className="mt-4" >
                 Add <span className="text-xl">+</span>
               </Button>
+              </div>
             </div>
           )}
 

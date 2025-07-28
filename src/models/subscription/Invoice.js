@@ -3,6 +3,7 @@ import cuid from "@bugsnag/cuid";
 
 const invoiceSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // shop referID F
     subscriptionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription', required: true },
     
     invoiceNumber: { type: String, default: cuid() },  // Human-readable identifier
