@@ -35,7 +35,6 @@ export default function CreatShop() {
       businessName: form.get("businessName"),
       location: form.get("businessLocation"),
     };
-    console.log(formData)
 
     try {
       const res = await fetch("http://localhost:3000/api/v1/shops", {
@@ -59,7 +58,7 @@ export default function CreatShop() {
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button variant="outline" className="h-full rounded-xl shadow-sm text-xl" onClick={() => setOpen(true)}>
         Create a Business
       </Button>
 
