@@ -257,7 +257,7 @@ app.get('/api/executepayment', adminsign, gentoken, async(req, res) => {
 })
 
 const gentoken = ('gentoken', async(req, res, next) => {
-    axios.post('https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout/token/grant',
+    axios.post(https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout/token/grant',
     {app_key: 'xzzIqNMPyuyN39DUtYGB298Ztc', app_secret: 'MO40tnULCjVjjGB2P3slAizH96ic3az01CGFK9YxAWOX1YNrpSly'},
     {
         headers: {

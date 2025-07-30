@@ -126,29 +126,38 @@ expiresAt: { type: Date, default: null }
 // }, { _id: false });
 
 const usageSchema = new mongoose.Schema({
-  customDomains: { type: Number, default: 0 },
-  subDomains: { type: Number, default: 0 },
+  customDomains: { type: Number, default: 0 },         // PLAN A: 0, B: 1, C: 3
+  subDomains: { type: Number, default: 1 },            // All plans include subdomains
   shops: { type: Number, default: 0 },
+
   apps: {
-    android: { type: Number, default: 0 },
-    web: { type: Number, default: 0 },
-    ios: { type: Number, default: 0 }
+    android: { type: Number, default: 1 },             // Android App access allowed
+    web: { type: Number, default: 1 },
+    ios: { type: Number, default: 0 },                 // PLAN A: 0, B: 1, C: 2
   },
+
   builds: {
-    android: { type: Number, default: 0 },
+    android: { type: Number, default: 1 },             // PLAN A: 1, B: 2, C: 3
     web: { type: Number, default: 0 },
-    ios: { type: Number, default: 0 }
+    ios: { type: Number, default: 0 },                 // PLAN A: 0, B: 1, C: 2
   },
-  paymentIntegrations: { type: Number, default: 0 },
-  deliveryIntegrations: { type: Number, default: 0 },
-  smsGateways: { type: Number, default: 0 },
-  monthlyNotifications: { type: Number, default: 0 },
-  storageMB: { type: Number, default: 0 },
-  customerAccounts: { type: Number, default: 0 },
-  staffUsers: { type: Number, default: 0 },
-  products: { type: Number, default: 0 },
-  monthlyOrders: { type: Number, default: 0 },
+
+  paymentIntegrations: { type: Number, default: 1 },   // PLAN A: 1, B: 2, C: 3
+  deliveryIntegrations: { type: Number, default: 1 },  // PLAN A: 1, B: 2, C: 3
+  smsGateways: { type: Number, default: 1 },           // PLAN A: 1, B: 2, C: 3
+
+  monthlyNotifications: { type: Number, default: 500 },  // PLAN A: 500, B: 5000, C: unlimited (handle as string or large number)
+
+  storageMB: { type: Number, default: 100 },           // Optional: not defined in your plan table
+
+  customerAccounts: { type: Number, default: 0 },      // Not defined in plan table
+  staffUsers: { type: Number, default: 0 },            // PLAN A: 0, B: 3, C: 9
+
+  products: { type: Number, default: 15 },             // PLAN A: 15, B: 100, C: unlimited
+
+  monthlyOrders: { type: Number, default: 0 },         // Optional: not defined in your plan table
 }, { _id: false });
+
 
 const userSchema = new mongoose.Schema({
   referenceId: { type: String, default: () => cuid(), select: true },
@@ -164,8 +173,7 @@ const userSchema = new mongoose.Schema({
   verification: { type: VerificationSchema, default: () => ({}), select: false },
   activeSessions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],
   subscriptionScope: { type: subscriptionScopeSchema, default: () => ({}) },
-  tier: { type: String, enum: ['free-starter', 'basic', 'growth', 'professional', 'enterprise'], default: 'free-starter' },
-
+  // tier: { type: String, enum: ['free-starter', 'basic', 'growth', 'professional', 'enterprise'], default: 'free-starter' },
   security: { type: SecuritySchema, default: () => ({}), select: false },
   consent: { type: ConsentSchema, default: () => ({}), select: false },
   status: { type: StatusSchema, default: () => ({}), select: false },
@@ -174,7 +182,7 @@ const userSchema = new mongoose.Schema({
   activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription', default: undefined },
   usage: { type: usageSchema },
   oauth: { type: oauthSchema, default: undefined, select: false },
-  // Profile Delete informationf
+  // Profile Delete information
 
   isDeleted: { type: Boolean, default: false, select: false },
   deletedAt: { type: Date, default: null, select: false },

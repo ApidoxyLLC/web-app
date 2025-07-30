@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
 
-const userSubscriptionHistorySchema = new mongoose.Schema({
-            userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-            planId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan', required: true },
-      planSnapshot: { type: String, required: true },
-}, {
-  timestamps: true,
-  collection: 'user_subscription_histories',
-});
+const userSubscriptionSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  planId: { type: mongoose.Schema.Types.ObjectId, ref: "SubscriptionPlan" },
+  startDate: Date,
+  endDate: Date,
+  status: { type: String, enum: ["active", "expired", "cancelled"], default: "active" },
+  paymentId: String,
+}, { timestamps: true, collection: 'user_subscriptions' });
 
-export const userSubscriptionHistoryModel = (db) =>  db.models.UserSubscriptionHistory || db.model('UserSubscriptionHistory', userSubscriptionHistorySchema);
+export const UserSubscription=(db)=> db.models.UserSubscription ||
+  db.model("UserSubscription", userSubscriptionSchema);
