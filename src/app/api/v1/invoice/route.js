@@ -3,11 +3,11 @@ import mongoose from 'mongoose';
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from 'next/server';
 import { InvoiceModel } from '@/models/subscription/invoice';
-import { getBkashToken } from '@/services/bkash/getBkashToken';
 import { userModel } from "@/models/auth/user";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import invoiceDTOSchema from './invoiceDTOSchema';
 import { PlanModel } from "@/models/subscription/Plan";
+import { initiateBkashPayment } from '@/services/bkash/initiateBkashPayment';
 
 export async function POST(request) {
     const body = await request.json();
@@ -87,41 +87,23 @@ export async function POST(request) {
     });
 
 
-
-
-
-    const token = await getBkashToken(); // Step 1: get token
-
-    // Step 2: initiate bKash payment request
-    const bkashUrl = 'https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout/create';
-    const callbackURL = `${process.env.NEXTAUTH_URL}/api/payment/callback`;
-
-    const paymentRes = await fetch(bkashUrl, {
-        method: 'POST',
-        headers: {
-            Authorization: token,
-            'Content-Type': 'application/json',
-            'X-APP-Key': process.env.BKASH_APP_KEY,
-        },
-        body: JSON.stringify({
-            mode: '0011',
-            payerReference: data.userId,
-            callbackURL,
-            amount: '1',
-            currency: 'BDT',
-            intent: 'sale',
-            merchantInvoiceNumber: invoiceInfo._id.toString()
-        })
-    });
-
-    const paymentData = await paymentRes.json();
-    console.log("*********paymentData***********************");
-    console.log(paymentData)
-    if (!paymentData || !paymentData.paymentID) {
-        return NextResponse.json({ success: false, message: 'bKash payment creation failed' }, { status: 500 });
+    let paymentData;
+    try {
+        paymentData = await initiateBkashPayment({
+            userId: data.userId,
+            invoiceId: invoiceInfo._id,
+            amount: plan.price,
+        });
+    } catch (err) {
+        return NextResponse.json({ success: false, message: err.message }, { status: 500 });
     }
 
+    // Update invoice with payment ID
     await Invoice.findByIdAndUpdate(invoiceInfo._id, { paymentId: paymentData.paymentID });
 
-    return NextResponse.json({ success: true, redirectURL: paymentData.bkashURL });
+    return NextResponse.json({
+        success: true,
+        paymentID: paymentData.paymentID,
+        redirectURL: paymentData.bkashURL
+    });
 }

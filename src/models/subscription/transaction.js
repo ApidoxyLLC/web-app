@@ -1,61 +1,26 @@
-// src/app/api/v1/execute-payment/route.js
-import { NextResponse } from "next/server";
-import { InvoiceModel } from "@/models/Invoice";
-import { TransactionModel } from "@/models/Transaction";
-import connectDB from "@/lib/mongodb/connect";
-import axios from "axios";
+import mongoose from 'mongoose';
 
-export async function POST(request) {
-    await connectDB();
-    try {
-        const { paymentId, invoiceId } = await request.json();
+const transactionSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    invoiceId: { type: String, required: true },
 
-        if (!paymentId || !invoiceId) {
-            return NextResponse.json({ success: false, message: "Missing paymentId or invoiceId" }, { status: 400 });
-        }
+    paymentID: { type: String, required: true },
+    trxID: { type: String, required: true },
+    transactionStatus: {
+        type: String,
+        enum: ["Completed", "Failed", "Cancelled"],
+        required: true,
+    },
 
-        // Step 1: Call bKash execute payment API
-        const token = await getBkashToken(); // Assume you have this function
+    amount: { type: String, required: true },
+    currency: { type: String, default: "BDT" },
 
-        const { data: executeRes } = await axios.post(
-            `${process.env.BKASH_BASE_URL}/checkout/payment/execute/${paymentId}`,
-            {},
-            {
-                headers: {
-                    Authorization: token,
-                    "X-APP-Key": process.env.BKASH_APP_KEY,
-                },
-            }
-        );
+    paymentExecuteTime: { type: String },
+    paymentMethod: { type: String, default: "bKash" },
 
-        if (executeRes.transactionStatus !== "Completed") {
-            await InvoiceModel.findByIdAndUpdate(invoiceId, { paymentStatus: "failed" });
-            return NextResponse.json({ success: false, message: "Payment failed" });
-        }
+    gatewayResponse: { type: Object }, 
+}, { timestamps: true, collection: 'transactions' });
 
-        // Step 2: Update Invoice
-        const invoice = await InvoiceModel.findByIdAndUpdate(
-            invoiceId,
-            {
-                paymentStatus: "success",
-                paymentId: paymentId,
-            },
-            { new: true }
-        );
 
-        // Step 3: Record transaction
-        await TransactionModel.create({
-            userId: invoice.userId,
-            bkashTrxId: executeRes.trxID,
-            amount: parseFloat(executeRes.amount),
-            invoiceId: invoice._id,
-            paymentStatus: "success",
-            executedAt: new Date(),
-        });
-
-        return NextResponse.json({ success: true, message: "Payment executed successfully" });
-    } catch (err) {
-        console.error("Payment Execution Error:", err);
-        return NextResponse.json({ success: false, message: "Internal Server Error" }, { status: 500 });
-    }
-}
+export const TransactionModel = (db) =>
+    db.models.Transaction || db.model('Transaction', transactionSchema);

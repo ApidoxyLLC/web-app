@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const invoiceSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   planId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan', required: true },
-
+  
   amount: { type: Number, required: true },
   currency: { type: String, default: 'BDT' },
 
@@ -12,8 +12,10 @@ const invoiceSchema = new mongoose.Schema({
 
   paymentGateway: { type: String, default: 'bkash' },
   gatewayInvoiceId: { type: String },
-
+  paymentId: { type: String },
   createdAt: { type: Date, default: Date.now },
+
+
 }, { timestamps: true, collection: 'invoices' });
 
 export const InvoiceModel =(db) => db.models.Invoice || db.model('Invoice', invoiceSchema);
