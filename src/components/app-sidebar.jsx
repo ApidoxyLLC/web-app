@@ -123,7 +123,6 @@ export function AppSidebar({
 }) {
   
   const { data, loading } = useFetch("/shops")
-  console.log(data.data)
   if (loading) return;
   return (
     <Sidebar collapsible="icon" {...props}>

@@ -27,7 +27,7 @@ const ImagePreview = ({ width, height, url, onRemove }) => (
 );
 
 
-export default function PicturePreviewInput({ width = 100, height = 100, label, picture = null, onChange }) {
+export default function PicturePreviewInput({ width = 100, height = 100, label, picture, onChange }) {
   return (
     <div style={{ width: `${width}px`, height: `${height}px` }}>
       {picture ? (

@@ -4,7 +4,7 @@
 
 import { TreeView } from '@/components/tree-view';
 import { PlusCircle, PlusIcon, Trash2, FolderPlus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,9 +29,9 @@ import { Textarea } from './ui/textarea';
 import { useParams } from 'next/navigation';
 import PicturePreviewInput from './picture-preview-input';
 import useFetch from '@/hooks/useFetch';
+import { useDebounce } from 'use-debounce';
 
 export default function Categories() {
-  // const [collections, setCollections] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [slugCheck, setSlugCheck] = useState({ isAvailable: null, suggestions: [] });
@@ -42,26 +42,37 @@ export default function Categories() {
     description: "",
     image: "",
   });
-  const [pic, setPic] = useState("")
+  const [debounchedValue] = useDebounce(newCategory?.slug, 500)
   const params = useParams()
   const shopId = params.shop
+  const [pic,setPic] = useState(`/image/${shopId}`)
   const {
     data: response,
     loading,
     error,
   } = useFetch(`/${shopId}/categories`);
 
-    const collections = response?.data || [];
-    console.log(collections)
-
-  const checkSlug = async () => {
-    if (!newCategory.slug) return;
-    setloadingState(true);
-    const res = await fetch(`http://localhost:3000/api/v1/categories/slug?slug=${newCategory.slug}&title=${newCategory.title}&shop=${shopId}`);
-    const data = await res.json();
-    setSlugCheck({ isAvailable: data.isAvailable, suggestions: data.recommendations || [] });
-    setloadingState(false);
-  };
+  const collections = response?.data || [];
+  useEffect(()=>{
+    if (!debounchedValue){
+      setSlugCheck({ isAvailable: null, suggestions: [] });
+      return ;
+    } 
+    const checkSlug =  async ()=>{
+      setloadingState(true);
+      try{
+        const res = await fetch(`http://localhost:3000/api/v1/categories/slug?slug=${debounchedValue}&title=${newCategory.title}&shop=${shopId}`);
+        const data = await res.json();
+        setSlugCheck({ isAvailable: data.isAvailable, suggestions: data.recommendations || [] });
+        setloadingState(false);
+      }catch(error){
+        console.log("Slug check failed", err);
+        setSlugCheck({ isAvailable: null, suggestions: [] });
+      }
+      setloadingState(false);
+    }
+    checkSlug()
+  },[debounchedValue])
 
   const handleCreateCategory = async () => {
     if (!slugCheck.isAvailable) return;
@@ -102,15 +113,37 @@ export default function Categories() {
     });
 
     const data = await res.json();
+    console.log(data)
     if (!data.success) {
       throw new Error(data.error || "Image upload failed");
     }
 
-    setNewCategory(prev => ({ ...prev, image: data.data.fileName }));
-    return data.data.fileName;
-  };
+    const imageUrl = `/image/${shopId}/${data.data.fileName}`;
 
-  // const  { data } = useFetch(`/image/${shopId}/${pic}`)
+  // Update category with image path
+    // setNewCategory(prev => ({ ...prev, image: imageUrl }));
+
+  // Update preview pic state to final uploaded image url
+  setPic(imageUrl);
+
+  return imageUrl;
+  };
+//   const handleImageChange = async (file) => {
+//   if (!(file instanceof File)) return;
+
+//   // Show local preview instantly
+//   const previewUrl = URL.createObjectURL(file);
+//   setPic(previewUrl);
+
+//   try {
+//     const uploadedUrl = await uploadImage(file);
+//   setNewCategory(prev => ({ ...prev, image: uploadedUrl }));
+//     // uploadedUrl is already set as pic in uploadImage
+//   } catch (error) {
+//     console.error("Upload failed", error);
+//     alert("Image upload failed");
+//   }
+// };
   
   const buildTree = (items, parentId = null, visited = new Set()) =>
     items
@@ -159,10 +192,7 @@ export default function Categories() {
       .filter(Boolean);
 
   const itemsTree = buildTree(collections);
-  console.log(itemsTree)
 
-  // categori fetched
-  // const {data, loading} = useFetch(`/${shopId}/categories`)
   return (
     <div className="space-y-4 p-6">
       <div className="flex justify-between items-center gap-2">
@@ -212,21 +242,27 @@ export default function Categories() {
               width={120}
               height={120}
               label="Upload Category Image"
-              picture={newCategory?.image}
-              onChange={async (file) => {
+              picture={pic? pic : null}
+              
+  // picture={newCategory.image ? `${ newCategory.image}` : null}
+                onChange={async (file) => {
     if (file instanceof File) {
+      // const previewUrl = URL.createObjectURL(file); 
+      // setPic(previewUrl)
+        // setNewCategory(prev => ({ ...prev, image: previewUrl }));
       try {
         const uploadedUrl = await uploadImage(file);
         console.log(uploadedUrl)
+        // setPic(uploadedUrl);
         setNewCategory(prev => ({ ...prev, image: uploadedUrl }));
       } catch (err) {
         console.error("Upload failed", err);
         alert("Image upload failed");
       }
     }else{
-      console.log("nonono")
-    }
-}}
+      console.log("err")
+    }}}
+
 
             />
 
@@ -265,7 +301,7 @@ export default function Categories() {
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
-              <Button size="sm" onClick={checkSlug} disabled={loadingState}>Check</Button>
+              {/* <Button size="sm" onClick={checkSlug} disabled={loadingState}>Check</Button> */}
             </ControlGroup>
 
             {slugCheck.isAvailable === false && (
@@ -286,9 +322,6 @@ export default function Categories() {
                   ))}
                 </div>
               </div>
-            )}
-            {slugCheck.isAvailable === true && (
-              <div className="text-sm text-green-600"> Slug is available</div>
             )}
 
             <Textarea
