@@ -56,12 +56,13 @@ export default function Dashboard() {
   const handleAdd = async () => {
   const provider = smsProviders.find((p) => p.name === selected);
   if (!provider) return;
-
+    console.log(formData)
   const payload = {
     provider: provider.id,
     shop,
     ...formData
   };
+  console.log("paylod", payload)
   
   try {
     const response = await fetch("/api/v1/sms-email-services", {
@@ -180,9 +181,11 @@ export default function Dashboard() {
                       <strong>{fieldName}</strong>: {value}
                     </p>
                   ))}
+                  
+                </div>
+                <div className="flex justify-end mt-6">
                   <Button
                     variant="destructive"
-                    className="col-span-2"
                     onClick={() => handleDelete(current.id)}
                   >
                     Delete

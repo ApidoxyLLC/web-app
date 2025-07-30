@@ -127,7 +127,7 @@ const TreeItem = React.forwardRef((
             <ul>
                 {data.map((item) => (
                     <li key={item.id}>
-                        {item.children ? (
+                        {item?.children ? (
                             <TreeNode
                                 item={item}
                                 selectedItemId={selectedItemId}

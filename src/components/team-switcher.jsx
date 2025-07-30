@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -19,12 +18,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
-import Image from "next/image";
 
-export function TeamSwitcher({ teams }) {
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { useRouter } from "next/navigation";
+export function TeamSwitcher( {teams} ) {
+  console.log(teams)
   const { isMobile } = useSidebar();
   const [activeTeam, setActiveTeam] = React.useState(teams[0]);
-
+  const router = useRouter()
   if (!activeTeam) {
     return null;
   }
@@ -43,7 +44,7 @@ export function TeamSwitcher({ teams }) {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
-                  {activeTeam.name}
+                  {activeTeam.businessName}
                 </span>
                 <span className="truncate text-xs">{activeTeam.email}</span>
               </div>
@@ -62,10 +63,13 @@ export function TeamSwitcher({ teams }) {
             {teams.map((team, index) => (
               <DropdownMenuItem
                 key={index}
-                onClick={() => setActiveTeam(team)}
+                onClick={() => {
+                  setActiveTeam(team)
+                  router.push(`http://localhost:3000/${team?.id}/dashboard`)
+                }}
                 className="gap-2 p-2"
               >
-                <div className="flex size-6 items-center justify-center rounded-sm border overflow-hidden">
+                {/* <div className="flex size-6 items-center justify-center rounded-sm border overflow-hidden">
                   <Image
                     width={32}
                     height={32}
@@ -73,8 +77,14 @@ export function TeamSwitcher({ teams }) {
                     alt={activeTeam.name}
                     className="size-6 shrink-0 object-cover"
                   />
-                </div>
-                {team.name}
+                </div> */}
+                <Avatar className="h-10 w-10">
+                  {/* <AvatarImage src="https://github.com/shadcn.png" /> */}
+                  <AvatarFallback>
+                    {team?.businessName?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {team.businessName}
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />

@@ -31,7 +31,7 @@ import PicturePreviewInput from './picture-preview-input';
 import useFetch from '@/hooks/useFetch';
 
 export default function Categories() {
-  const [collections, setCollections] = useState([]);
+  // const [collections, setCollections] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [slugCheck, setSlugCheck] = useState({ isAvailable: null, suggestions: [] });
@@ -45,6 +45,14 @@ export default function Categories() {
   const [pic, setPic] = useState("")
   const params = useParams()
   const shopId = params.shop
+  const {
+    data: response,
+    loading,
+    error,
+  } = useFetch(`/${shopId}/categories`);
+
+    const collections = response?.data || [];
+    console.log(collections)
 
   const checkSlug = async () => {
     if (!newCategory.slug) return;
@@ -65,7 +73,7 @@ export default function Categories() {
     });
     const data = await res.json();
     if (data.success) {
-      setCollections(prev => [...prev, data.data]);
+      alert("Category created successfully. Please refresh to see it.");
       setNewCategory({ title: "", slug: "", description: "", image: undefined });
       setSlugCheck({ isAvailable: null, suggestions: [] });
       setIsOpen(false);
@@ -78,93 +86,83 @@ export default function Categories() {
     const deleteRecursive = (categoryId) => {
       const children = collections.filter(item => item.parent === categoryId);
       children.forEach(child => deleteRecursive(child.id));
-      setCollections(prev => prev.filter(item => item.id !== categoryId));
+      // setCollections(prev => prev.filter(item => item.id !== categoryId));
     };
     deleteRecursive(id);
   };
-
-  const uploadImage = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("shop", shopId);
-
-  const res = await fetch("http://localhost:3000/api/v1/upload-image", {
-    method: "POST",
-    body: formData,
-  });
-  console.log(res)
-
-  const data = await res.json();
-  console.log(data)
-  setPic(data?.data?.fileName)
-  if (!data.success) {
-    throw new Error(data.error || "Image upload failed");
-  }
   
-  return data?.data?.fileName
-;
-   // return uploaded image URL
-};
+  const uploadImage = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("shop", shopId);
+
+    const res = await fetch("http://localhost:3000/api/v1/upload-image", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || "Image upload failed");
+    }
+
+    setNewCategory(prev => ({ ...prev, image: data.data.fileName }));
+    return data.data.fileName;
+  };
 
   // const  { data } = useFetch(`/image/${shopId}/${pic}`)
+  
   const buildTree = (items, parentId = null, visited = new Set()) =>
-  items
-    .filter((item) => item.parent === parentId)
-    .map((item) => {
-      if (visited.has(item.id)) {
-        return null 
-      }
+    items
+      .filter((item) => item.parent === parentId)
+      .map((item) => {
+        if (visited.has(item.id)) return null;
+        visited.add(item.id);
+        const children = buildTree(items, item.id, new Set(visited));
 
-      visited.add(item.id);
-
-      const children = buildTree(items, item.id, new Set(visited));
-
-      return {
-        ...item,
-        name: (
-          <div className="flex items-center gap-2 group">
-            <img src={item.image} alt={item.title} className="h-6 w-6 rounded" />
-            <span>{item.title}</span>
-
-            {children.length > 0 && (
-              <Badge className="text-sm h-6 bg-primary-foreground italic px-2 py-0">
-                {children.length}
-              </Badge>
-            )}
-
-            <div className="flex gap-1">
-              <Badge
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedCategory(item);
-                  setIsOpen(true);
-                }}
-              >
-                <PlusIcon className="h-3 w-3" />
-              </Badge>
-              <Badge
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(item.id);
-                }}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Badge>
+        return {
+          ...item,
+          name: (
+            <div className="flex items-center gap-2 group">
+              {item.image && <img src={item.image} alt={item.title} className="h-6 w-6 rounded" />}
+              <span>{item.title}</span>
+              {children.length > 0 && (
+                <Badge className="text-sm h-6 bg-primary-foreground italic px-2 py-0">
+                  {children.length}
+                </Badge>
+              )}
+              <div className="flex gap-1">
+                <Badge
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedCategory(item);
+                    setIsOpen(true);
+                  }}
+                >
+                  <PlusIcon className="h-3 w-3" />
+                </Badge>
+                <Badge
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(item.id);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Badge>
+              </div>
             </div>
-          </div>
-        ),
-        children, 
-        draggable: true,
-      };
-    })
-    .filter(Boolean);
+          ),
+          children,
+          draggable: true,
+        };
+      })
+      .filter(Boolean);
 
   const itemsTree = buildTree(collections);
+  console.log(itemsTree)
 
   // categori fetched
-  const {data, loading} = useFetch(`/${shopId}/categories`)
-  console.log("hooooooo",shopId)
-  console.log(data)
+  // const {data, loading} = useFetch(`/${shopId}/categories`)
   return (
     <div className="space-y-4 p-6">
       <div className="flex justify-between items-center gap-2">
@@ -177,6 +175,26 @@ export default function Categories() {
           Add Root Category
         </Button>
       </div>
+      {
+        loading ? <div className="">
+      {[...Array(2)].map((_, idx) => (
+        <div
+          key={idx}
+          className="h-[100px] mt-3 animate-pulse rounded-xl bg-muted/50 dark:bg-muted"
+        />
+      ))}
+    </div> : <div className="border rounded-lg ">
+        <TreeView
+          data={itemsTree}
+          defaultLeafIcon={<PlusCircle />}
+          // onDocumentDrag={(source, target) => {
+          //   const newParent = target?.id || null;
+          //   // setCollections(prev => prev.map(item => item.id === source.id ? { ...item, parent: newParent } : item));
+          // }}
+        />
+      </div>
+      }
+      {error && <p className="text-red-500">Error loading categories.</p>}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-md p-0">
@@ -287,16 +305,8 @@ export default function Categories() {
         </DialogContent>
       </Dialog>
 
-      <div className="border rounded-lg">
-        <TreeView
-          data={itemsTree}
-          defaultLeafIcon={<PlusCircle />}
-          onDocumentDrag={(source, target) => {
-            const newParent = target?.id || null;
-            setCollections(prev => prev.map(item => item.id === source.id ? { ...item, parent: newParent } : item));
-          }}
-        />
-      </div>
+      
+      
     </div>
   );
 }

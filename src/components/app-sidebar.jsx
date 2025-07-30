@@ -19,31 +19,16 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { TeamSwitcher } from "./team-switcher"
+import useFetch from "@/hooks/useFetch"
 
-// This is sample data.
-const data = {
+// This is sample datas.
+
+const datas = {
   user: {
     name: "Oprotichita",
     email: "o@example.com",
     avatar: "/avatars/shadcn.jpg",
   },
-  shops: [
-    {
-      name: "JCI Bangladesh",
-      email: "admin@jci.org.bd",
-      logo: "https://i.ibb.co/fVtsTKWv/icon.png",
-    },
-    {
-      name: "Restarizer Inc",
-      email: "company@example.com",
-      logo: "https://i.pinimg.com/236x/87/e1/63/87e1632235613ea35be3809b8dac2628.jpg",
-    },
-    {
-      name: "Shake over",
-      email: "name@example.com",
-      logo: "https://i.pinimg.com/236x/87/e1/63/87e1632235613ea35be3809b8dac2628.jpg",
-    },
-  ],
   navMain: [
     {
       title: "Store Manager",
@@ -140,14 +125,18 @@ const data = {
 export function AppSidebar({
   ...props
 }) {
+  
+  const { data, loading } = useFetch("/shops")
+  console.log(data.data)
+  if (loading) return;
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher shop={props.shop} teams={data.shops} />
+        <TeamSwitcher shop={props.shop} teams={data?.data} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavMain items={datas.navMain} />
+        <NavProjects projects={datas.projects} />
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
