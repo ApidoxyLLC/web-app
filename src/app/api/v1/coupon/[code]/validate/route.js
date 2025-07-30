@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import dbConnect from '../../../lib/dbConnect';
+import { dbConnect } from '@/lib/mongodb/db';
 import couponDTOSchema from './couponDTOSchema';
 import { authenticationStatus } from '../../../middleware/auth';
 import { couponModel } from '@/models/shop/product/Coupon';

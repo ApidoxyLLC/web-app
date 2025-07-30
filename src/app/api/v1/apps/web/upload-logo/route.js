@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
-import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
-import securityHeaders from '../utils/securityHeaders';
+import getAuthenticatedUser from '../../../auth/utils/getAuthenticatedUser';
+import securityHeaders from '../../../utils/securityHeaders';
 import { uploadShopImage } from '@/services/image/blackblaze';
 import uploadImageFileDTOSchema from './uploadImageFileDTOSchema';
 

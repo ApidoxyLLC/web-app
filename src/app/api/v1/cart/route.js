@@ -3,8 +3,8 @@ import { dbConnect } from "@/lib/mongodb/db";
 import { cartModel } from "@/models/shop/product/Cart";
 import { productModel } from "@/models/shop/product/Product";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
-import securityHeaders from "../../utils/securityHeaders";
-import { authenticationStatus } from "../../middleware/auth";
+import securityHeaders from "../utils/securityHeaders";
+import { authenticationStatus } from "../middleware/auth";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
 export const dynamic = 'force-dynamic';
