@@ -478,7 +478,7 @@ export function ProductsTable({
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="outline" size="sm" asChild>
-            <Link href="./products/new">
+            <Link href="./products/add">
               <PlusIcon />
               <span className="hidden lg:inline">Add Product</span>
             </Link>

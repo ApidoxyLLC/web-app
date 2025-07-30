@@ -86,10 +86,6 @@ const datas = {
           title: "Andorid",
           url: "/android",
         },
-        {
-          title: "iOS",
-          url: "/ios",
-        },
       ],
     },
     {

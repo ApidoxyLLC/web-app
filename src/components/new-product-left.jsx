@@ -22,13 +22,6 @@ import {
   DropzoneUploadIcon,
   DropzoneZone,
 } from "@/components/ui/dropzone";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select";
 import {
   FileList,
   FileListDescription,
@@ -63,9 +56,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { Label } from "./ui/label";
-import { TagInput } from 'emblor';
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
+import CustomTagInput from "./custom-tag-input";
 
 export default function NewProduct() {
   const [files, setFiles] = useState([]);
@@ -73,7 +66,6 @@ export default function NewProduct() {
   const [variants, setVariants] = useState([
     { id: '1', name: '', tags: [] } 
   ]);
-  const [mergeMethod, setMergeMethod] = useState("Create a merge commit");
   const [collections, setCollections] = useState([
     { id: "123456789", title: "Clothing", handle: "clothing", description: "All clothing items.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
     { id: "987654321", title: "Men's Clothing", handle: "mens-clothing", description: "Trendy men's clothing.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "123456789" },
@@ -101,7 +93,7 @@ export default function NewProduct() {
   sku: "",
   barcode: "",
   weight: "",
-  unit: "kg",
+  unit: "",
   selectedCategory: "",
   variants: [],
   type: "",
@@ -129,7 +121,6 @@ export default function NewProduct() {
     }
   };
 
-  // Add a function to handle adding new variants
   const addVariant = () => {
     if (variants.length < 3) {
       setVariants([
@@ -143,7 +134,6 @@ export default function NewProduct() {
     setVariants(variants.filter(v => v.id !== variantId));
   };
 
-  // Add this helper function inside the component
   const renderCollectionMenu = (items) => {
     const buildNestedMenu = (parent = null) => {
       const children = items.filter(item => item.parent === parent);
@@ -303,7 +293,7 @@ export default function NewProduct() {
               <ControlGroupItem className="flex-1">
                 <InputBase>
                   <InputBaseControl>
-                    <InputBaseInput placeholder="0.00"/>
+                    <InputBaseInput placeholder="0.00" onChange={(e)=>{handleChange("price",e.target.value)}} />
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
@@ -318,7 +308,9 @@ export default function NewProduct() {
               <ControlGroupItem className="flex-1">
                 <InputBase>
                   <InputBaseControl>
-                    <InputBaseInput placeholder="0.00"/>
+                    <InputBaseInput placeholder="0.00" onChange={(e)=>{
+                      handleChange("compareAtPrice",e.target.value)
+                    }} />
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
@@ -337,7 +329,9 @@ export default function NewProduct() {
               <ControlGroupItem className="flex-1">
                 <InputBase>
                   <InputBaseControl>
-                    <InputBaseInput placeholder="0.00"/>
+                    <InputBaseInput placeholder="0.00" onChange={(e)=>{
+                      handleChange("cost",e.target.value)
+                    }}/>
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
@@ -352,7 +346,9 @@ export default function NewProduct() {
                 <ControlGroupItem className="flex-1">
                   <InputBase>
                     <InputBaseControl>
-                      <InputBaseInput placeholder="0.00"/>
+                      <InputBaseInput placeholder="0.00" onChange={(e)=>{
+                      handleChange("profit",e.target.value)
+                    }}/>
                     </InputBaseControl>
                   </InputBase>
                 </ControlGroupItem>
@@ -366,7 +362,9 @@ export default function NewProduct() {
                 <ControlGroupItem className="flex-1">
                   <InputBase>
                     <InputBaseControl>
-                      <InputBaseInput placeholder="0.00"/>
+                      <InputBaseInput placeholder="0.00" onChange={(e)=>{
+                      handleChange("margin",e.target.value)
+                    }}/>
                     </InputBaseControl>
                   </InputBase>
                 </ControlGroupItem>
@@ -395,7 +393,9 @@ export default function NewProduct() {
               <ControlGroupItem className="flex-1">
                 <InputBase>
                   <InputBaseControl>
-                    <InputBaseInput placeholder="Enter SKU"/>
+                    <InputBaseInput placeholder="Enter SKU" onChange={(e)=>{
+                      handleChange("sku",e.target.value)
+                    }}/>
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
@@ -410,7 +410,9 @@ export default function NewProduct() {
               <ControlGroupItem className="flex-1">
                 <InputBase>
                   <InputBaseControl>
-                    <InputBaseInput placeholder="Enter barcode"/>
+                    <InputBaseInput placeholder="Enter barcode" onChange={(e)=>{
+                      handleChange("barcode",e.target.value)
+                    }}/>
                   </InputBaseControl>
                 </InputBase>
               </ControlGroupItem>
@@ -442,17 +444,21 @@ export default function NewProduct() {
             <ControlGroupItem className="flex-1">
               <InputBase>
                 <InputBaseControl>
-                  <InputBaseInput placeholder="0.0"/>
+                  <InputBaseInput placeholder="0.0" onChange={(e)=>{
+                      handleChange("weight",e.target.value)
+                    }}/>
                 </InputBaseControl>
               </InputBase>
             </ControlGroupItem>
             <Select defaultValue="kg">
               <ControlGroupItem>
                 <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Currency" defaultValue="0" />
+                  <SelectValue placeholder="Currency" defaultValue="0" onChange={(e)=>{
+                      handleChange("unit",e.target.value)
+                    }}/>
                 </SelectTrigger>
               </ControlGroupItem>
-              <SelectContent align="end">
+              <SelectContent align="end" >
                 <SelectItem value="lb">lb</SelectItem>
                 <SelectItem value="og">og</SelectItem>
                 <SelectItem value="kg">kg</SelectItem>
@@ -509,6 +515,7 @@ export default function NewProduct() {
                                   const newVariants = [...variants];
                                   newVariants[variants.indexOf(variant)].name = e.target.value;
                                   setVariants(newVariants);
+                                  handleChange("varient",)
                                 }}
                               />
                             </InputBaseControl>
@@ -525,7 +532,7 @@ export default function NewProduct() {
                     </div>
 
                     
-                    <TagInput
+                    {/* <TagInput
                       placeholder="Add variant values"
                       tags={variant.tags}
                       setTags={(newTags) => {
@@ -535,7 +542,18 @@ export default function NewProduct() {
                       }}
                       activeTagIndex={activeTagIndex}
                       setActiveTagIndex={setActiveTagIndex}
-                    />
+                    /> */}
+                    <CustomTagInput
+  placeholder="Add variant values"
+  tags={variant.tags}
+  setTags={(newTags) => {
+    const newVariants = [...variants];
+    newVariants[variants.indexOf(variant)].tags = newTags;
+    setVariants(newVariants);
+  }}
+  activeTagIndex={activeTagIndex}
+  setActiveTagIndex={setActiveTagIndex}
+/>
                   </CardContent>
                 </Card>
               </SortableItem>
@@ -598,7 +616,7 @@ export default function NewProduct() {
               </InputBase>
             </ControlGroupItem>
           </ControlGroup>
-          <TagInput
+          <CustomTagInput
             placeholder="Add tag"
             tags={tags}
             setTags={(newTags) => {

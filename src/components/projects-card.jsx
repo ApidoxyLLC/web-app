@@ -1,10 +1,12 @@
 "use client"
 import {
+  KeyRound,
   LifeBuoy,
   Lock,
   LogOutIcon,
   Shield,
   UserCircle2,
+  UserLock,
 } from "lucide-react";
 import {
   Card,
@@ -18,19 +20,38 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@radix-ui/react-popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ModeToggle } from "./mode-toggle";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect,useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import logo from "../../public/favicon.ico"
-import { TreePalm, MapPin, User2 } from "lucide-react";
+import { TreePalm, MapPin, User2, ChevronRight  } from "lucide-react";
 import Image from "next/image";
 import CreatShop from "./shop-info-modal";
 import useFetch from "@/hooks/useFetch";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 export function ProjectsCard() {
   const router = useRouter()
   const userData = useSession()
+  const [showSecuritySub, setShowSecuritySub] = useState(false);
+  const [activeModal, setActiveModal] = useState(null);
+  const submenuRef = useRef(null);
+  const [submenuHeight, setSubmenuHeight] = useState(0);
+
+  useEffect(() => {
+    if (submenuRef.current) {
+      setSubmenuHeight(showSecuritySub ? submenuRef.current.scrollHeight : 0);
+    }
+  }, [showSecuritySub]);
   console.log(userData)
   useEffect(() => {
     if (userData.status === "authenticated" && userData.data?.user) {
@@ -94,31 +115,131 @@ export function ProjectsCard() {
                 </div>
               </div>
               <div className="flex flex-col">
-                <button className="w-full flex items-center gap-2 px-4 py-2 hover:bg-accent dark:hover:bg-zinc-800 transition text-left">
-                  <UserCircle2 className="w-4 h-4" />
-                  Account
-                </button>
-                <button className="w-full flex items-center gap-2 px-4 py-2 hover:bg-accent dark:hover:bg-zinc-800 transition text-left">
-                  <Shield className="w-4 h-4" />
-                  Security
-                </button>
-                <button className="w-full flex items-center gap-2 px-4 py-2 hover:bg-accent dark:hover:bg-zinc-800 transition text-left">
-                  <Lock className="w-4 h-4" />
-                  Privacy
-                </button>
-                <button className="w-full flex items-center gap-2 px-4 py-2 hover:bg-accent dark:hover:bg-zinc-800 transition text-left pb-3">
-                  <LifeBuoy className="w-4 h-4" />
-                  Support
-                </button>
-                <div className="border-t" />
-                <button
-                  onClick={() => signOut({ callbackUrl: "/signup" })}
-                  className="w-full flex items-center gap-2 px-4 pt-2 pb-3 hover:bg-accent dark:hover:bg-zinc-800 transition text-left"
-                >
-                  <LogOutIcon className="w-4 h-4" />
-                  Logout
-                </button>
-              </div>
+        <button className="w-full flex items-center gap-2 px-4 py-2 hover:bg-accent dark:hover:bg-zinc-800 transition text-left">
+          <UserCircle2 className="w-4 h-4" />
+          Account
+        </button>
+
+        <div className="w-full">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowSecuritySub((prev) => !prev);
+            }}
+            className="w-full flex items-center justify-between px-4 py-2 hover:bg-accent dark:hover:bg-zinc-800 transition text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Security
+            </span>
+            <ChevronRight
+              className={`w-4 h-4 transition-transform duration-200 ${showSecuritySub ? "rotate-90" : ""}`}
+            />
+          </button>
+
+          <div
+            ref={submenuRef}
+            style={{
+              height: submenuHeight,
+              overflow: "hidden",
+              transition: "height 0.25s ease"
+            }}
+          >
+            <div className="ml-8 flex flex-col border-l border-muted pl-2 py-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveModal("changePassword");
+                }}
+                className="px-4 py-2 hover:bg-accent flex gap-2 items-center dark:hover:bg-zinc-800 text-sm text-left"
+              >
+                <KeyRound className="size-4" />Change Password
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveModal("twoFactor");
+                }}
+                className="px-4 py-2 flex gap-2 items-center hover:bg-accent dark:hover:bg-zinc-800 text-sm text-left"
+              >
+                <Lock  className="size-4"/>Two-Factor Auth
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveModal("loginActivity");
+                }}
+                className="px-4 py-2 flex gap-2 items-center hover:bg-accent dark:hover:bg-zinc-800 text-sm text-left"
+              >
+               <UserLock  className="size-4" /> Login Activity
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button className="w-full flex items-center gap-2 px-4 py-2 hover:bg-accent dark:hover:bg-zinc-800 transition text-left">
+          <Lock className="w-4 h-4" />
+          Privacy
+        </button>
+
+        <button className="w-full flex items-center gap-2 px-4 py-2 hover:bg-accent dark:hover:bg-zinc-800 transition text-left pb-3">
+          <LifeBuoy className="w-4 h-4" />
+          Support
+        </button>
+
+        <div className="border-t" />
+        <button
+          onClick={() => signOut({ callbackUrl: "/signup" })}
+          className="w-full flex items-center gap-2 px-4 pt-2 pb-3 hover:bg-accent dark:hover:bg-zinc-800 transition text-left"
+        >
+          <LogOutIcon className="w-4 h-4" />
+          Logout
+        </button>
+      </div>
+      <Dialog open={activeModal === "changePassword"} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input type="password" placeholder="Current Password" />
+            <Input type="password" placeholder="New Password" />
+            <Input type="password" placeholder="Confirm New Password" />
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setActiveModal(null)}>Cancel</Button>
+            <Button>Update</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeModal === "twoFactor"} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Two-Factor Authentication</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm">Enable or disable 2FA.</p>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setActiveModal(null)}>Close</Button>
+            <Button>Enable</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeModal === "loginActivity"} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Login Activity</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm">Here will be your login history...</p>
+          <DialogFooter>
+            <Button onClick={() => setActiveModal(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      
             </PopoverContent>
           </Popover>
         </div>
