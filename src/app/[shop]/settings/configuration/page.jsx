@@ -25,19 +25,20 @@ import {
   InputBaseInput,
 } from "@/components/ui/input-base";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 
 export default function StoreSettings() {
-  const params = useParams()
+  const {shop} = useParams()
   
   const [formData, setFormData] = useState({
+    shop,
     businessName: "",
     email: "",
     phone: "",
     industry: "",
     country: "",
-    location: "",
+    address: "",
   });
-  const slug = params.shop
 
 
   const handleChange = (field, value) => {
@@ -49,8 +50,8 @@ export default function StoreSettings() {
 
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`/api/v1/shops/${slug}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/v1/configuration`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -60,7 +61,7 @@ export default function StoreSettings() {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Shop updated successfully!");
+        toast.success("Shop updated successfully!");
       } else {
         console.error(data);
         alert(data.error || "Update failed");
@@ -203,7 +204,7 @@ export default function StoreSettings() {
                       <InputBaseInput
                         placeholder="123 Main St, City"
                         value={formData.address}
-                        onChange={(e) => handleChange("location", e.target.value)}
+                        onChange={(e) => handleChange("address", e.target.value)}
                       />
                     </InputBaseControl>
                   </InputBase>

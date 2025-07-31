@@ -51,7 +51,6 @@ export default function Categories() {
     loading,
     error,
   } = useFetch(`/${shopId}/categories`);
-  console.log(newCategory)
   const collections = response?.data || [];
   useEffect(()=>{
     if (!debounchedValue){
@@ -97,7 +96,6 @@ export default function Categories() {
     const deleteRecursive = (categoryId) => {
       const children = collections.filter(item => item.parent === categoryId);
       children.forEach(child => deleteRecursive(child.id));
-      // setCollections(prev => prev.filter(item => item.id !== categoryId));
     };
     deleteRecursive(id);
   };
@@ -118,33 +116,10 @@ export default function Categories() {
     }
 
     const imageUrl = `http://localhost:3000/api/v1/image/${shopId}/${data.data.fileName}`;
-    console.log("imgurl",imageUrl)
+    setPic(imageUrl);
 
-  // Update category with image path
-    // setNewCategory(prev => ({ ...prev, image: imageUrl }));
-
-  // Update preview pic state to final uploaded image url
-  setPic(imageUrl);
-  setNewCategory(prev => ({...prev,image:data.data.fileName}))
-
-  return imageUrl;
+  return data?.data?.fileName;
   };
-//   const handleImageChange = async (file) => {
-//   if (!(file instanceof File)) return;
-
-//   // Show local preview instantly
-//   const previewUrl = URL.createObjectURL(file);
-//   setPic(previewUrl);
-
-//   try {
-//     const uploadedUrl = await uploadImage(file);
-//   setNewCategory(prev => ({ ...prev, image: uploadedUrl }));
-//     // uploadedUrl is already set as pic in uploadImage
-//   } catch (error) {
-//     console.error("Upload failed", error);
-//     alert("Image upload failed");
-//   }
-// };
   
   const buildTree = (items, parentId = null, visited = new Set()) =>
     items
@@ -193,7 +168,6 @@ export default function Categories() {
       .filter(Boolean);
 
   const itemsTree = buildTree(collections);
-  console.log("pic",pic)
   return (
     <div className="space-y-4 p-6">
       <div className="flex justify-between items-center gap-2">
@@ -247,14 +221,10 @@ export default function Categories() {
   // picture={newCategory.image ? `${ newCategory.image}` : null}
                 onChange={async (file) => {
     if (file instanceof File) {
-      // const previewUrl = URL.createObjectURL(file); 
-      // setPic(previewUrl)
-        // setNewCategory(prev => ({ ...prev, image: previewUrl }));
       try {
         const uploadedUrl = await uploadImage(file);
-        // console.log("api img data",uploadedUrl)
-        // setNewCategory(prev => ({ ...prev, image: uploadedUrl }));
-      } catch (err) {
+        setNewCategory(prev => ({...prev,image:uploadedUrl}))
+        } catch (err) {
         console.error("Upload failed", err);
         alert("Image upload failed");
       }

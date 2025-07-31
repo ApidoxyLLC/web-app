@@ -63,13 +63,14 @@ export default function ShopUpdatePage() {
     const doc = parser.parseFromString(policies, 'text/html');
     const plainText = doc.body.textContent || doc.body.innerText;
       console.log(plainText)
-      const res = await fetch(`/api/v1/shops/${slug}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/v1/policy`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           policies:plainText, 
+          shop:slug
         }),
       });
 

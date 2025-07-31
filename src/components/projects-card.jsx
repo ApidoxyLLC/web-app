@@ -62,6 +62,7 @@ export function ProjectsCard() {
   }, [userData, userData.status, router]);
   
   const { data, loading } = useFetch("/shops")
+  console.log("dddddddd", data)
   if (loading) {
   return (
     <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 gap-6 px-4 py-6 lg:px-6">

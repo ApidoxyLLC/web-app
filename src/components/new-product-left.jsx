@@ -59,6 +59,7 @@ import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import CustomTagInput from "./custom-tag-input";
+import { useParams } from "next/navigation";
 
 export default function NewProduct() {
   const [files, setFiles] = useState([]);
@@ -82,20 +83,31 @@ export default function NewProduct() {
   const [selectedCategory, setSelectedCategory] = useState("All Products");
   const [tags, setTag] = useState([]);
   const [activeTagIndexx, setActiveTagIndexx] = useState(null);
+  const {shop}=useParams()
   const [productData, setProductData] = useState({
+  shop:shop,
   title: "",
   description: "",
-  price: "",
-  compareAtPrice: "",
-  cost: "",
-  profit: "",
-  margin: "",
+  files: [],
+  price: {
+    currency:"BDT",
+    base:"",
+    compareAtPrice: "",
+    cost: "",
+    profit: 0,
+    margin: 0,
+  },
   sku: "",
   barcode: "",
   weight: "",
   unit: "",
   selectedCategory: "",
-  variants: [],
+  variants: [
+    {
+      name:"",
+      value:[]
+    }
+  ],
   type: "",
   vendor: "",
   tags: [],
@@ -106,6 +118,31 @@ export default function NewProduct() {
   freeShipment: false,
   chargeTax: true,
 });
+// const [productData, setProductData] = React.useState({
+//   title: "",
+//   description: "",
+//   files: [],
+//   selectedCategory: "",
+//   price: "",
+//   compareAtPrice: "",
+//   tax: true,
+//   cost: "",
+//   profit: "",
+//   margin: "",
+//   sku: "",
+//   barcode: "",
+//   outOfStock: false,
+//   freeShipment: false,
+//   physicalProduct: true,
+//   weight: "",
+//   unit: "kg",
+//   variants: [],
+//   status: "active",
+//   type: "",
+//   vendor: "",
+//   tags: []
+// });
+
   const handleChange = (key,value)=>{
     setProductData((prev) => ({...prev, [key]: value}))
   }
@@ -143,7 +180,8 @@ export default function NewProduct() {
         
         if (hasChildren) {
           return (
-            <DropdownMenuItem key={item.id} className="p-0">
+            <DropdownMenuItem key={item.id} className="p-0"   
+                onClick={() => handleChange("selectedCategory",item.title )}>
               <DropdownMenu>
                 <DropdownMenuTrigger 
                   className="w-full px-2 py-1.5 text-sm hover:bg-accent"
@@ -262,7 +300,7 @@ export default function NewProduct() {
               </ControlGroupItem>
               <DropdownMenu>
                 <ControlGroupItem>
-                  <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger  asChild>
                     <Button size="icon" variant="outline">
                       <ChevronDown />
                     </Button>
