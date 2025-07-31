@@ -5,7 +5,10 @@ import Image from "next/image";
 import Dropzone from "react-dropzone";
 import { cn } from "@/lib/utils";
 
-const ImagePreview = ({ width, height, url, onRemove }) => (
+const ImagePreview = ({ width, height, url, onRemove }) => {
+  // console.log(url)
+  return (
+  
   <div
     className="relative border border-border rounded-md overflow-hidden"
     style={{ width: `${width}px`, height: `${height}px` }}
@@ -18,16 +21,18 @@ const ImagePreview = ({ width, height, url, onRemove }) => (
     </button>
     <Image
       src={url}
-      alt=""
+      alt="lskdjf"
       width={width}
       height={height}
       className="w-full h-full object-contain"
     />
   </div>
 );
+}
 
 
 export default function PicturePreviewInput({ width = 100, height = 100, label, picture, onChange }) {
+  console.log("pictureee",picture)
   return (
     <div style={{ width: `${width}px`, height: `${height}px` }}>
       {picture ? (

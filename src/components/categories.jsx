@@ -45,13 +45,13 @@ export default function Categories() {
   const [debounchedValue] = useDebounce(newCategory?.slug, 500)
   const params = useParams()
   const shopId = params.shop
-  const [pic,setPic] = useState(`/image/${shopId}`)
+  const [pic,setPic] = useState(null)
   const {
     data: response,
     loading,
     error,
   } = useFetch(`/${shopId}/categories`);
-
+  console.log(newCategory)
   const collections = response?.data || [];
   useEffect(()=>{
     if (!debounchedValue){
@@ -113,18 +113,19 @@ export default function Categories() {
     });
 
     const data = await res.json();
-    console.log(data)
     if (!data.success) {
       throw new Error(data.error || "Image upload failed");
     }
 
-    const imageUrl = `/image/${shopId}/${data.data.fileName}`;
+    const imageUrl = `http://localhost:3000/api/v1/image/${shopId}/${data.data.fileName}`;
+    console.log("imgurl",imageUrl)
 
   // Update category with image path
     // setNewCategory(prev => ({ ...prev, image: imageUrl }));
 
   // Update preview pic state to final uploaded image url
   setPic(imageUrl);
+  setNewCategory(prev => ({...prev,image:data.data.fileName}))
 
   return imageUrl;
   };
@@ -192,7 +193,7 @@ export default function Categories() {
       .filter(Boolean);
 
   const itemsTree = buildTree(collections);
-
+  console.log("pic",pic)
   return (
     <div className="space-y-4 p-6">
       <div className="flex justify-between items-center gap-2">
@@ -242,8 +243,7 @@ export default function Categories() {
               width={120}
               height={120}
               label="Upload Category Image"
-              picture={pic? pic : null}
-              
+              picture={pic ? pic : null}
   // picture={newCategory.image ? `${ newCategory.image}` : null}
                 onChange={async (file) => {
     if (file instanceof File) {
@@ -252,9 +252,8 @@ export default function Categories() {
         // setNewCategory(prev => ({ ...prev, image: previewUrl }));
       try {
         const uploadedUrl = await uploadImage(file);
-        console.log(uploadedUrl)
-        // setPic(uploadedUrl);
-        setNewCategory(prev => ({ ...prev, image: uploadedUrl }));
+        // console.log("api img data",uploadedUrl)
+        // setNewCategory(prev => ({ ...prev, image: uploadedUrl }));
       } catch (err) {
         console.error("Upload failed", err);
         alert("Image upload failed");
