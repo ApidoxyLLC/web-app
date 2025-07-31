@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { POST as executePayment } from '../../execute-payment/route';
+import { generateReceiptPDF } from '@/services/pdf/pdfService';
+import { uploadSubscriptionReceipt } from '@/services/pdf/backblazePdf';
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { InvoiceModel } from '@/models/subscription/invoice';
 
@@ -15,37 +16,67 @@ export async function GET(request) {
     try {
         const vendor_db = await vendorDbConnect();
         const Invoice = InvoiceModel(vendor_db);
+        const invoice = await Invoice.findOne({ paymentId: paymentID });
 
-        if (status === 'success') {
-            const fakeRequest = new Request('http://localhost', {
-                method: 'POST',
-                body: JSON.stringify({ paymentID }),
-                headers: { 'Content-Type': 'application/json' },
-            });
-
-            const response = await executePayment(fakeRequest);
-            const result = await response.json();
-            console.log("*******result*********************")
-            console.log(result)
-            if (result?.data?.transactionStatus === 'Completed') {
-                return NextResponse.redirect(new URL(`/payment/success?trxId=${result?.data?.trxID}`, request.url));
-            } else {
-                return NextResponse.redirect(new URL('/payment/error?reason=execution-failed', request.url));
-            }
+        if (!invoice) {
+            return NextResponse.redirect(new URL('/payment/error?reason=invoice-not-found', request.url));
         }
 
+        if (status === 'success') {
+            // Generate PDF
+            const pdfBytes = await generateReceiptPDF(invoice);
+
+            // Upload to Backblaze
+            const uploadResult = await uploadSubscriptionReceipt({
+                pdfBytes,
+                userId: invoice.userId,
+                paymentId: invoice.paymentId,
+                invoiceId: invoice._id
+            });
+            console.log("uploadResult***************")
+            console.log(uploadResult)
+            if (!uploadResult.success) {
+                throw new Error('Failed to upload receipt');
+            }
+
+            // Update invoice
+            await Invoice.updateOne(
+                { _id: invoice._id },
+                {
+                    $set: {
+                        receiptUrl: uploadResult.url,
+                        receiptFileId: uploadResult.fileId,
+                        status: 'paid',
+                        completedAt: new Date()
+                    }
+                }
+            );
+
+            return NextResponse.redirect(
+                new URL(`/payment/success?trxId=${invoice.paymentId}`, request.url)
+            );
+        }
+
+        // Handle other statuses
         if (status === 'failure') {
-            await Invoice.findOneAndDelete({ paymentId: paymentID });
-            return NextResponse.redirect(new URL('/payment/error?reason=failure', request.url));
+            await Invoice.updateOne(
+                { _id: invoice._id },
+                { $set: { status: 'failed' } }
+            );
+            return NextResponse.redirect(new URL('/payment/error?reason=payment-failed', request.url));
         }
 
         if (status === 'cancel') {
-            await Invoice.findOneAndDelete({ paymentId: paymentID });
+            await Invoice.deleteOne({ _id: invoice._id });
             return NextResponse.redirect(new URL('/payment/cancelled', request.url));
         }
-        return NextResponse.redirect(new URL('/payment/error?reason=unknown-status', request.url));
+
+        return NextResponse.redirect(new URL('/payment/error?reason=invalid-status', request.url));
+
     } catch (error) {
-        console.error('Callback error:', error);
-        return NextResponse.redirect(new URL('/payment/error?reason=callback-error', request.url));
+        console.error('Payment callback error:', error);
+        return NextResponse.redirect(
+            new URL(`/payment/error?reason=server-error&message=${encodeURIComponent(error.message)}`, request.url)
+        );
     }
 }
