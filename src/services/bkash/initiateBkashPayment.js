@@ -19,6 +19,7 @@ export async function initiateBkashPayment({ userId, invoiceId, amount }) {
             mode: '0011',
             payerReference: userId,
             callbackURL,
+            
             //   amount: amount.toString(),
             amount: '2',
             currency: 'BDT',

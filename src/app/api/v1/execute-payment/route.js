@@ -4,7 +4,6 @@ import { InvoiceModel } from '@/models/subscription/invoice';
 import { TransactionModel } from '@/models/subscription/transaction';
 import { getBkashToken } from '@/services/bkash/getBkashToken';
 import transactionDTOSchema from './transactionDTOSchema';
-import { queryBkashPayment } from "@/services/bkash/queryBkashPayment";
 
 export async function POST(request) {
     try {
@@ -39,9 +38,7 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        const paymentResult = await queryBkashPayment(paymentID);
-        console.log("Payment Query result:", paymentResult);
-
+      
 
 
         const vendor_db = await vendorDbConnect();
@@ -60,13 +57,13 @@ export async function POST(request) {
             userId: invoice.userId?.toString(),
             invoiceId: invoice._id.toString(),
             paymentID: paymentID,
-            trxID: paymentResult.trxID,
-            transactionStatus: paymentResult.transactionStatus,
+            trxID: executeResult.trxID,
+            transactionStatus: executeResult.transactionStatus,
             amount: invoice.amount?.toString(),
             currency: 'BDT',
-            paymentExecuteTime: paymentResult.completedTime,
+            paymentExecuteTime: executeResult.paymentExecuteTime,
             paymentMethod: 'bKash',
-            gatewayResponse: paymentResult,
+            gatewayResponse: executeResult,
         };
 
         console.log("transactionData*************************")
@@ -82,22 +79,22 @@ export async function POST(request) {
         await Transaction.create(parsed.data);
 
         // Update invoice if payment is successful
-        if (paymentResult.transactionStatus === 'Completed') {
+        if (executeResult.transactionStatus === 'Completed') {
             await Invoice.findOneAndUpdate(
                 { paymentId: paymentID },
                 {
                     $set: {
                         status: 'paid',
-                        trxId: paymentResult.trxID,
+                        trxId: executeResult.trxID,
                         paymentTime: new Date(),
                     },
                 }
             );
 
-            return NextResponse.json({ success: true, message: 'Payment successful', data: paymentResult });
+            return NextResponse.json({ success: true, message: 'Payment successful', data: executeResult });
         }
 
-        return NextResponse.json({ success: false, message: 'Payment not completed', data: paymentResult });
+        return NextResponse.json({ success: false, message: 'Payment not completed', data: executeResult });
 
     } catch (error) {
         console.error('[EXECUTE_PAYMENT_ERROR]', error);
