@@ -26,7 +26,7 @@ export async function POST(request) {
   try { body = await request.json();} 
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
   const    vendorId = request.headers.get('x-vendor-identifier');
-  const        host = request.headers.get('host'); 
+  const        host = request.headers.get('host');
   const          ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
   const   userAgent = request.headers.get('user-agent') || '';
   const fingerprint = request.headers.get('x-fingerprint') || null;
@@ -57,7 +57,6 @@ export async function POST(request) {
                                                     options: { secret: RT_SECRET_KEY } });
 
     // Connect to vendor DB
-
     const    shop_db = await dbConnect({ dbKey: dbName, dbUri })
     const  UserModel = userModel(shop_db);
 
@@ -203,11 +202,11 @@ export async function POST(request) {
     const  accessTokenExpiry = minutesToExpiryTimestamp(AT_EXPIRY)
     const refreshTokenExpiry = minutesToExpiryTimestamp(RT_EXPIRY)
     // Start transaction for login
-    const dbSession = await vendor_db.startSession();
+    const dbSession = await shop_db.startSession();
     try {
         await dbSession.withTransaction(async () => {
-        const SessionModel = sessionModel(vendor_db);
-        const LoginHistoryModel = loginHistoryModel(vendor_db);
+        const SessionModel = sessionModel(shop_db);
+        const LoginHistoryModel = loginHistoryModel(shop_db);
 
         // 1. Create session
         await new SessionModel({               _id: sessionId,
