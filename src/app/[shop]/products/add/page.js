@@ -3,8 +3,8 @@ import ProductTitle from "./FormInputsComponents/ProductTitle";
 import ProductDescription from "./FormInputsComponents/ProductDescription";
 import UploadImage from "./FormInputsComponents/UploadImage";
 
-export default function Page({ params }) {
-  const { shop } = params
+export default async function Page({ params }) {
+  const { shop } = await params
   return (
     <div className="flex flex-col lg:flex-row gap-4 p-4">
       <div className="flex-3">
