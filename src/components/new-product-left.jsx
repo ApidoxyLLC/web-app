@@ -65,7 +65,7 @@ import UploadImage from "@/app/[shop]/products/add/FormInputsComponents/UploadIm
 export default function NewProduct() {
   const [activeTagIndex, setActiveTagIndex] = useState(null);
   const [variants, setVariants] = useState([
-    { id: '1', name: '', tags: [] } 
+    { id: '1', name: '', options: [] } 
   ]);
   const [collections, setCollections] = useState([
     { id: "123456789", title: "Clothing", handle: "clothing", description: "All clothing items.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
@@ -81,9 +81,10 @@ export default function NewProduct() {
     { id: "123445456789", title: "Chemicals", handle: "chemicals", description: "Chemical products and materials.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
   ]);
   const [selectedCategory, setSelectedCategory] = useState("All Products");
-  const [tags, setTag] = useState([]);
   const [activeTagIndexx, setActiveTagIndexx] = useState(null);
   const {shop}=useParams()
+  console.log(variants)
+
   const [productData, setProductData] = useState({
   shop,
   title: "",
@@ -102,15 +103,12 @@ export default function NewProduct() {
   sku: "",
   barcode: "",
   isFreeShiping: false,
-  variants: [
-    
-  ],
+  variants: variants.map(({ name, options }) => ({ name, options })),
   status: "active",
   type: "",
   vendor: "",
-  tags: [],
+  tags:[]
 });
-console.log(productData)
   const handleChange = (key, value) => {
   setProductData((prev) => ({
     ...prev,
@@ -118,7 +116,7 @@ console.log(productData)
          : typeof prev[key] === "boolean" ? Boolean(value)
          : value,
   }));
-};
+  };
   const handleDragEnd = (event) => {
     const { active, over } = event;
     
@@ -130,20 +128,17 @@ console.log(productData)
       });
     }
   };
-
   const addVariant = () => {
     if (variants.length < 3) {
       setVariants([
         ...variants, 
-        { id: String(variants.length + 1), name: '', tags: [] }
+        { id: String(variants.length + 1), name: '', options: [] }
       ]);
     }
   };
-
   const deleteVariant = (variantId) => {
     setVariants(variants.filter(v => v.id !== variantId));
   };
-
   const renderCollectionMenu = (items) => {
     const buildNestedMenu = (parent = null) => {
       const children = items.filter(item => item.parent === parent);
@@ -485,7 +480,7 @@ console.log(productData)
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Variants</CardTitle>
           {variants.length < 3 && (
-            <Button 
+            <Button
               onClick={addVariant}
               className="h-8 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 px-4 rounded-md text-sm font-medium"
             >
@@ -523,13 +518,15 @@ console.log(productData)
                                 placeholder="Variant name (e.g. Size, Color)"
                                 value={variant.name}
                                 onChange={(e) => {
-                                  const newVariants = [...variants];
-                                  newVariants[variants.indexOf(variant)].name = e.target.value;
-                                  setVariants(newVariants);
-                                  setProductData((prev => ({...prev, variants:{
-                                    name:e.target.value
-                                  }})))
-                                }}
+  const newVariants = [...variants];
+  newVariants[variants.indexOf(variant)].name = e.target.value;
+  setVariants(newVariants);
+  setProductData((prev) => ({
+    ...prev,
+    variants: newVariants.map(({ name, options }) => ({ name, options })),
+  }));
+}}
+
                               />
                             </InputBaseControl>
                           </InputBase>
@@ -548,13 +545,17 @@ console.log(productData)
                     
                     <CustomTagInput
   placeholder="Add variant values"
-  tags={variant.tags}
+  tags={variant.options}
   setTags={(newTags) => {
-    const newVariants = [...variants];
-    newVariants[variants.indexOf(variant)].tags = newTags;
-    setVariants(newVariants);
-    
-  }}
+  const newVariants = [...variants];
+  newVariants[variants.indexOf(variant)].options = newTags;
+  setVariants(newVariants);
+  setProductData((prev) => ({
+    ...prev,
+    variants: newVariants.map(({ name, options }) => ({ name, options })),
+  }));
+}}
+
   activeTagIndex={activeTagIndex}
   setActiveTagIndex={setActiveTagIndex}
 />
@@ -625,9 +626,10 @@ console.log(productData)
           </ControlGroup>
           <CustomTagInput
             placeholder="Add tag"
-            tags={tags}
+            tags={productData.tags}
             setTags={(newTags) => {
-                setTag(newTags);
+                // setTag(newTags);
+                setProductData((prev => ({...prev, tags : newTags })))
             }}
             activeTagIndexx={activeTagIndexx}
             setActiveTagIndexx={setActiveTagIndexx}

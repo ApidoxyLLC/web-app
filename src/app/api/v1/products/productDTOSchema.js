@@ -126,7 +126,7 @@ const productDTOSchema = z.object({
 
   isPhysical: z.boolean().default(true),
   weight: z.number().positive("Weight must be positive").max(1000, "Weight too high").optional(),
-  weightUnit: z.enum(['kg', 'gram', 'lb', 'og' ]).default('kg').optional(),
+  weightUnit: z.enum(['kg', 'g', 'lb', 'og' ]).default('kg').optional(),
   price: z.number().positive("Price must be positive").max(1000000, "Price too high"),
   compareAtPrice: z.number().positive().max(1000000).optional()
     .refine(val => !val || val > this.price, {
