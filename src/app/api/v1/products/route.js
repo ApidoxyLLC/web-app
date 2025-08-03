@@ -256,7 +256,7 @@ export async function POST(request) {
 
   try {
     const { 
-      title, description, tags, images, isPhysical, weight, weightUnit
+      title, description, tags, images, isPhysical, weight, weightUnit, 
       category,
       price, compareAtPrice, costPerItem, profit,  margin, 
       sellWithOutStock, sku, barcode, 
