@@ -1,0 +1,43 @@
+import nodemailer from 'nodemailer';
+
+export default async function sendReciptToEmail({ receiverEmail, emailType, senderEmail, token, attachments = [], customHtml }) {
+    try {
+        const transporter = nodemailer.createTransport({
+            host: process.env.MAILTRAP_HOST,
+            port: parseInt(process.env.MAILTRAP_PORT),
+            auth: {
+                user: process.env.MAILTRAP_USER,
+                pass: process.env.MAILTRAP_PASS
+            }
+        });
+
+        // Handle different email types
+        let subject, html;
+        if (emailType === 'RECEIPT') {
+            subject = "Your Payment Receipt";
+            html = customHtml;
+        } else {
+            const path = emailType === 'VERIFY' ? 'verifyemail' : 'resetpassword';
+            const link = `${process.env.BASE_URL}/${path}?token=${token}`;
+            subject = emailType === 'VERIFY' ? "Verify your email" : "Reset your password";
+            html = `<p>
+              Click <a href="${link}">here</a> to ${emailType === "VERIFY" ? "verify your email" : "reset your password"},
+              or copy and paste the link below in your browser:
+              <br/> ${link}
+              </p>`;
+        }
+
+        const mailOptions = {
+            from: `<${senderEmail}>`,
+            to: receiverEmail,
+            subject,
+            html,
+            attachments
+        };
+
+        return await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error('Email sending error:', error);
+        throw new Error(error.message);
+    }
+}

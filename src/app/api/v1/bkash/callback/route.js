@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { generateReceiptPDF } from '@/services/pdf/pdfService';
-import { uploadSubscriptionReceipt } from '@/services/pdf/backblazePdf';
+import { generateReceiptPDF } from '@/services/reciptPdf/pdfService';
+import { uploadSubscriptionReceipt } from '@/services/reciptPdf/backblazePdf';
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { InvoiceModel } from '@/models/subscription/invoice';
+import { sendPaymentNotification } from '@/services/sendReciptPdf/notificationService';
+import { POST as executePayment } from '../../execute-payment/route';
 
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
@@ -23,38 +25,88 @@ export async function GET(request) {
         }
 
         if (status === 'success') {
-            // Generate PDF
-            const pdfBytes = await generateReceiptPDF(invoice);
+            try {
+                // Execute the payment first
+                const fakeRequest = new Request('http://localhost', {
+                    method: 'POST',
+                    body: JSON.stringify({ paymentID }),
+                    headers: { 'Content-Type': 'application/json' },
+                });
 
-            // Upload to Backblaze
-            const uploadResult = await uploadSubscriptionReceipt({
-                pdfBytes,
-                userId: invoice.userId,
-                paymentId: invoice.paymentId,
-                invoiceId: invoice._id
-            });
-            console.log("uploadResult***************")
-            console.log(uploadResult)
-            if (!uploadResult.success) {
-                throw new Error('Failed to upload receipt');
-            }
+                const response = await executePayment(fakeRequest);
+                const result = await response.json();
 
-            // Update invoice
-            await Invoice.updateOne(
-                { _id: invoice._id },
-                {
-                    $set: {
-                        receiptUrl: uploadResult.url,
-                        receiptFileId: uploadResult.fileId,
-                        status: 'paid',
-                        completedAt: new Date()
-                    }
+                if (!result?.success) {
+                    throw new Error(result?.message || 'Payment execution failed');
                 }
-            );
 
-            return NextResponse.redirect(
-                new URL(`/payment/success?trxId=${invoice.paymentId}`, request.url)
-            );
+                // Only proceed with receipt generation if payment was successful
+                const pdfBytes = await generateReceiptPDF(invoice);
+                console.log("pdfBytes: await fs.readFile('receipt.pdf'),")
+                console.log(pdfBytes)
+                // Upload to Backblaze
+                const uploadResult = await uploadSubscriptionReceipt({
+                    pdfBytes,
+                    userId: invoice.userId,
+                    paymentId: invoice.paymentId,
+                    invoiceId: invoice._id
+                });
+
+                if (!uploadResult.success) {
+                    throw new Error('Failed to upload receipt');
+                }
+
+                // Send notification
+                const notificationResult = await sendPaymentNotification({
+                    userId: invoice.userId,
+                    pdfBuffer: pdfBytes,
+                    pdfUrl: uploadResult.url,
+                    invoice: {
+                        _id: invoice._id,
+                        paymentId: invoice.paymentId,
+                        amount: invoice.amount,
+                        currency: invoice.currency,
+                        // packageName: invoice.packageName,
+                        // validUntil: invoice.validUntil
+                    },
+                });
+
+                // Update invoice with notification status
+                const updateData = {
+                    status: 'completed',
+                    receiptUrl: uploadResult.url,
+                    receiptFileId: uploadResult.fileId,
+                    completedAt: new Date(),
+                    paymentStatus: 'processed'
+                };
+
+                if (notificationResult.success) {
+                    updateData.notifiedVia = notificationResult.channel;
+                    updateData.notificationStatus = 'sent';
+                } else {
+                    updateData.notificationStatus = 'failed';
+                    updateData.notificationError = notificationResult.message;
+                }
+
+                await Invoice.updateOne(
+                    { _id: invoice._id },
+                    { $set: updateData }
+                );
+
+                return NextResponse.redirect(
+                    new URL(`/payment/success?trxId=${invoice.paymentId}`, request.url)
+                );
+
+            } catch (executionError) {
+                console.error('Payment execution error:', executionError);
+                // await Invoice.updateOne(
+                //     { _id: invoice._id },
+                //     { $set: { status: 'failed', error: executionError.message } }
+                // );
+                return NextResponse.redirect(
+                    new URL(`/payment/error?reason=execution-failed&message=${encodeURIComponent(executionError.message)}`, request.url)
+                );
+            }
         }
 
         // Handle other statuses
