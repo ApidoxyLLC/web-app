@@ -1,4 +1,3 @@
-
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb/db";
@@ -79,7 +78,6 @@ export async function POST(request) {
                                                     options: { secret: AT_SECRET_KEY } });    
     const REFRESH_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret,
                                                     options: { secret: RT_SECRET_KEY } });
-
 
     const    shop_db = await dbConnect({ dbKey: dbName, dbUri })
     const  UserModel = userModel(shop_db);

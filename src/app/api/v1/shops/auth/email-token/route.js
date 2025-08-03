@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { dbConnect } from '@/lib/mongodb/db';
-import { userModel } from '@/models/auth/User';
+import { userModel } from '@/models/shop/shop-user/ShopUser';
 import crypto from 'crypto'; 
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import sendEmail from '@/services/mail/sendEmail';

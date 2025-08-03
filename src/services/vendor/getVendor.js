@@ -5,6 +5,7 @@ import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import config from "../../../config";
 
 const defaultFields = ['_id', 'email', 'dbInfo', 'secrets', 'expirations'];
+// ['secrets', 'timeLimitations', 'status'] 
 
 function buildProjection(fields = []) {
   const merged = Array.from(new Set([...defaultFields, ...fields]));

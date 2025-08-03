@@ -33,7 +33,7 @@ export async function POST(request) {
 
 
   if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
-  const    parsed = loginDTOSchema.safeParse(body);
+  const parsed = loginDTOSchema.safeParse(body);
   if (!parsed.success)    return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 422 });
 
   const { allowed, headers} = rateLimit({ip, fingerprint});
