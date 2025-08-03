@@ -5,7 +5,6 @@ import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
 import securityHeaders from '../../utils/securityHeaders';
 import { uploadShopImage } from '@/services/image/blackblaze';
-import uploadImageFileDTOSchema from './uploadImageFileDTOSchema';
 
 export async function POST(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
@@ -26,22 +25,30 @@ export async function POST(request) {
     const     file = formData.get('file');
     const   shopId = formData.get('shop');
 
-    const parsed = uploadImageFileDTOSchema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+    if (typeof shopId !== 'string' || shopId.length > 64 || !/^[a-zA-Z0-9_-]+$/.test(shopId))
+      return NextResponse.json({ error: 'Invalid Shop ID format' }, { status: 400 });
 
+    let vendor;
     try {
         const vendor_db = await vendorDbConnect()
         const    Vendor = vendorModel(vendor_db)
-        const    vendor = await Vendor.findOne({ referenceId: shopId })
+                 vendor = await Vendor.findOne({ referenceId: shopId })
                                       .select('_id referenceId ownerId ownerId dbInfo bucketInfo')
                                       .lean();
+        if (!vendor)
+          throw new Error('Shop not found')            
+    } catch (error) {
+        console.log(error)
+        return NextResponse.json( { error: error }, { status: 404 } );
+    }
 
-        const image = await uploadShopImage({     file, 
-                                                vendor,
-                                              uploadBy: data.userId,
-                                                folder: 'products' })
+    try {
+       const image = await uploadShopImage({     file, 
+                                               vendor,
+                                             uploadBy: data.userId,
+                                               folder: 'products' })
 
-        if(!image) return NextResponse.json( { error: error }, { status: 400 } );
+        if (!image) return NextResponse.json({ error: 'Image upload failed' }, { status: 400 });
        return NextResponse.json( { success: true, data: image }, { status: 201 });
     } catch (error) {
         console.log(error)
