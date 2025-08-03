@@ -12,6 +12,8 @@ const priceSchema = new mongoose.Schema({
        base: { type: Number, required: true, min: 0, default: undefined },
   compareAt: { type: Number, min: 0, default: undefined },
        cost: { type: Number, min: 0, default: undefined },
+     profit: { type: Number, min: 0, default: undefined },
+     margin: { type: Number, min: 0, default: undefined },
    discount: { type: discountSchema, default: undefined },
    minPrice: { type: Number, min: 0, default: undefined },
    maxPrice: { type: Number, min: 0, default: undefined },
@@ -24,20 +26,20 @@ const attributeSchema = new mongoose.Schema({
 
 // Improved variant schema
 const variantSchema = new mongoose.Schema({
-         variantId: { type: String, default: () => cuid(), unique: true },
-             title: { type: String, required: true }, 
-           options: { type: [attributeSchema], default: undefined },
+        //  variantId: { type: String, default: () => cuid(), unique: true },
+        //      title: { type: String, required: true }, 
+           options: { type: [String], default: undefined },
              price: { type: priceSchema, default: undefined },
-       priceVaries: { type: Boolean, default: undefined },
-            weight: Number,
-               sku: { type: String, sparse: true },
-           barcode: String,
-       isAvailable: { type: Boolean, default: undefined },
-  requiresShipping: { type: Boolean, default: undefined  },
-           taxable: { type: Boolean, default: true },
-         inventory: { type: inventorySchema }, 
-            images: [{ type: String }],
-          position: Number,
+  //      priceVaries: { type: Boolean, default: undefined },
+  //           weight: Number,
+  //              sku: { type: String, sparse: true },
+  //          barcode: String,
+  //      isAvailable: { type: Boolean, default: undefined },
+  // requiresShipping: { type: Boolean, default: undefined  },
+  //          taxable: { type: Boolean, default: true },
+  //        inventory: { type: inventorySchema }, 
+  //           images: [{ type: String }],
+  //         position: Number,
 }, { _id: true });
 
 const detailSchema = new mongoose.Schema({
@@ -50,9 +52,16 @@ const detailSchema = new mongoose.Schema({
      careInstructions: String                   
 }, { _id: false });
 
+// const imageSchema = new mongoose.Schema({
+//                  id: { type: Number, default: 0 },
+//                 url: { type: String, required: true },
+//                 alt: String,
+//            position: Number
+// }, { _id: false });
+
 const imageSchema = new mongoose.Schema({
                  id: { type: Number, default: 0 },
-                url: { type: String, required: true },
+               name: { type: String, required: true },
                 alt: String,
            position: Number
 }, { _id: false });
@@ -86,23 +95,27 @@ const warrantySchema = new mongoose.Schema({
 
 const productSchema = new mongoose.Schema({
          //   productId: { type: String, default: () => cuid(), unique: true },
-                slug: { type: String, required: true, unique: true },
+               //  slug: { type: String, required: true, unique: true },
                title: { type: String, required: true, trim: true },
          description: String, 
                 tags: [{ type: String }],
              gallery: { type:[imageSchema] },
   otherMediaContents: { type:[mediaSchema] },
                price: { type: priceSchema  },
-           thumbnail: { type: String, required: true },
+           thumbnail: { type: String, required: false },
              options: { type: [String], enum:["size", "color", "material"] },
              details: { type: detailSchema, default: undefined },
-          categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category'}],
+          // categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category'}],
+            category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category'},
          hasVariants: { type: Boolean, default: false },
          isAvailable: { type: Boolean, default: undefined },
-            warranty: { type: warrantySchema,  default: undefined },
+            // warranty: { type: warrantySchema,  default: undefined },
               status: { type: String, default: 'draft',  enum: ['active', 'draft', 'archived', 'discontinued'] },
       approvalStatus: { type: String, default: 'pending', enum: ['pending', 'approved', 'rejected'] },
        productFormat: { type: String, enum: ['physical', 'digital'],  default: 'physical' },
+              weight: { type: String },
+     hasFreeShipment: { type: Boolean,  default: undefined },
+    sellWithOutStock: { type: Boolean,  default: undefined },
        digitalAssets: { type: [digitalAssetSchema], default: undefined },
                brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand' },
             shipping: { type: shippingSchema, default: undefined},
@@ -110,7 +123,7 @@ const productSchema = new mongoose.Schema({
                           count: { type: Number, default: 0 }  },
           isFeatured: { type: Boolean, default: false },
            createdAt: { type: Date, default: Date.now },
-            variants: { type: [variantSchema] },
+            variants: { type: [variantSchema], default: [] },
            inventory: { type: inventorySchema, default: undefined },
              reviews: { type: [mongoose.Schema.Types.ObjectId], ref: 'Review', default: [] },
           productUrl: { type: String, default: undefined },
@@ -123,3 +136,25 @@ const productSchema = new mongoose.Schema({
 { timestamps: true, collection: 'products' });
 
 export const productModel = (db) => db.models.Product || db.model('Product', productSchema);
+
+
+
+
+// title 
+// description
+// images 
+// category 
+// isPhysical
+// weight
+// hasVarient
+// variants: []
+
+// price
+// compareAtPrice
+// costPerItem
+// profit
+// margin 
+
+// sku 
+// barcode 
+

@@ -12,8 +12,6 @@ import { headers } from "next/headers";
 import { authOptions } from "../auth/[...nextauth]/option";
 import { productDTOSchema } from './productDTOSchema';
 import { getToken } from 'next-auth/jwt';
-import { userModel } from '@/models/auth/User';
-import slugify from 'slugify';
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import securityHeaders from "../utils/securityHeaders";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
@@ -229,53 +227,13 @@ export async function POST(request) {
     if(!authenticated) 
         return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
-  /** 
-   * fake Authentication for test purpose only 
-   * *******************************************
-   * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-   * *******************************************
-   * *              ***
-   * *              ***
-   * *            *******
-   * *             *****
-   * *              *** 
-   * *               *           
-   * */
-
-  // const authDb = await authDbConnect()
-  // const User = userModel(authDb);
-  // const user = await User.findOne({ referenceId: "cmda6hrqs0000vwlll4qhy7vw" })
-  //                        .select('referenceId _id name email phone role isEmailVerified')
-  // const data = { sessionId: "686f81d0f3fc7099705e44d7",
-  //          userReferenceId: user.referenceId,
-  //                   userId: user._id,
-  //                     name: user.name,
-  //                    email: user.email,
-  //                    phone: user.phone,
-  //                     role: user.role,
-  //               isVerified: user.isEmailVerified || user.isPhoneVerified,
-  //               }
-  
-  /** 
-   * fake Authentication for test purpose only 
-   * *******************************************
-   * *********FAKE AUTHENTICATION END********* *
-   * *******************************************
-  **/
-
-
-
   const { shop: shopId } = parsed.data;
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
-  // if (!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session) || !token.fingerprint || token.fingerprint != fingerprint) 
-  //   return NextResponse.json({ success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
-  
-
-  const   auth_db = await authDbConnect();
+  // const   auth_db = await authDbConnect();
   const vendor_db = await vendorDbConnect();
   const    Vendor = vendorModel(vendor_db)
-  const      Shop = shopModel(auth_db);
+  // const      Shop = shopModel(auth_db);
 
   const vendor = await Vendor.findOne({ referenceId: shopId })
                              .select( "+_id +ownerId +dbInfo +secrets +expirations")
@@ -291,48 +249,58 @@ export async function POST(request) {
 
   const dbUri = await decrypt({   cipherText: vendor.dbInfo.dbUri, 
                                      options: { secret: config.vendorDbUriEncryptionKey } });
-    console.log(dbUri)
-  // const dbName = `${config.vendorDbPrefix}_${vendor._id}`;
+
   const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
   const Product = productModel(shop_db);
 
-  // const session = await shop_db.startSession();
-  // session.startTransaction();
 
   try {
     const { 
-      title, description, tags, gallery, otherMediaContents,
-      price, thumbnail, options, details,  categories,
-      hasVariants, isAvailable, warranty, status, approvalStatus, 
-      productFormat, digitalAssets, brand, shipping, variants, slug } = parsed.data;
+      title, description, tags, images, isPhysical, weight,
+      category,
+      price, compareAtPrice, costPerItem, profit,  margin, 
+      sellWithOutStock, sku, barcode, 
+      isFreeShiping, variants
+
+    } = parsed.data;
 
 
-      const slugExist = await Product.exists({ slug });
-      if (slugExist)
-        return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
+      // const slugExist = await Product.exists({ slug: title.toString().toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/--+/g, '-')  });
+      // if (slugExist)
+      //   return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
     // Validate categories exist
     
-    if (categories && categories.length > 0) {
-      const Category = categoryModel(shop_db);
-      const categoriesData = await Category.find({ _id: { $in: categories } }).select("_id").lean();
-      if (categoriesData.length !== categories.length) {
-        throw new Error("One or more categories not found");
-      }
-    }
+    if (category && category !== 'all') {
+  const Category = categoryModel(shop_db);
+  const categoryExists = await Category.exists({ _id: category });
+  if (!categoryExists)
+    return NextResponse.json({ success: false, error: "Category not found" }, { status: 404, headers: securityHeaders });
+}
 
-    const newProduct = new Product({ title, slug, description, tags, gallery,
-                                      otherMediaContents, price, thumbnail, options,
-                                      details, categories, hasVariants, isAvailable,
-                                      warranty, status, approvalStatus, productFormat,
-                                      digitalAssets, brand, shipping, variants });
+    const newProduct = new Product({  title, 
+                                      //  slug: title.toString().toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/--+/g, '-')  , 
+                                description, tags, 
+                                    gallery: images,
+                              productFormat: isPhysical ? 'physical' : 'digital',
+                                     weight,
+                                   category,
+                                      price: {
+                                                base: price,
+                                                compareAt: compareAtPrice,
+                                                cost: costPerItem,
+                                                 profit: profit,
+                                                 margin: margin, 
+                                              },
+                           sellWithOutStock,
+                                  inventory: { sku, barcode },
+                            hasFreeShipment: isFreeShiping, 
+                                   variants,
+                                    });
 
     const savedProduct = await newProduct.save();
 
-    // Update shop's products reference
-    await Shop.updateOne( { _id: vendor._id }, { $addToSet: { products: savedProduct._id } });
-    // await session.commitTransaction();
-    // session.endSession();
+
 
     const response = NextResponse.json(
       { success: true, data: savedProduct, message: "Product created successfully" }, { status: 201 });
@@ -345,8 +313,7 @@ export async function POST(request) {
     return response;
 
   } catch (err) {
-    // await session.abortTransaction();
-    // session.endSession();
+
 
     const errorMsg = err.code === 11000
       ? "A product with similar attributes already exists"
@@ -472,4 +439,39 @@ export async function PATCH(request) {
     );
   }
 }
+
+
+  /** 
+   * fake Authentication for test purpose only 
+   * *******************************************
+   * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+   * *******************************************
+   * *              ***
+   * *              ***
+   * *            *******
+   * *             *****
+   * *              *** 
+   * *               *           
+   * */
+
+  // const authDb = await authDbConnect()
+  // const User = userModel(authDb);
+  // const user = await User.findOne({ referenceId: "cmda6hrqs0000vwlll4qhy7vw" })
+  //                        .select('referenceId _id name email phone role isEmailVerified')
+  // const data = { sessionId: "686f81d0f3fc7099705e44d7",
+  //          userReferenceId: user.referenceId,
+  //                   userId: user._id,
+  //                     name: user.name,
+  //                    email: user.email,
+  //                    phone: user.phone,
+  //                     role: user.role,
+  //               isVerified: user.isEmailVerified || user.isPhoneVerified,
+  //               }
+  
+  /** 
+   * fake Authentication for test purpose only 
+   * *******************************************
+   * *********FAKE AUTHENTICATION END********* *
+   * *******************************************
+  **/
 

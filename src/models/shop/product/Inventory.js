@@ -17,18 +17,19 @@ import cuid from "@bugsnag/cuid";
 //         });
 
 export const inventorySchema = new mongoose.Schema({
-          inventoryId: { type: String, default: ()=> cuid() },
-            productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-            variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
+          // inventoryId: { type: String, default: ()=> cuid() },
+            // productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+            // variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
                   sku: { type: String, required: true, index: true, unique: true },
+              barcode: String,
                 // stock: stockSchema,
-    lowStockThreshold: { type: Number, default: 5 },
+    // lowStockThreshold: { type: Number, default: 5 },
              quantity: { type: Number, required: true, min: 0 },
-            backorder: { type: Boolean, default: false },
-             preorder: { type: Boolean, default: false },
-               status: { type: String, default: 'in-stock', enum: ['in-stock', 'out-of-stock', 'discontinued', 'pre-order'] },
-             reserved: { type: Number, default: 0 },
-      lastStockChange: {     actionType: { type: String, enum: ['IN', 'OUT', 'ADJUSTMENT'] }, 
-                          quantityDelta: Number, 
-                              timestamp: Date }
+    //         backorder: { type: Boolean, default: false },
+    //          preorder: { type: Boolean, default: false },
+    //            status: { type: String, default: 'in-stock', enum: ['in-stock', 'out-of-stock', 'discontinued', 'pre-order'] },
+    //          reserved: { type: Number, default: 0 },
+    //   lastStockChange: {     actionType: { type: String, enum: ['IN', 'OUT', 'ADJUSTMENT'] }, 
+    //                       quantityDelta: Number, 
+    //                           timestamp: Date }
 }, { _id: true });
