@@ -255,22 +255,7 @@ export default function StoreSettings() {
       </div>
 
       <div className="flex flex-col gap-6">
-        <Card>
-          <CardContent className="p-6 pt-5 text-center space-y-4">
-            <h2 className="mb-4 text-md font-semibold text-start">Store QR</h2>
-            <div className="w-full h-40 flex flex-col items-center justify-center rounded-md">
-              <BsQrCode className="text-9xl" />
-              <p className="text-sm pt-2">Scan to visit</p>
-            </div>
-            <div className="mt-2 flex items-center justify-between border p-2 rounded-md overflow-x-auto">
-              <span className="text-sm text-gray-400">https://apidoxy.com</span>
-              <FiCopy className="cursor-pointer" />
-            </div>
-            <div className="pt-1">
-              <Button className="w-full">Save QR</Button>
-            </div>
-          </CardContent>
-        </Card>
+       
 
         <Card>
           <CardContent className="p-6 pt-5 text-center space-y-4">
