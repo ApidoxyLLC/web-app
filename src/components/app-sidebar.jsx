@@ -83,7 +83,7 @@ const datas = {
           url: "/website",
         },
         {
-          title: "Andorid",
+          title: "Android",
           url: "/android",
         },
       ],

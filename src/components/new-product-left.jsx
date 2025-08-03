@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import CustomTagInput from "./custom-tag-input";
 import { useParams } from "next/navigation";
+import UploadImage from "@/app/[shop]/products/add/FormInputsComponents/UploadImage";
 
 export default function NewProduct() {
   const [files, setFiles] = useState([]);
@@ -255,7 +256,7 @@ export default function NewProduct() {
             <Textarea placeholder="Product description" onChange={()=> handleChange('discription', e.target.value)} />
 
 
-            <Dropzone
+            {/* <Dropzone
               accept={{
                 "image/*": [".jpg", ".png"],
                 "application/pdf": [".pdf"],
@@ -292,7 +293,8 @@ export default function NewProduct() {
                   ))}
                 </FileList>
               </div>
-            </Dropzone>
+            </Dropzone> */}
+            <UploadImage shopId = {shop}></UploadImage>
 
             <ControlGroup>
               <ControlGroupItem className="flex-1">

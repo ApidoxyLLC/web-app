@@ -22,9 +22,8 @@ import Link from "next/link";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { useRouter } from "next/navigation";
 export function TeamSwitcher( {teams} ) {
-  console.log(teams)
   const { isMobile } = useSidebar();
-  const [activeTeam, setActiveTeam] = React.useState(teams[0]);
+  const [activeTeam, setActiveTeam] = React.useState(teams?.[0]);
   const router = useRouter()
   if (!activeTeam) {
     return null;

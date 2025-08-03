@@ -42,6 +42,7 @@ export default function Categories() {
     description: "",
     image: "",
   });
+  console.log(newCategory)
   const [debounchedValue] = useDebounce(newCategory?.slug, 500)
   const params = useParams()
   const shopId = params.shop
@@ -52,6 +53,7 @@ export default function Categories() {
     error,
   } = useFetch(`/${shopId}/categories`);
   const collections = response?.data || [];
+  console.log(collections)
   useEffect(()=>{
     if (!debounchedValue){
       setSlugCheck({ isAvailable: null, suggestions: [] });
@@ -82,6 +84,7 @@ export default function Categories() {
       body: JSON.stringify({ ...newCategory, parent: parentId, shop: shopId })
     });
     const data = await res.json();
+    console.log(data)
     if (data.success) {
       alert("Category created successfully. Please refresh to see it.");
       setNewCategory({ title: "", slug: "", description: "", image: undefined });
@@ -211,18 +214,17 @@ export default function Categories() {
               </DialogDescription>
             </DialogHeader>
           </div>
-
           <div className="grid gap-6 p-6">
             <PicturePreviewInput
               width={120}
               height={120}
               label="Upload Category Image"
               picture={pic ? pic : null}
-  // picture={newCategory.image ? `${ newCategory.image}` : null}
-                onChange={async (file) => {
+              onChange={async (file) => {
     if (file instanceof File) {
       try {
         const uploadedUrl = await uploadImage(file);
+        console.log(uploadedUrl)
         setNewCategory(prev => ({...prev,image:uploadedUrl}))
         } catch (err) {
         console.error("Upload failed", err);

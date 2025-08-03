@@ -350,23 +350,23 @@ export default function DeliverySettings() {
                 <Button
                   onClick={() => setZonesList([...zonesList, zoneInput])}
                   variant="outline"
+                  className="h-10"
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
               </div>
               <div className="">
                 {zonesList.map((zone, index) => (
-                  <div key={index} className="flex items-center gap-6">
-                    <div className="w-full px-3 py-2 border rounded-md">
+                  <div key={index} className="flex items-center gap-6 h-full">
+                    <div className="w-full pl-3 py-2 border rounded-md">
                       {zone.name}
                     </div>
-                    <div className="w-full px-3 py-2 border rounded-md">
+                    <div className="w-full pl-3 py-2 border rounded-md">
                       {zone.charge}
                     </div>
                     <Button
                       variant="destructive"
-                      size="sm"
-                      className="flex items-center gap-2 px-4"
+                      className="flex items-center gap-2 w-20 h-10"
                       onClick={() => {
                         const updated = zonesList.filter((_, i) => i !== index);
                         setZonesList(updated);
@@ -499,6 +499,7 @@ export default function DeliverySettings() {
                     setDistrictsList([...districtsList, districtInput])
                   }
                   variant="outline"
+                  className='h-10'
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
@@ -515,7 +516,7 @@ export default function DeliverySettings() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      className=" flex items-center gap-2 px-4"
+                      className=" flex items-center gap-2 px-4 w-20 h-10"
                       onClick={() => {
                         const updated = districtsList.filter(
                           (_, i) => i !== index
@@ -620,6 +621,7 @@ export default function DeliverySettings() {
                     setUpazilasList([...upazilasList, upazilaInput]);
                   }}
                   variant="outline"
+                  className="h-10"
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
@@ -636,7 +638,7 @@ export default function DeliverySettings() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="flex items-center gap-2 px-4"
+                      className="flex items-center gap-2 px-4 w-20 h-10"
                       onClick={() => {
                         const updated = upazilasList.filter(
                           (_, i) => i !== index
