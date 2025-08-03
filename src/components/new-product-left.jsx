@@ -63,7 +63,6 @@ import { useParams } from "next/navigation";
 import UploadImage from "@/app/[shop]/products/add/FormInputsComponents/UploadImage";
 
 export default function NewProduct() {
-  const [files, setFiles] = useState([]);
   const [activeTagIndex, setActiveTagIndex] = useState(null);
   const [variants, setVariants] = useState([
     { id: '1', name: '', tags: [] } 
@@ -86,67 +85,40 @@ export default function NewProduct() {
   const [activeTagIndexx, setActiveTagIndexx] = useState(null);
   const {shop}=useParams()
   const [productData, setProductData] = useState({
-  shop:shop,
+  shop,
   title: "",
   description: "",
-  files: [],
-  price: {
-    currency:"BDT",
-    base:"",
-    compareAtPrice: "",
-    cost: "",
-    profit: 0,
-    margin: 0,
-  },
+  images: [],
+  category: "",
+  isPhysical: true,
+  weight: 0,
+  weightUnit:"",
+  price: 0,
+  compareAtPrice: 0,
+  costPerItem: 0,
+  profit: 0,
+  margin: 0,
+  sellWithOutStock: false,
   sku: "",
   barcode: "",
-  weight: "",
-  unit: "",
-  selectedCategory: "",
+  isFreeShiping: false,
   variants: [
-    {
-      name:"",
-      value:[]
-    }
+    
   ],
+  status: "active",
   type: "",
   vendor: "",
   tags: [],
-  status: "active",
-  files: [],
-  outOfStock: false,
-  physicalProduct: true,
-  freeShipment: false,
-  chargeTax: true,
 });
-// const [productData, setProductData] = React.useState({
-//   title: "",
-//   description: "",
-//   files: [],
-//   selectedCategory: "",
-//   price: "",
-//   compareAtPrice: "",
-//   tax: true,
-//   cost: "",
-//   profit: "",
-//   margin: "",
-//   sku: "",
-//   barcode: "",
-//   outOfStock: false,
-//   freeShipment: false,
-//   physicalProduct: true,
-//   weight: "",
-//   unit: "kg",
-//   variants: [],
-//   status: "active",
-//   type: "",
-//   vendor: "",
-//   tags: []
-// });
-
-  const handleChange = (key,value)=>{
-    setProductData((prev) => ({...prev, [key]: value}))
-  }
+console.log(productData)
+  const handleChange = (key, value) => {
+  setProductData((prev) => ({
+    ...prev,
+    [key]: typeof prev[key] === "number" ? Number(value)
+         : typeof prev[key] === "boolean" ? Boolean(value)
+         : value,
+  }));
+};
   const handleDragEnd = (event) => {
     const { active, over } = event;
     
@@ -228,7 +200,35 @@ export default function NewProduct() {
 
     return buildNestedMenu(null);
   };
+ const handleCheckbox = (key, value) => {
+    setProductData((prev) => ({
+      ...prev,
+      [key]: value === true,
+    }));
+  };
+  const handleSubmit = async () => {
+   try {
+  const response = await fetch("http://localhost:3000/api/v1/products", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(productData),
+  });
 
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log("✅ Product created:", data);
+  alert("Product created successfully!");
+} catch (err) {
+  console.log("❌ Error:", err);
+  alert("Error submitting product. Check console.");
+}
+
+  };
   return (
     <div className="grid grid-cols-10 gap-4">
       <div className="flex-1 flex flex-col gap-4 col-span-6">
@@ -247,53 +247,15 @@ export default function NewProduct() {
               <InputBase>
                 <InputBaseControl>
                   <InputBaseInput placeholder="Short sleeve t-shirt" 
-                  onChange={()=> handleChange('title', e.target.value)} />
+                    onChange={(e) => handleChange("title", e.target.value)}
+/>
                 </InputBaseControl>
               </InputBase>
             </ControlGroupItem>
           </ControlGroup>
 
-            <Textarea placeholder="Product description" onChange={()=> handleChange('discription', e.target.value)} />
-
-
-            {/* <Dropzone
-              accept={{
-                "image/*": [".jpg", ".png"],
-                "application/pdf": [".pdf"],
-              }}
-              onDropAccepted={setFiles}
-            >
-              <div className="grid gap-4">
-                <DropzoneZone>
-                  <DropzoneInput />
-                  <DropzoneGroup className="gap-4">
-                    <DropzoneUploadIcon />
-                    <DropzoneGroup>
-                      <DropzoneTitle>Drop product images here or click to upload</DropzoneTitle>
-                      <DropzoneDescription>
-                        You can upload files up to 10MB in size. Supported formats: JPG,
-                        PNG, PDF.
-                      </DropzoneDescription>
-                    </DropzoneGroup>
-                  </DropzoneGroup>
-                </DropzoneZone>
-                <FileList>
-                  {files.map((file) => (
-                    <FileListItem key={file.name}>
-                      <FileListHeader>
-                        <FileListIcon />
-                        <FileListInfo>
-                          <FileListName>{file.name}</FileListName>
-                          <FileListDescription>
-                            <FileListSize>{file.size}</FileListSize>
-                          </FileListDescription>
-                        </FileListInfo>
-                      </FileListHeader>
-                    </FileListItem>
-                  ))}
-                </FileList>
-              </div>
-            </Dropzone> */}
+            <Textarea placeholder="Product description"         onChange={(e) => handleChange("description", e.target.value)}
+ />
             <UploadImage shopId = {shop}></UploadImage>
 
             <ControlGroup>
@@ -313,7 +275,7 @@ export default function NewProduct() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </ControlGroup>
-
+      
 
         </CardContent>
       </Card>
@@ -370,7 +332,7 @@ export default function NewProduct() {
                 <InputBase>
                   <InputBaseControl>
                     <InputBaseInput placeholder="0.00" onChange={(e)=>{
-                      handleChange("cost",e.target.value)
+                      handleChange("costPerItem",e.target.value)
                     }}/>
                   </InputBaseControl>
                 </InputBase>
@@ -419,7 +381,10 @@ export default function NewProduct() {
         </CardHeader>
         <CardContent className="flex flex-1 flex-col gap-4">
           <div className="flex items-center gap-3">
-            <Checkbox id="outOfStock" />
+            <Checkbox
+            checked={productData.sellWithOutStock}
+            onCheckedChange={(val) => handleCheckbox("sellWithOutStock", val)}
+          />
             <Label htmlFor="outOfStock">Continue selling when out of stock</Label>
           </div>
           
@@ -467,11 +432,17 @@ export default function NewProduct() {
         </CardHeader>
         <CardContent className="flex flex-1 flex-col gap-4">
           <div className="flex items-center gap-3">
-            <Checkbox id="freeShipment" />
+           <Checkbox
+            checked={productData.isFreeShiping}
+            onCheckedChange={(val) => handleCheckbox("isFreeShiping", val)}
+          />
             <Label htmlFor="freeShipment">Free shipment</Label>
           </div>
           <div className="flex items-center gap-3">
-            <Checkbox id="physicalProduct" defaultChecked />
+            <Checkbox
+            checked={productData.isPhysical}
+            onCheckedChange={(val) => handleCheckbox("isPhysical", val)}
+          />s
             <Label htmlFor="physicalProduct">This is a physical product</Label>
           </div>
           
@@ -490,12 +461,12 @@ export default function NewProduct() {
                 </InputBaseControl>
               </InputBase>
             </ControlGroupItem>
-            <Select defaultValue="kg">
+            <Select defaultValue="kg" onValueChange={(value) =>
+        setProductData((prev) => ({ ...prev, weightUnit: value }))
+      }>
               <ControlGroupItem>
                 <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Currency" defaultValue="0" onChange={(e)=>{
-                      handleChange("unit",e.target.value)
-                    }}/>
+                  <SelectValue placeholder="Currency" />
                 </SelectTrigger>
               </ControlGroupItem>
               <SelectContent align="end" >
@@ -555,7 +526,9 @@ export default function NewProduct() {
                                   const newVariants = [...variants];
                                   newVariants[variants.indexOf(variant)].name = e.target.value;
                                   setVariants(newVariants);
-                                  handleChange("varient",)
+                                  setProductData((prev => ({...prev, variants:{
+                                    name:e.target.value
+                                  }})))
                                 }}
                               />
                             </InputBaseControl>
@@ -572,17 +545,7 @@ export default function NewProduct() {
                     </div>
 
                     
-                    {/* <TagInput
-                      placeholder="Add variant values"
-                      tags={variant.tags}
-                      setTags={(newTags) => {
-                        const newVariants = [...variants];
-                        newVariants[variants.indexOf(variant)].tags = newTags;
-                        setVariants(newVariants);
-                      }}
-                      activeTagIndex={activeTagIndex}
-                      setActiveTagIndex={setActiveTagIndex}
-                    /> */}
+                    
                     <CustomTagInput
   placeholder="Add variant values"
   tags={variant.tags}
@@ -590,6 +553,7 @@ export default function NewProduct() {
     const newVariants = [...variants];
     newVariants[variants.indexOf(variant)].tags = newTags;
     setVariants(newVariants);
+    
   }}
   activeTagIndex={activeTagIndex}
   setActiveTagIndex={setActiveTagIndex}
@@ -609,7 +573,10 @@ export default function NewProduct() {
           <CardTitle>Status</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Select defaultValue="active">
+          <Select defaultValue={productData.status}
+      onValueChange={(value) =>
+        setProductData((prev) => ({ ...prev, status: value }))
+      }>
             <SelectTrigger className="w-full flex-1">
                 <SelectValue placeholder="Select a status" />
             </SelectTrigger>
@@ -637,7 +604,7 @@ export default function NewProduct() {
             <ControlGroupItem className="flex-1">
               <InputBase>
                 <InputBaseControl>
-                  <InputBaseInput/>
+                  <InputBaseInput onChange={(e)=>{handleChange("type",e.target.value)}}/>
                 </InputBaseControl>
               </InputBase>
             </ControlGroupItem>
@@ -651,7 +618,7 @@ export default function NewProduct() {
             <ControlGroupItem className="flex-1">
               <InputBase>
                 <InputBaseControl>
-                  <InputBaseInput/>
+                  <InputBaseInput onChange={(e)=>{handleChange("vendor",e.target.value)}} />
                 </InputBaseControl>
               </InputBase>
             </ControlGroupItem>
@@ -668,7 +635,7 @@ export default function NewProduct() {
         </CardContent>
       </Card>
 
-      <Button className="cursor-pointer w-full">
+      <Button onClick={handleSubmit} className="cursor-pointer w-full">
         Save product
       </Button>
       </div>

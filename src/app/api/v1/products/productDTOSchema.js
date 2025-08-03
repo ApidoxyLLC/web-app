@@ -111,7 +111,7 @@ import mongoose from 'mongoose';
 // }).strict();
 
 const variantSchema = z.object({
-  name: z.string().optional(),
+  name: z.string(),
   options: z.array(z.string().min(1)).min(1, "At least one option is required"),
   // price: z.number().positive("Variant price must be positive").optional(),
 
@@ -126,7 +126,7 @@ const productDTOSchema = z.object({
 
   isPhysical: z.boolean().default(true),
   weight: z.number().positive("Weight must be positive").max(1000, "Weight too high").optional(),
-  weightUnit: z.enum(['kg', 'gram', 'lb', 'og' ]).default('kg'),
+  weightUnit: z.enum(['kg', 'gram', 'lb', 'og' ]).default('kg').optional(),
   price: z.number().positive("Price must be positive").max(1000000, "Price too high"),
   compareAtPrice: z.number().positive().max(1000000).optional()
     .refine(val => !val || val > this.price, {

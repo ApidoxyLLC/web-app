@@ -114,21 +114,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          <Select onValueChange={(val) => setRole(val)} value={role}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select a role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="Admin">Admin</SelectItem>
-                <SelectItem value="Owner">Owner</SelectItem>
-                <SelectItem value="Manager">Manager</SelectItem>
-                <SelectItem value="Supervisor">Supervisor</SelectItem>
-                <SelectItem value="Editor">Editor</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
           <Button
             size="icon"
             className="bg-green-500 hover:bg-green-600 text-white"
@@ -156,7 +141,7 @@ export default function Dashboard() {
               <p className="text-sm">{user.email}</p>
             </div>
           </div>
-          <Badge>{user.role}</Badge>
+          <Badge>Full access</Badge>
 
           <div className="flex items-center justify-evenly w-full sm:w-auto gap-3">
             <Button variant="ghost" size="icon">

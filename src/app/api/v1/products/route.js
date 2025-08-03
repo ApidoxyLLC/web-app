@@ -215,9 +215,10 @@ export async function POST(request) {
   // const fingerprint = request.headers.get('x-fingerprint') || null;
 
   let body;
+  console.log(body)
   try { body = await request.json() } 
   catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders });}
-
+  console.log(body)
   // Validate input with Zod
   const parsed = productDTOSchema.safeParse(body);
   if (!parsed.success)
