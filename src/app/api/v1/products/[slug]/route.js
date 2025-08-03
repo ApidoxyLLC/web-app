@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { dbConnect } from "@/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
-import { productModel } from "@/models/shop/products/Product";
+import { productModel } from "@/models/shop/product/Product";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
 
 export const dynamic = 'force-dynamic';
