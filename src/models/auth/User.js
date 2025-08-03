@@ -172,15 +172,13 @@ const userSchema = new mongoose.Schema({
   isPhoneVerified: { type: Boolean, default: false, select: false },
   verification: { type: VerificationSchema, default: () => ({}), select: false },
   activeSessions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Session', select: false }],
-  subscriptionScope: { type: subscriptionScopeSchema, default: () => ({}) },
-  // tier: { type: String, enum: ['free-starter', 'basic', 'growth', 'professional', 'enterprise'], default: 'free-starter' },
   security: { type: SecuritySchema, default: () => ({}), select: false },
   consent: { type: ConsentSchema, default: () => ({}), select: false },
   status: { type: StatusSchema, default: () => ({}), select: false },
   lock: { type: LockSchema, default: () => ({}), select: false },
   twoFactor: { type: TwoFactorSchema, default: () => ({}), select: false },
-  activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription', default: undefined },
-  usage: { type: usageSchema },
+  // activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription', default: undefined },
+  // usage: { type: usageSchema },
   oauth: { type: oauthSchema, default: undefined, select: false },
   // Profile Delete information
 

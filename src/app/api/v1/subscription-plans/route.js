@@ -1,88 +1,49 @@
 import { NextResponse } from "next/server";
-import authDbConnect from "@/lib/mongodb/authDbConnect";
-import subscriptionPlanDTOSchema from "./subscriptionPlanDTOSchema";
-// import { createSubscriptionPlan } from "@/services/subscription/plan.service";
-
-// import { planModel } from '@/models/planModel';
-
+import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
+import {subscriptionPlanDTOSchema} from "./subscriptionPlanDTOSchema";
 import { PlanModel } from "@/models/subscription/Plan";
 
 export async function POST(request) {
-  await authDbConnect();
-
+console.log("Hello......")
   try {
     const body = await request.json();
+    console.log("Raw request:", JSON.stringify(body, null, 2));
 
-    // Validate incoming data
     const parsed = subscriptionPlanDTOSchema.safeParse(body);
     if (!parsed.success) {
-      console.log("Validation errors:", parsed.error.flatten());
-      return NextResponse.json({
-        success: false,
-        errors: parsed.error.flatten()
-      }, { status: 400 });
+      const errors = parsed.error.issues.map(issue => ({
+        field: issue.path.join('.'),
+        message: issue.message
+      }));
+      return NextResponse.json(
+        { success: false, errors },
+        { status: 400 }
+      );
     }
 
+    const vendorDb = await vendorDbConnect();
+    const Plan = PlanModel(vendorDb);
 
-    const {
-      name,
-      slug,
-      price,
-      duration,
-      services: {
-        website: {
-          subdomains,
-          customDomains,
-        },
-        androidBuilds,
-        iosBuilds,
-        paymentGateways,
-        deliveryGateways,
-        smsGateways,
-        userAccess: additionalUsers,
-        pushNotifications,
-        products: productLimit,
-      }
-    } = parsed.data;
+    // Create with validation
+    const newPlan = await Plan.create(parsed.data);
 
-    const authDb = await authDbConnect();
-    const Plan = PlanModel(authDb);
-
-    const newPlan = await Plan.create({
-      name,
-      slug,
-      price,
-      duration,
-      services: {
-        website: {
-          subdomains,
-          customDomains,
-        },
-        androidBuilds,
-        iosBuilds,
-        paymentGateways,
-        deliveryGateways,
-        smsGateways,
-        userAccess: additionalUsers,
-        pushNotifications,
-        products: productLimit,
-      }
-    });
-
-
-    return NextResponse.json({
-      success: true,
-      message: 'Subscription plan created successfully',
-      data: newPlan
-    }, { status: 201 });
+    return NextResponse.json(
+      { success: true, data: newPlan },
+      { status: 201 }
+    );
 
   } catch (error) {
-    console.error('POST Subscription Plan Error:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Something went wrong',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error("Database error:", error);
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { success: false, message: "Slug must be unique" },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json(
+      { success: false, message: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -107,7 +68,7 @@ export async function POST(request) {
 //         return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
 //     // 4. Send Request to Database 
 //       try {
-//           const      auth_db = await authDbConnect();
+//           const      auth_db = await vendorDbConnect();
 //           const    Plan = await planModel(auth_db);
 //           const existingPlan = await Plan.findOne({ tier: parsed.data.tier });
 //           if (existingPlan) 
@@ -136,7 +97,7 @@ export async function POST(request) {
 //     const tier = searchParams.get('tier'); // 'free', 'starter', etc.
 
 //     // 2. Database connection
-//     const db = await authDbConnect();
+//     const db = await vendorDbConnect();
 //     const Plan = planModel(db);
 
 //     // 3. Build query with filters

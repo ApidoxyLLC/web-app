@@ -1,30 +1,25 @@
 import mongoose from 'mongoose';
 
-const durationSchema = new mongoose.Schema({
-  monthly: { type: Number, required: true },  
-  yearly: { type: Number, required: true }    
-}, { _id: false });
-
 const servicesSchema = new mongoose.Schema({
   website: {
-    subdomains: { type: Number, default: 0 },
+    subdomains: { type: Number, default: 1 },
     customDomains: { type: Number, default: 0 }
   },
-  androidBuilds: { type: Number, default: 0 },
-  iosBuilds: { type: Number, default: 0 },
-  paymentGateways: { type: Number, default: 0 },
-  deliveryGateways: { type: Number, default: 0 },
-  smsGateways: { type: Number, default: 0 },
+  androidBuilds: { type: Number, default: 1 },
+  paymentGateways: { type: Number, default: 1 }, 
+  deliveryGateways: { type: Number, default: 1 },
+  smsGateways: { type: Number, default: 1 },
   userAccess: { type: Number, default: 0 },
-  pushNotifications: { type: String, default: '0' },
-  products: { type: String, default: '0' }
+  pushNotifications: { type: Number, default: 500 }, 
+  products: { type: Number, default: 15 } 
 }, { _id: false });
 
 const planSchema = new mongoose.Schema({
   name: { type: String, enum: ['PLAN A', 'PLAN B', 'PLAN C'], required: true },
   slug: { type: String, unique: true, required: true }, 
   price: { type: Number, default: 0 },
-  duration: { type: durationSchema, required: true },
+  monthly: { type: Number, required: true },
+  yearly: { type: Number, required: true },
   services: { type: servicesSchema, required: true }
 }, { timestamps: true, collection: 'subscription_plans' });
 

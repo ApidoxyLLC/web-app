@@ -22,7 +22,7 @@ export default async function sendSMS({ phone, message }) {
 
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000); // 8-second timeout
+        const timeout = setTimeout(() => controller.abort(), 8000);
 
         const res = await fetch(smsApiUrl, {
             signal: controller.signal
