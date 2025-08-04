@@ -39,11 +39,12 @@ export async function POST(request) {
 
     const authDb = await authDbConnect()
     const User = userModel(authDb);
-    const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
+    const user = await User.findOne({
+        referenceId: "cmdwxn2sg0000o09w6morw1mv" })
         .select('referenceId _id name email phone role isEmailVerified')
     console.log(user)
     const data = {
-        sessionId: "cmdags8700000649w6qyzu8xx",
+        // sessionId: "cmdags8700000649w6qyzu8xx",
         userReferenceId: user.referenceId,
         userId: user?._id,
         name: user.name,
