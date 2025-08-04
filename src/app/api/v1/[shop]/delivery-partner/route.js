@@ -7,12 +7,13 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 // import { userModel } from "@/models/auth/user";
-
 export async function GET(request) {
+        console.log("hello*****")
+    // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
         request.socket?.remoteAddress || '';
-    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getMarketing' });
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
     if (!allowed) {
         return NextResponse.json(
             { error: 'Too many requests. Please try again later.' },
@@ -42,18 +43,18 @@ export async function GET(request) {
         }
 
 
-        /**
-                           * fake Authentication for test purpose only
-                           * *******************************************
-                           * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-                           * *******************************************
-                           * *              ***
-                           * *              ***
-                           * *            *******
-                           * *             *****
-                           * *              ***
-                           * *               *
-                           * */
+         /** 
+                   * fake Authentication for test purpose only 
+                   * *******************************************
+                   * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+                   * *******************************************
+                   * *              ***
+                   * *              ***
+                   * *            *******
+                   * *             *****
+                   * *              *** 
+                   * *               *           
+                   * */
 
         // const authDb = await authDbConnect()
         // const User = userModel(authDb);
@@ -71,7 +72,7 @@ export async function GET(request) {
         //     isVerified: user.isEmailVerified || user.isPhoneVerified,
         // }
 
-        /**
+        /** 
          * fake Authentication for test purpose only 
          * *******************************************
          * *********FAKE AUTHENTICATION END********* *
@@ -79,9 +80,13 @@ export async function GET(request) {
         **/
 
 
+        if (!mongoose.Types.ObjectId.isValid(data.userId)) {
+            return NextResponse.json(
+                { error: "Invalid user ID format" },
+                { status: 400 }
+            );
+        }
 
-
-        // Connect to databases
         const [auth_db, vendor_db] = await Promise.all([
             authDbConnect(),
             vendorDbConnect()
@@ -92,7 +97,6 @@ export async function GET(request) {
             vendorModel(vendor_db)
         ];
 
-        // Permission filter
         const permissionFilter = {
             referenceId,
             $or: [
@@ -102,32 +106,29 @@ export async function GET(request) {
                         $elemMatch: {
                             userId: new mongoose.Types.ObjectId(data.userId),
                             status: "active",
-                            permission: { $in: ["r:tracking", "r:shop"] }
+                            permission: { $in: ["r:delivery-partner", "r:shop"] }
                         }
                     }
                 }
             ]
         };
 
-        // Query both collections
         const [vendorData, shopData] = await Promise.all([
-            Vendor.findOne(permissionFilter).select("marketing").lean(),
-            Shop.findOne(permissionFilter).select("marketing").lean()
+            Vendor.findOne(permissionFilter).select("deliveryPartner").lean(),
+            Shop.findOne(permissionFilter).select("deliveryPartner").lean()
         ]);
 
-        // Combine results from both collections
-        const marketingData = {
-            ...(vendorData?.marketing || {}),
-            ...(shopData?.marketing || {})
+        const deliveryPartners = {
+            ...(vendorData?.deliveryPartner || {}),
+            ...(shopData?.deliveryPartner || {})
         };
 
-        // If no marketing data exists
-        if (Object.keys(marketingData).length === 0) {
+        if (Object.keys(deliveryPartners).length === 0) {
             return NextResponse.json(
                 {
                     success: true,
                     data: null,
-                    message: "Seo marketing not  found"
+                    message: "No delivery partner found"
                 },
                 { status: 200 }
             );
@@ -136,19 +137,16 @@ export async function GET(request) {
         return NextResponse.json(
             {
                 success: true,
-                data: {
-                    googleTagManager: marketingData.googleTagManager || null,
-                    facebookPixel: marketingData.facebookPixel || null
-                }
+                data: deliveryPartners
             },
             { status: 200 }
         );
 
     } catch (error) {
-        console.error("GET Marketing Error:", error);
+        console.error("GET Delivery Partner Error:", error);
         return NextResponse.json(
             {
-                error: error.message || "Failed to retrieve marketing data",
+                error: error.message || "Failed to retrieve delivery partner data",
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
             },
             { status: 500 }

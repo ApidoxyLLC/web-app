@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
-import { userModel } from "@/models/auth/user";
+// import { userModel } from "@/models/auth/user";
 import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
@@ -79,13 +79,11 @@ export async function GET(request, { params }) {
         **/
 
 
-        // Connect to databases
         const auth_db = await authDbConnect();
         const vendor_db = await vendorDbConnect();
         const Shop = shopModel(auth_db);
         const Vendor = vendorModel(vendor_db);
 
-        // Permission filter
         const permissionFilter = {
             referenceId: shop,
             $or: [
@@ -102,13 +100,11 @@ export async function GET(request, { params }) {
             ]
         };
 
-        // Query both collections
         const [vendorData, shopData] = await Promise.all([
             Vendor.findOne(permissionFilter, "smsProvider emailProvider"),
             Shop.findOne(permissionFilter, "smsProvider emailProvider")
         ]);
 
-        // Combine results
         const providers = {
             smsProvider: vendorData?.smsProvider || shopData?.smsProvider || null,
             emailProvider: vendorData?.emailProvider || shopData?.emailProvider || null
