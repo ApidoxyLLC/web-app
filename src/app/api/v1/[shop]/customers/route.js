@@ -72,21 +72,10 @@ export async function GET(request, { params }) {
       ];
     }
 
-    if (status) {
-      query['status.currentStatus'] = status;
-    }
-
-    if (role) {
-      query.role = role;
-    }
-
-    if (searchParams.has('emailVerified')) {
-      query.isEmailVerified = emailVerified === 'true';
-    }
-
-    if (searchParams.has('phoneVerified')) {
-      query.isPhoneVerified = phoneVerified === 'true';
-    }
+    if (status) query['status.currentStatus'] = status;
+    if (role) query.role = role;
+    if (searchParams.has('emailVerified')) query.isEmailVerified = emailVerified === 'true';
+    if (searchParams.has('phoneVerified')) query.isPhoneVerified = phoneVerified === 'true';
 
     const total = await User.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
