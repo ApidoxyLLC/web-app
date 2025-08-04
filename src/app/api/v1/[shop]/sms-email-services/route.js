@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-// import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
+import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { userModel } from "@/models/auth/user";
 import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
@@ -32,14 +32,14 @@ export async function GET(request, { params }) {
             );
         }
 
-        // // Authentication
-        // const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        // if (!authenticated) {
-        //     return NextResponse.json(
-        //         { error: authError || "Not authorized" },
-        //         { status: 401 }
-        //     );
-        // }
+        // Authentication
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json(
+                { error: authError || "Not authorized" },
+                { status: 401 }
+            );
+        }
 
 
         /** 
@@ -55,21 +55,21 @@ export async function GET(request, { params }) {
             * *               *           
             * */
 
-        const authDb = await authDbConnect()
-        const User = userModel(authDb);
-        const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
-            .select('referenceId _id name email phone role isEmailVerified')
-        console.log(user)
-        const data = {
-            sessionId: "cmdags8700000649w6qyzu8xx",
-            userReferenceId: user.referenceId,
-            userId: user?._id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-            isVerified: user.isEmailVerified || user.isPhoneVerified,
-        }
+        // const authDb = await authDbConnect()
+        // const User = userModel(authDb);
+        // const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
+        //     .select('referenceId _id name email phone role isEmailVerified')
+        // console.log(user)
+        // const data = {
+        //     sessionId: "cmdags8700000649w6qyzu8xx",
+        //     userReferenceId: user.referenceId,
+        //     userId: user?._id,
+        //     name: user.name,
+        //     email: user.email,
+        //     phone: user.phone,
+        //     role: user.role,
+        //     isVerified: user.isEmailVerified || user.isPhoneVerified,
+        // }
 
         /** 
          * fake Authentication for test purpose only 
