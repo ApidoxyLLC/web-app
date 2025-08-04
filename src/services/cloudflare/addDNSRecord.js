@@ -2,12 +2,12 @@ import config from "./config";
 
 const templates = [
   {
-    name: "shop2",
-    cname: "shop2-dxi.pages.dev",
+    name: "shop1",
+    cname: "shop1-dxi.pages.dev",
   },
   {
-    name: "shop3",
-    cname: "shop3-dxi.pages.dev",
+    name: "shop2",
+    cname: "shop2-dxi.pages.dev",
   },
 ];
 
