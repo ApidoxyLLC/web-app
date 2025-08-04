@@ -3,7 +3,7 @@ import data from "./data.json"
 export default function Page() {
   return (
     <div className="pb-4">
-        <CustomersTable data={data} />
+        <CustomersTable  />
     </div>
   );
 }

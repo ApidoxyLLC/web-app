@@ -135,7 +135,7 @@ export default function Dashboard() {
             </Avatar>
             <div>
               <p className="text-base font-semibold">
-                {user.name}{" "}
+                {user.name}
                 {index === 0 && <span className="font-medium">(You)</span>}
               </p>
               <p className="text-sm">{user.email}</p>

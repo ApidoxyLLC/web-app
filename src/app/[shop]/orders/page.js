@@ -4,7 +4,7 @@ import data from "./data.json"
 export default function Page() {
   return (
     <div className="pb-4">
-        <OrdersTable data={data} />
+        <OrdersTable />
     </div>
   );
 }
