@@ -21,7 +21,7 @@ export async function GET(request, { params }) {
 
   try {
     // Get shop reference from params
-    const { shop: shopReferenceId } = params;
+    const { shop: shopReferenceId } = await params;
     if (!shopReferenceId) return NextResponse.json({ success: false, error: 'Shop reference is required' }, { status: 400, headers: securityHeaders });
     
     // Get vendor by referenceId only (host is not passed)
