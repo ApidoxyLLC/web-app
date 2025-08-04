@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import securityHeaders from '../../utils/securityHeaders';
-// import securityHeaders from '@/app/api/utils/securityHeaders';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import { dbConnect } from '@/lib/mongodb/db';
-import getAuthenticatedUser from '@/app/api/auth/utils/getAuthenticatedUser';
+import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
 import { getVendor } from '@/services/vendor/getVendor';
 import hasCustomerReadAccess from './hasCustomerReadAccess';
 import { orderModel } from '@/models/shop/product/Order';
