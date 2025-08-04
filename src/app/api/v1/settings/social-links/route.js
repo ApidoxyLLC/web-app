@@ -16,7 +16,8 @@ export async function POST(request) {
     
     // Validate input first
     let body;
-    try { body = await request.json(); 
+    try { 
+        body = await request.json(); 
         const parsed = socialLinksDTOSchema.safeParse(body);
         if (!parsed.success) 
             return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 422 } );

@@ -6,7 +6,7 @@ import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
-import { userModel } from "@/models/auth/user";
+import { userModel } from "@/models/auth/User";
 
 export async function POST(request) {
     console.log("Subscription Plan Creation Request");
