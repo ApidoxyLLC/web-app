@@ -81,7 +81,6 @@ export async function GET(request) {
 
 
 
-        // Connect to databases
         const [auth_db, vendor_db] = await Promise.all([
             authDbConnect(),
             vendorDbConnect()
@@ -92,7 +91,6 @@ export async function GET(request) {
             vendorModel(vendor_db)
         ];
 
-        // Permission filter
         const permissionFilter = {
             referenceId,
             $or: [

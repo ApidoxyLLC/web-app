@@ -2,18 +2,18 @@ import { NextResponse } from "next/server";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
-// import { userModel } from "@/models/auth/user";
 import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
+// import { userModel } from "@/models/auth/user";
 
 export async function GET(request, { params }) {
     // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
         request.socket?.remoteAddress || '';
-    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getSmsEmail' });
     if (!allowed) {
         return NextResponse.json(
             { error: 'Too many requests. Please try again later.' },
@@ -22,38 +22,29 @@ export async function GET(request, { params }) {
     }
 
     try {
-        const { shop } = params; 
-        console.log({ params })
-        console.log(shop)
-        if (!shop) {
+        const { shop: referenceId } = params;
+        console.log("Shop Reference ID:", referenceId);
+
+        if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },
                 { status: 400 }
             );
         }
 
-        // Authentication
-        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        if (!authenticated) {
-            return NextResponse.json(
-                { error: authError || "Not authorized" },
-                { status: 401 }
-            );
-        }
 
-
-        /** 
-            * fake Authentication for test purpose only 
-            * *******************************************
-            * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-            * *******************************************
-            * *              ***
-            * *              ***
-            * *            *******
-            * *             *****
-            * *              *** 
-            * *               *           
-            * */
+ /**
+                           * fake Authentication for test purpose only
+                           * *******************************************
+                           * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+                           * *******************************************
+                           * *              ***
+                           * *              ***
+                           * *            *******
+                           * *             *****
+                           * *              ***
+                           * *               *
+                           * */
 
         // const authDb = await authDbConnect()
         // const User = userModel(authDb);
@@ -71,7 +62,7 @@ export async function GET(request, { params }) {
         //     isVerified: user.isEmailVerified || user.isPhoneVerified,
         // }
 
-        /** 
+        /**
          * fake Authentication for test purpose only 
          * *******************************************
          * *********FAKE AUTHENTICATION END********* *
@@ -79,13 +70,27 @@ export async function GET(request, { params }) {
         **/
 
 
-        const auth_db = await authDbConnect();
-        const vendor_db = await vendorDbConnect();
-        const Shop = shopModel(auth_db);
-        const Vendor = vendorModel(vendor_db);
+        // Authentication
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json(
+                { error: authError || "Not authorized" },
+                { status: 401 }
+            );
+        }
+
+        const [auth_db, vendor_db] = await Promise.all([
+            authDbConnect(),
+            vendorDbConnect()
+        ]);
+
+        const [Shop, Vendor] = [
+            shopModel(auth_db),
+            vendorModel(vendor_db)
+        ];
 
         const permissionFilter = {
-            referenceId: shop,
+            referenceId,
             $or: [
                 { ownerId: data.userId },
                 {
@@ -100,10 +105,15 @@ export async function GET(request, { params }) {
             ]
         };
 
+        console.log("Permission Filter:", permissionFilter);
+
         const [vendorData, shopData] = await Promise.all([
-            Vendor.findOne(permissionFilter, "smsProvider emailProvider"),
-            Shop.findOne(permissionFilter, "smsProvider emailProvider")
+            Vendor.findOne(permissionFilter).select("smsProvider emailProvider").lean(),
+            Shop.findOne(permissionFilter).select("smsProvider emailProvider").lean()
         ]);
+
+        console.log("Vendor Data:", vendorData);
+        console.log("Shop Data:", shopData);
 
         const providers = {
             smsProvider: vendorData?.smsProvider || shopData?.smsProvider || null,
@@ -112,20 +122,30 @@ export async function GET(request, { params }) {
 
         if (!providers.smsProvider && !providers.emailProvider) {
             return NextResponse.json(
-                { success: false, message: "No provider data found or no permission" },
-                { status: 404 }
+                {
+                    success: true,
+                    data: null,
+                    message: "No SMS/Email provider configuration found"
+                },
+                { status: 200 }
             );
         }
 
         return NextResponse.json(
-            { success: true, data: providers },
+            {
+                success: true,
+                data: providers
+            },
             { status: 200 }
         );
 
     } catch (error) {
-        console.error("Internal error:", error);
+        console.error("GET SMS/Email Services Error:", error);
         return NextResponse.json(
-            { error: error.message || "Failed to retrieve provider data" },
+            {
+                error: error.message || "Failed to retrieve provider data",
+                stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+            },
             { status: 500 }
         );
     }
