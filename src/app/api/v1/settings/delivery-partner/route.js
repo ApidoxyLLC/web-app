@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
+import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { shopModel } from "@/models/auth/Shop";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { vendorModel } from "@/models/vendor/Vendor";

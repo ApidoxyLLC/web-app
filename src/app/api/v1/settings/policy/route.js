@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
+import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { vendorModel } from "@/models/vendor/Vendor";
 import policyDTOSchema from "./policyDTOSchema";
