@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const notificationDTOSchema = z.object({
+  shop: z.string(), 
   triggerBasis: z.enum(['hourly', 'order']),
   count: z.string().min(1, 'Count is required and must be at least 1'),
   notifyVia: z.array(z.enum(['email', 'sms', 'whatsapp'])).min(1, 'At least one notification method is required'),
