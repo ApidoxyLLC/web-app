@@ -101,6 +101,8 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs'
+import useFetch from "@/hooks/useFetch"
+import { useParams } from "next/navigation"
 
 export const schema = z.object({
   id: z.number(),
@@ -134,180 +136,95 @@ function DragHandle({ id }) {
 
 const columns = [
   {
-    id: "drag",
-    header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.id} />,
+    accessorKey: "orderId",
+    header: "Order ID",
+    cell: ({ row }) => row.original.orderId,
   },
   {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
-    ),
+    accessorKey: "userId",
+    header: "User ID",
+    cell: ({ row }) => row.original.userId,
+  },
+  {
+    accessorKey: "cartId",
+    header: "Cart ID",
+    cell: ({ row }) => row.original.cartId,
+  },
+  {
+    id: "items",
+    header: "Items",
     cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
+      <ul className="space-y-1">
+        {row.original.items.map((item, idx) => (
+          <li key={idx} className="text-xs">
+            {item.title} × {item.quantity} = ৳{item.subtotal}
+          </li>
+        ))}
+      </ul>
     ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
-    accessorKey: "header",
-    header: "Header",
+    id: "total",
+    header: "Total (BDT)",
+    cell: ({ row }) => (
+      <div className="text-right font-medium">
+        ৳{row.original.totals.grandTotal}
+      </div>
+    ),
+  },
+  {
+    id: "discount",
+    header: "Discount",
+    cell: ({ row }) => (
+      <div className="text-right text-sm text-muted-foreground">
+        -৳{row.original.totals.discount}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "orderStatus",
+    header: "Order Status",
+    cell: ({ row }) => (
+      <Badge variant="outline">{row.original.orderStatus}</Badge>
+    ),
+  },
+  {
+    id: "shipping",
+    header: "Shipping",
     cell: ({ row }) => {
-      return <TableCellViewer item={row.original} />
-    },
-    enableHiding: false,
-  },
-  {
-    accessorKey: "type",
-    header: "Section Type",
-    cell: ({ row }) => (
-      <div className="w-32">
-        <Badge variant="outline" className="px-1.5 text-muted-foreground">
-          {row.original.type}
-        </Badge>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className="flex gap-1 px-1.5 text-muted-foreground [&_svg]:size-3"
-      >
-        {row.original.status === "Done" ? (
-          <CheckCircle2Icon className="text-green-500 dark:text-green-400" />
-        ) : (
-          <LoaderIcon />
-        )}
-        {row.original.status}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "target",
-    header: () => <div className="w-full text-right">Target</div>,
-    cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: "Done",
-            error: "Error",
-          })
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-target`} className="sr-only">
-          Target
-        </Label>
-        <Input
-          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
-          defaultValue={row.original.target}
-          id={`${row.original.id}-target`}
-        />
-      </form>
-    ),
-  },
-  {
-    accessorKey: "limit",
-    header: () => <div className="w-full text-right">Limit</div>,
-    cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: "Done",
-            error: "Error",
-          })
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-          Limit
-        </Label>
-        <Input
-          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
-          defaultValue={row.original.limit}
-          id={`${row.original.id}-limit`}
-        />
-      </form>
-    ),
-  },
-  {
-    accessorKey: "reviewer",
-    header: "Reviewer",
-    cell: ({ row }) => {
-      const isAssigned = row.original.reviewer !== "Assign reviewer"
-
-      if (isAssigned) {
-        return row.original.reviewer
-      }
-
+      const shipping = row.original.shipping
       return (
-        <>
-          <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
-            Reviewer
-          </Label>
-          <Select>
-            <SelectTrigger
-              className="h-8 w-40"
-              id={`${row.original.id}-reviewer`}
-            >
-              <SelectValue placeholder="Assign reviewer" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-              <SelectItem value="Jamik Tashpulatov">
-                Jamik Tashpulatov
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </>
+        <div className="text-xs">
+          {shipping.address.street}, {shipping.address.city},{" "}
+          {shipping.address.country}
+        </div>
       )
     },
   },
   {
-    id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
-            size="icon"
-          >
-            <MoreVerticalIcon />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Make a copy</DropdownMenuItem>
-          <DropdownMenuItem>Favorite</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Delete</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    id: "payment",
+    header: "Payment",
+    cell: ({ row }) => {
+      console.log("rowwwwwww",row)
+      const { method, status } = row.original.payment
+      return (
+        <div className="flex flex-col text-xs">
+          <span className="capitalize">Method: {method}</span>
+          <span className="text-muted-foreground">Status: {status}</span>
+        </div>
+      )
+    },
+  },
+  {
+    accessorKey: "placedAt",
+    header: "Placed At",
+    cell: ({ row }) => {
+      const date = new Date(row.original.placedAt)
+      return <span className="text-sm">{date.toLocaleString()}</span>
+    },
   },
 ]
+
 
 function DraggableRow({ row }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
@@ -334,13 +251,18 @@ function DraggableRow({ row }) {
   )
 }
 
-export function OrdersTable({
-  data: initialData,
-}) {
-  const [data, setData] = React.useState(() => initialData)
+export function OrdersTable(
+  // data: initialData,
+) {
+  // const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState({})
+    React.useState({
+      userId: false,
+      orderId: false,
+      cartId: false,
+      placedAt: false
+    })
   const [columnFilters, setColumnFilters] = React.useState(
     []
   )
@@ -356,35 +278,38 @@ export function OrdersTable({
     useSensor(KeyboardSensor, {})
   )
 
+  const {shop} = useParams()
+  const {data,loading,error}= useFetch(`/${shop}/orders`)
+  console.log("ddddd",data)
   const dataIds = React.useMemo(
-    () => data?.map(({ id }) => id) || [],
+    () => data?.data?.map(({ id }) => id) || [],
     [data]
   )
 
-  const table = useReactTable({
-    data,
-    columns,
-    state: {
-      sorting,
-      columnVisibility,
-      rowSelection,
-      columnFilters,
-      pagination,
-    },
-    getRowId: (row) => row.id.toString(),
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-  })
+const table = useReactTable({
+  data: data.data || [],
+  columns,
+  state: {
+    rowSelection,
+    columnVisibility,
+    columnFilters,
+    sorting,
+    pagination,
+  },
+  getRowId: (row) => row.id,
+  enableRowSelection: true,
+  onRowSelectionChange: setRowSelection,
+  onColumnVisibilityChange: setColumnVisibility,
+  onColumnFiltersChange: setColumnFilters,
+  onSortingChange: setSorting,
+  onPaginationChange: setPagination,
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  getFacetedRowModel: getFacetedRowModel(),
+  getFacetedUniqueValues: getFacetedUniqueValues(),
+})
 
   function handleDragEnd(event) {
     const { active, over } = event
@@ -397,51 +322,31 @@ export function OrdersTable({
     }
   }
 
+  if (loading) {
+      return (
+        <div className="flex h-64 items-center justify-center">
+          <LoaderIcon className="h-8 w-8 animate-spin" />
+        </div>
+      )
+    }
+  
+    if (error) {
+      return (
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-center text-red-500">
+            Failed to load customers: {error.message}
+          </div>
+        </div>
+      )
+    }
   return (
     <Tabs
       defaultValue="outline"
       className="flex w-full flex-col justify-start gap-6"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-        <Select defaultValue="outline">
-          <SelectTrigger
-            className="@4xl/main:hidden flex w-fit"
-            id="view-selector"
-          >
-            <SelectValue placeholder="Select a view" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="outline">Outline</SelectItem>
-            <SelectItem value="past-performance">Past Performance</SelectItem>
-            <SelectItem value="key-personnel">Key Personnel</SelectItem>
-            <SelectItem value="focus-documents">Focus Documents</SelectItem>
-          </SelectContent>
-        </Select>
-        <TabsList className="@4xl/main:flex hidden">
-          <TabsTrigger value="outline">Outline</TabsTrigger>
-          <TabsTrigger value="past-performance" className="gap-1">
-            Past Performance{" "}
-            <Badge
-              variant="secondary"
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/30"
-            >
-              3
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="key-personnel" className="gap-1">
-            Key Personnel{" "}
-            <Badge
-              variant="secondary"
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/30"
-            >
-              2
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="focus-documents">Focus Documents</TabsTrigger>
-        </TabsList>
+        
+       <div></div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -476,10 +381,6 @@ export function OrdersTable({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <PlusIcon />
-            <span className="hidden lg:inline">Add Section</span>
-          </Button>
         </div>
       </div>
       <TabsContent
@@ -535,6 +436,8 @@ export function OrdersTable({
                 )}
               </TableBody>
             </Table>
+
+
           </DndContext>
         </div>
         <div className="flex items-center justify-between px-4">

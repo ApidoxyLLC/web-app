@@ -57,6 +57,7 @@ export async function POST(request) {
     await session.commitTransaction();
     return NextResponse.json( { message: "User registered successfully", success: true, data: responseData }, { status: 201 });
   } catch (error) {
+    console.log(error)
     await session.abortTransaction();
     return NextResponse.json({ error: error.message || "Something went wrong", stack: process.env.NODE_ENV !== "production" ? error.stack : undefined, }, { status: 500 } );
   } finally { session.endSession(); }

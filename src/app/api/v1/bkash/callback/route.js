@@ -40,7 +40,6 @@ export async function GET(request) {
                     throw new Error(result?.message || 'Payment execution failed');
                 }
 
-                // Only proceed with receipt generation if payment was successful
                 const pdfBytes = await generateReceiptPDF(invoice);
                 console.log("pdfBytes: await fs.readFile('receipt.pdf'),")
                 console.log(pdfBytes)

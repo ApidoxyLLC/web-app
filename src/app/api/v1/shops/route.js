@@ -15,7 +15,7 @@ import cuid from "@bugsnag/cuid";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { createB2Bucket } from "@/services/image/blackblaze";
 import { addDNSRecord } from "@/services/cloudflare/addDNSRecord";
-
+import { domainModel } from "@/models/vendor/Domain"
 export async function POST(request) {
   let body;
   try { body = await request.json(); }
@@ -33,6 +33,7 @@ export async function POST(request) {
 
   const auth_db = await authDbConnect()
   const UserModel = userModel(auth_db);
+  const vendor_db = await vendorDbConnect()
 
   const user = await UserModel.findOne({
     referenceId: data.userReferenceId,
@@ -44,11 +45,11 @@ export async function POST(request) {
     return NextResponse.json({ error: "...not authorized" }, { status: 404 });
 
   // Check shop limit before allowing to create
-  const currentShopUsage = user.usage?.shops;
-  const allowedShopLimit = user.subscriptionScope?.shops;
+  // const currentShopUsage = user.usage?.shops;
+  // const allowedShopLimit = user.subscriptionScope?.shops;
 
-  if (currentShopUsage >= allowedShopLimit)
-    return NextResponse.json({ warning: `You have reached your shop limit (${allowedShopLimit}) for the current plan.`, success: false }, { status: 403 });
+  // if (currentShopUsage >= allowedShopLimit)
+  //   return NextResponse.json({ warning: `You have reached your shop limit (${allowedShopLimit}) for the current plan.`, success: false }, { status: 403 });
 
   const parsed = createShopDTOSchema.safeParse(body);
   if (!parsed.success)
@@ -67,28 +68,33 @@ export async function POST(request) {
     const dbName = `${config.vendorDbPrefix}_${_id}_db`
     const bucketName = `${referenceId}`
     const primaryDomain = _id.toString() + '.' + process.env.DEFAULT_SHOP_DOMAIN;
+    const Domain = domainModel(vendor_db);
+    const existingDomain = await Domain.findOne({
+        domain: { $in: [primaryDomain] }
+      });
 
+      if (existingDomain) {
+        return NextResponse.json({
+          error: `Domain ${primaryDomain} already exists in domains collection.`,
+        }, { status: 409 });
+      }
 
-    const existingShop = await vendorModel(auth_db).findOne({
-      $or: [
-        { primaryDomain: primaryDomain },
-        { domains: primaryDomain }
-      ]
-    });
+      // const domainsToAdd = [primaryDomain]; // Start with primary domain
+      // const existingDomains = await Domain.find({
+      //   domain: { $in: domainsToAdd }
+      // });
 
-    if (existingShop) {
-      return NextResponse.json({
-        error: `Domain ${primaryDomain} already exists in the system.`,
-      }, { status: 409 });
-    }
-
-
-
-    await addDNSRecord({
-      domain: primaryDomain,
-      zoneId: config.zoneId,
-      template: "shop2" // this points to your Pages or proxy
-    });
+      // if (existingDomains.length > 0) {
+      //   const conflictDomains = existingDomains.map(d => d.domain);
+      //   return NextResponse.json({
+      //     error: `These domains already exist: ${conflictDomains.join(', ')}`,
+      //   }, { status: 409 });
+      // }
+        await Domain.create({
+          domain: primaryDomain,
+          shop: _id,
+          isActive: true
+        });
 
 
     const bucket = await createB2Bucket({ bucketName, createdBy: data.userId, shopId: referenceId });
@@ -160,7 +166,6 @@ export async function POST(request) {
       $inc: { 'usage.shops': 1 }
     }
 
-    const vendor_db = await vendorDbConnect()
     const authDb_session = await auth_db.startSession()
     const VendorModel = vendorModel(vendor_db)
     const ShopModel = shopModel(auth_db);

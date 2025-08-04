@@ -9,10 +9,7 @@ const envSchema = z.object({
   CLOUDFLARE_DNS_DEFAULT_TTL_MS: z.string().optional().default('3600'),
   DEFAULT_SHOP_DOMAIN: z.string().min(1),
 
-  // Netlify
-  NETLIFY_API_TOKEN: z.string().min(1, 'NETLIFY_API_TOKEN is required'),
-  NETLIFY_SITE_ID: z.string().min(1, 'NETLIFY_SITE_ID is required'),
-  DEFAULT_CUSTOM_DOMAIN: z.string().optional(),
+  
 });
 
 const config = {
@@ -24,11 +21,7 @@ const config = {
     defaultShopDomain: process.env.DEFAULT_SHOP_DOMAIN,
     dnsTtlMs: parseInt(process.env.CLOUDFLARE_DNS_DEFAULT_TTL_MS || '3600', 10),
   },
-  netlify: {
-    apiToken: process.env.NETLIFY_API_TOKEN,
-    siteId: process.env.NETLIFY_SITE_ID,
-    defaultDomain: process.env.DEFAULT_CUSTOM_DOMAIN || null,
-  },
+
 
 };
 
