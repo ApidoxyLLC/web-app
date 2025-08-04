@@ -4,7 +4,7 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import config from "../../../config";
 
-const defaultFields = ['_id', 'email', 'dbInfo', 'secrets', 'expirations'];
+const defaultFields = ['_id', 'ownerId', 'email', 'dbInfo', 'secrets', 'expirations'];
 // ['secrets', 'timeLimitations', 'status'] 
 
 function buildProjection(fields = []) {
