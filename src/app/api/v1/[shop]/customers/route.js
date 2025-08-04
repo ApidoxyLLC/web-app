@@ -81,7 +81,7 @@ export async function GET(request, { params }) {
     const hasPreviousPage = page > 1;
 
     const users = await User.find(query)
-      .select('-verification -security -activeSessions -twoFactor -lock')
+      .select('status lock verification -security -activeSessions -twoFactor')
       .sort({ [sortField]: sortOrder })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -100,6 +100,7 @@ export async function GET(request, { params }) {
       isPhoneVerified: user.isPhoneVerified,
       role: user.role,
       status: user.status?.currentStatus,
+      lock: user.lock,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       theme: user.theme,
