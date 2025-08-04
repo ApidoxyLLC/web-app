@@ -1,50 +1,131 @@
 import { NextResponse } from "next/server";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-import {subscriptionPlanDTOSchema} from "./subscriptionPlanDTOSchema";
+import { subscriptionPlanDTOSchema } from "./subscriptionPlanDTOSchema";
 import { PlanModel } from "@/models/subscription/Plan";
+import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import mongoose from "mongoose";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
+import { userModel } from "@/models/auth/user";
 
 export async function POST(request) {
-console.log("Hello......")
-  try {
-    const body = await request.json();
-    console.log("Raw request:", JSON.stringify(body, null, 2));
+    console.log("Subscription Plan Creation Request");
 
-    const parsed = subscriptionPlanDTOSchema.safeParse(body);
-    if (!parsed.success) {
-      const errors = parsed.error.issues.map(issue => ({
-        field: issue.path.join('.'),
-        message: issue.message
-      }));
-      return NextResponse.json(
-        { success: false, errors },
-        { status: 400 }
-      );
+    // Rate limiting
+    const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+        request.headers['x-real-ip'] ||
+        request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createPlan' });
+    if (!allowed) {
+        return NextResponse.json(
+            { error: 'Too many requests. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': retryAfter.toString() } }
+        );
     }
 
-    const vendorDb = await vendorDbConnect();
-    const Plan = PlanModel(vendorDb);
+    try {
+        const body = await request.json();
+        console.log("Request body:", JSON.stringify(body, null, 2));
 
-    // Create with validation
-    const newPlan = await Plan.create(parsed.data);
+        // Validate input
+        const parsed = subscriptionPlanDTOSchema.safeParse(body);
+        if (!parsed.success) {
+            const errors = parsed.error.issues.map(issue => ({
+                field: issue.path.join('.'),
+                message: issue.message
+            }));
+            return NextResponse.json(
+                { success: false, errors },
+                { status: 400 }
+            );
+        }
 
-    return NextResponse.json(
-      { success: true, data: newPlan },
-      { status: 201 }
-    );
+        // // Authentication
+        // const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        // if (!authenticated) {
+        //     return NextResponse.json(
+        //         { error: authError || "Not authorized" },
+        //         { status: 401 }
+        //     );
+        // }
 
-  } catch (error) {
-    console.error("Database error:", error);
-    if (error.code === 11000) {
-      return NextResponse.json(
-        { success: false, message: "Slug must be unique" },
-        { status: 409 }
-      );
+         /** 
+                   * fake Authentication for test purpose only 
+                   * *******************************************
+                   * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+                   * *******************************************
+                   * *              ***
+                   * *              ***
+                   * *            *******
+                   * *             *****
+                   * *              *** 
+                   * *               *           
+                   * */
+
+        const authDb = await authDbConnect()
+        const User = userModel(authDb);
+        const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
+            .select('referenceId _id name email phone role isEmailVerified')
+        console.log(user)
+        const data = {
+            sessionId: "cmdags8700000649w6qyzu8xx",
+            userReferenceId: user.referenceId,
+            userId: user?._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            isVerified: user.isEmailVerified || user.isPhoneVerified,
+        }
+
+        /** 
+         * fake Authentication for test purpose only 
+         * *******************************************
+         * *********FAKE AUTHENTICATION END********* *
+         * *******************************************
+        **/
+
+              const vendorDb = await vendorDbConnect();
+        const Plan = PlanModel(vendorDb);
+
+        const planData = {
+            ...parsed.data,
+            createdBy: new mongoose.Types.ObjectId(data.userId)
+        };
+
+        const newPlan = await Plan.create(planData);
+
+        return NextResponse.json(
+            {
+                success: true,
+                data: newPlan,
+                message: "Subscription plan created successfully"
+            },
+            { status: 201 }
+        );
+
+    } catch (error) {
+        console.error("Plan Creation Error:", error);
+        if (error.code === 11000) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Plan slug must be unique",
+                    error: error.message
+                },
+                { status: 409 }
+            );
+        }
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Internal server error",
+                error: error.message,
+                stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+            },
+            { status: 500 }
+        );
     }
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
-  }
 }
 
 // // Pagination constants
