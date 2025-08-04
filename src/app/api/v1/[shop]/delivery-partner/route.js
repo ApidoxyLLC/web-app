@@ -7,13 +7,13 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 // import { userModel } from "@/models/auth/user";
-
-export async function GET(request, { params }) {
+export async function GET(request) {
+        console.log("hello*****")
     // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
         request.socket?.remoteAddress || '';
-    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getSmsEmail' });
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
     if (!allowed) {
         return NextResponse.json(
             { error: 'Too many requests. Please try again later.' },
@@ -22,8 +22,9 @@ export async function GET(request, { params }) {
     }
 
     try {
-        const { shop: referenceId } = params;
-        console.log("Shop Reference ID:", referenceId);
+        const url = new URL(request.url);
+        const pathSegments = url.pathname.split('/');
+        const referenceId = pathSegments[pathSegments.indexOf('v1') + 1];
 
         if (!referenceId) {
             return NextResponse.json(
@@ -32,19 +33,28 @@ export async function GET(request, { params }) {
             );
         }
 
+        // Authentication
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json(
+                { error: authError || "Not authorized" },
+                { status: 401 }
+            );
+        }
 
- /**
-                           * fake Authentication for test purpose only
-                           * *******************************************
-                           * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-                           * *******************************************
-                           * *              ***
-                           * *              ***
-                           * *            *******
-                           * *             *****
-                           * *              ***
-                           * *               *
-                           * */
+
+         /** 
+                   * fake Authentication for test purpose only 
+                   * *******************************************
+                   * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+                   * *******************************************
+                   * *              ***
+                   * *              ***
+                   * *            *******
+                   * *             *****
+                   * *              *** 
+                   * *               *           
+                   * */
 
         // const authDb = await authDbConnect()
         // const User = userModel(authDb);
@@ -62,7 +72,7 @@ export async function GET(request, { params }) {
         //     isVerified: user.isEmailVerified || user.isPhoneVerified,
         // }
 
-        /**
+        /** 
          * fake Authentication for test purpose only 
          * *******************************************
          * *********FAKE AUTHENTICATION END********* *
@@ -70,12 +80,10 @@ export async function GET(request, { params }) {
         **/
 
 
-        // Authentication
-        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        if (!authenticated) {
+        if (!mongoose.Types.ObjectId.isValid(data.userId)) {
             return NextResponse.json(
-                { error: authError || "Not authorized" },
-                { status: 401 }
+                { error: "Invalid user ID format" },
+                { status: 400 }
             );
         }
 
@@ -98,34 +106,29 @@ export async function GET(request, { params }) {
                         $elemMatch: {
                             userId: new mongoose.Types.ObjectId(data.userId),
                             status: "active",
-                            permission: { $in: ["r:sms-provider", "r:email-provider", "r:shop"] }
+                            permission: { $in: ["r:delivery-partner", "r:shop"] }
                         }
                     }
                 }
             ]
         };
 
-        console.log("Permission Filter:", permissionFilter);
-
         const [vendorData, shopData] = await Promise.all([
-            Vendor.findOne(permissionFilter).select("smsProvider emailProvider").lean(),
-            Shop.findOne(permissionFilter).select("smsProvider emailProvider").lean()
+            Vendor.findOne(permissionFilter).select("deliveryPartner").lean(),
+            Shop.findOne(permissionFilter).select("deliveryPartner").lean()
         ]);
 
-        console.log("Vendor Data:", vendorData);
-        console.log("Shop Data:", shopData);
-
-        const providers = {
-            smsProvider: vendorData?.smsProvider || shopData?.smsProvider || null,
-            emailProvider: vendorData?.emailProvider || shopData?.emailProvider || null
+        const deliveryPartners = {
+            ...(vendorData?.deliveryPartner || {}),
+            ...(shopData?.deliveryPartner || {})
         };
 
-        if (!providers.smsProvider && !providers.emailProvider) {
+        if (Object.keys(deliveryPartners).length === 0) {
             return NextResponse.json(
                 {
                     success: true,
                     data: null,
-                    message: "No SMS/Email provider configuration found"
+                    message: "No delivery partner found"
                 },
                 { status: 200 }
             );
@@ -134,16 +137,16 @@ export async function GET(request, { params }) {
         return NextResponse.json(
             {
                 success: true,
-                data: providers
+                data: deliveryPartners
             },
             { status: 200 }
         );
 
     } catch (error) {
-        console.error("GET SMS/Email Services Error:", error);
+        console.error("GET Delivery Partner Error:", error);
         return NextResponse.json(
             {
-                error: error.message || "Failed to retrieve provider data",
+                error: error.message || "Failed to retrieve delivery partner data",
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
             },
             { status: 500 }
