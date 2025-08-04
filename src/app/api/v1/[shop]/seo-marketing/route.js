@@ -118,11 +118,9 @@ export async function GET(request, { params }) {
         // Combine results
         const marketingData = {
             googleTagManager: vendorData?.marketing?.googleTagManager ||
-                shopData?.marketing?.googleTagManager ||
-                null,
+                shopData?.marketing?.googleTagManager,
             facebookPixel: vendorData?.marketing?.facebookPixel ||
-                shopData?.marketing?.facebookPixel ||
-                null
+                shopData?.marketing?.facebookPixel 
         };
 
         console.log(marketingData)
