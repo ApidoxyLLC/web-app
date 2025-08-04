@@ -13,11 +13,9 @@ export async function GET(request, { params }) {
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' },{ status: 429, headers: { 'Retry-After': retryAfter.toString() } });
 
-
   // Authenticated access only
   const { authenticated, error, data } = await getAuthenticatedUser(request);
-  if (!authenticated) 
-    return NextResponse.json({ error: error || 'Not authorized' }, { status: 401 });
+  if (!authenticated) return NextResponse.json({ error: error || 'Not authorized' }, { status: 401 });
 
   try {
     // Get shop reference from params
