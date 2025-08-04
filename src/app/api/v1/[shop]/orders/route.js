@@ -4,7 +4,7 @@ import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import { dbConnect } from '@/lib/mongodb/db';
 import getAuthenticatedUser from '@/app/api/auth/utils/getAuthenticatedUser';
 import { getVendor } from '@/services/vendor/getVendor';
-import hasCustomerReadAccess from '../customers/hasCustomerReadAccess';
+import hasCustomerReadAccess from './hasCustomerReadAccess';
 import { orderModel } from '@/models/shop/product/Order';
 
 export async function GET(request, { params }) {
@@ -24,8 +24,8 @@ export async function GET(request, { params }) {
 
     // Get vendor info
     const { vendor, dbUri, dbName } = await getVendor({ id: shopReferenceId });
-    // if (!hasCustomerReadAccess(vendor, data.userId))
-    //   return NextResponse.json({ error: 'Not authorized to access orders' }, { status: 403, headers: securityHeaders });
+    if (!hasCustomerReadAccess(vendor, data.userId))
+      return NextResponse.json({ error: 'Not authorized to access orders' }, { status: 403, headers: securityHeaders });
 
     // Connect to the vendor's DB
     const shop_db = await dbConnect({ dbKey: dbName, dbUri });
