@@ -41,7 +41,7 @@ export async function PATCH(request) {
     if (existingIndex !== -1) {
         // Update existing entry
         vendor.chatSupport[existingIndex].link = link;
-        vendor.chatSupport[existingIndex].active = active;
+        vendor.chatSupport[existingIndex].active = true;
     } else {
         // Add new entry
         vendor.chatSupport = vendor.chatSupport || []; 
