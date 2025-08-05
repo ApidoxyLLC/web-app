@@ -1,64 +1,119 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Trash2, UserPlus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-const suggestions = [
-  { name: "Sowrov", email: "sowrov@example.com" },
-  { name: "jon", email: "jon@example.com" },
-  { name: "Apon", email: "gedoba6074@javbing.com" },
-];
+import { useSession } from "next-auth/react";
+import useFetch from "@/hooks/useFetch";
+import { useParams } from "next/navigation";
 
 export default function Dashboard() {
-  const [users, setUsers] = useState([
-    {
-      name: "Apon",
-      email: "gedoba6074@javbing.com",
-      role: "Shop Owner",
-    },
-  ]);
+  const { data: session } = useSession();
+  const [users, setUsers] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
-  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
-  const [role, setRole] = useState("Admin");
-  const [open, setOpen] = useState(true);
   const [value, setValue] = useState("");
+  const [role] = useState("Admin");
+  const [open, setOpen] = useState(true);
+  const [suggestions, setSuggestions] = useState([]);
+const [loading, setLoading] = useState(false);
+const shop = useParams()
+const shopId =shop.shop
+
+useEffect(() => {
+  const delayDebounce = setTimeout(async () => {
+    if (!value.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const query = value.includes("@")
+        ? `email=${encodeURIComponent(value)}`
+        : `username=${encodeURIComponent(value)}`;
+        
+      const res = await fetch(`/api/v1/user?${query}`);
+      const result = await res.json();
+
+      if (res.ok) {
+        setSuggestions([result.data]);
+      } else {
+        setSuggestions([]);
+      }
+    } catch (err) {
+      console.error("Fetch suggestions error:", err);
+      setSuggestions([]);
+    }
+
+    setLoading(false);
+  }, 400); // debounce input
+
+  return () => clearTimeout(delayDebounce);
+}, [value]);
+
+  // ✅ Only update users when session is ready
+  useEffect(() => {
+    if (session?.user?.name && session?.user?.email) {
+      setUsers([
+        {
+          name: session.user.name,
+          email: session.user.email,
+        },
+      ]);
+    }
+  }, [session]);
 
   const handleAddUserClick = () => {
     setIsAdding(true);
     setOpen(true);
   };
 
-  const handleDoneClick = () => {
-    const suggestion = suggestions.find((s) => s.name === value);
-    if (suggestion && role) {
-      setUsers([
-        ...users,
-        {
-          name: suggestion.name,
-          email: suggestion.email,
-          role,
-        },
+  const handleDoneClick = async () => {
+    const selected = suggestions.find((s) => s.email === value);
+    console.log(selected,shopId)
+    if (!selected) return alert("don't get selected");
+
+    try {
+      setUsers((prev) => [
+        ...prev,
+        { name: selected.name, email: selected.email, role },
       ]);
-      setSelectedSuggestion(null);
-      setValue("");
-      setIsAdding(false);
+
+      const response = await fetch("http://localhost:3000/api/v1/permission", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          shop: shopId,
+          action: "grant-permission",
+          userId: selected.id,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Permission grant failed");
+      }
+
+      console.log("✅ Permission granted:", result);
+    } catch (err) {
+      console.error("❌ Error granting permission:", err.message);
     }
+
+    setValue("");
+    setIsAdding(false);
+    setOpen(false);
   };
-  const filteredSuggestions = suggestions.filter((s) =>
+
+  const filteredSuggestions = suggestions?.filter((s) =>
     `${s.name} ${s.email}`.toLowerCase().includes(value.toLowerCase())
   );
+
   return (
     <Card className="w-full max-w-4xl mx-auto mt-6 rounded-lg p-4 shadow-none">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
@@ -73,13 +128,14 @@ export default function Dashboard() {
           Add User
         </Button>
       </div>
+
       {isAdding && (
         <div className="mt-4 bg-muted rounded-md px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="relative w-[200px]">
             <input
               type="text"
-              className="border  border-gray-300 bg-primary-foreground rounded-md px-3 py-2 w-full text-sm"
-              placeholder="Type name or email"
+              className="border border-gray-300 bg-primary-foreground rounded-md px-3 py-2 w-full text-sm"
+              placeholder="Type email"
               value={value}
               onChange={(e) => {
                 setValue(e.target.value);
@@ -87,18 +143,20 @@ export default function Dashboard() {
               }}
             />
             {value && (
-              <div className="absolute z-10 mt-1 w-full bg-primary-foreground  rounded-md shadow-lg max-h-60 overflow-y-auto text-sm">
-                {filteredSuggestions.length > 0 ? (
+              <div className="absolute z-10 mt-1 w-full bg-primary-foreground rounded-md shadow-lg max-h-60 overflow-y-auto text-sm">
+                {loading ? (
+                  <div className="px-3 py-2 text-muted-foreground">Loading...</div>
+                ) : filteredSuggestions?.length > 0 ? (
                   filteredSuggestions.map((s) => (
                     <div
-                      key={s.email}
+                      key={s.referenceId}
                       onClick={() => {
-                        setValue(s.name);
+                        setValue(s.email);
                         setOpen(false);
                       }}
                       className={
                         open
-                          ? `px-3 py-2 bg-primary-foreground cursor-pointer`
+                          ? "px-3 py-2 bg-primary-foreground cursor-pointer"
                           : "hidden"
                       }
                     >
@@ -106,9 +164,7 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-muted-foreground">
-                    User not found
-                  </div>
+                  <div className="px-3 py-2 text-muted-foreground">User not found</div>
                 )}
               </div>
             )}
@@ -123,11 +179,11 @@ export default function Dashboard() {
           </Button>
         </div>
       )}
+
       {users.map((user, index) => (
         <div
           key={index}
-          className="
-           bg-muted rounded-md px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between "
+          className="bg-muted rounded-md px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between"
         >
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
@@ -136,13 +192,12 @@ export default function Dashboard() {
             <div>
               <p className="text-base font-semibold">
                 {user.name}
-                {index === 0 && <span className="font-medium">(You)</span>}
+                {index === 0 && <span className="font-medium"> (You)</span>}
               </p>
               <p className="text-sm">{user.email}</p>
             </div>
           </div>
           <Badge>Full access</Badge>
-
           <div className="flex items-center justify-evenly w-full sm:w-auto gap-3">
             <Button variant="ghost" size="icon">
               <Trash2 className="w-4 h-4" />

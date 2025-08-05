@@ -135,21 +135,16 @@ function DragHandle({ id }) {
 }
 
 const columns = [
-  {
-    accessorKey: "orderId",
-    header: "Order ID",
-    cell: ({ row }) => row.original.orderId,
-  },
-  {
-    accessorKey: "userId",
-    header: "User ID",
-    cell: ({ row }) => row.original.userId,
-  },
-  {
-    accessorKey: "cartId",
-    header: "Cart ID",
-    cell: ({ row }) => row.original.cartId,
-  },
+  // {
+  //   accessorKey: "orderId",
+  //   header: "Order ID",
+  //   cell: ({ row }) => row.original.orderId,
+  // },
+  // {
+  //   accessorKey: "userId",
+  //   header: "User ID",
+  //   cell: ({ row }) => row.original.userId,
+  // },
   {
     id: "items",
     header: "Items",
@@ -258,9 +253,6 @@ export function OrdersTable(
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState({
-      userId: false,
-      orderId: false,
-      cartId: false,
       placedAt: false
     })
   const [columnFilters, setColumnFilters] = React.useState(
@@ -396,46 +388,37 @@ const table = useReactTable({
             id={sortableId}
           >
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-muted">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <TableHead key={header.id} colSpan={header.colSpan}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      )
-                    })}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody className="**:data-[slot=table-cell]:first:w-8">
-                {table.getRowModel().rows?.length ? (
-                  <SortableContext
-                    items={dataIds}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {table.getRowModel().rows.map((row) => (
-                      <DraggableRow key={row.id} row={row} />
-                    ))}
-                  </SortableContext>
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
-                      No results.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+  <TableHeader className="sticky top-0 z-10 bg-muted">
+    {table.getHeaderGroups().map((headerGroup) => (
+      <TableRow key={headerGroup.id}>
+        {headerGroup.headers.map((header) => (
+          <TableHead key={header.id} colSpan={header.colSpan}>
+            {header.isPlaceholder
+              ? null
+              : flexRender(header.column.columnDef.header, header.getContext())}
+          </TableHead>
+        ))}
+      </TableRow>
+    ))}
+  </TableHeader>
+
+  <TableBody>
+    {table.getRowModel().rows?.length ? (
+      <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
+        {table.getRowModel().rows.map((row) => (
+          <DraggableRow key={row.id} row={row} />
+        ))}
+      </SortableContext>
+    ) : (
+      <TableRow>
+        <TableCell colSpan={columns.length} className="h-24 text-center">
+          No results.
+        </TableCell>
+      </TableRow>
+    )}
+  </TableBody>
+</Table>
+
 
 
           </DndContext>

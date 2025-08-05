@@ -42,7 +42,6 @@ export default function Website() {
       console.log(err)
       toast.error("Something went wrong while submitting. Please try again.");
     }
-
   }
   return (
     <Card className="flex-1 py-0">

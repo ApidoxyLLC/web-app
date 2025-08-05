@@ -65,7 +65,7 @@ export default function Dashboard() {
   console.log("paylod", payload)
   
   try {
-    const response = await fetch("/api/v1/sms-email-services", {
+    const response = await fetch("/api/v1/settings/sms-email-services", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
