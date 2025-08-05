@@ -255,7 +255,86 @@ const staffSchema = new mongoose.Schema(
 //   password: { type: String },
 // }, { timestamps: true });
 
+const subscriptionScopeSchema = new mongoose.Schema({
+  name: { type: String, required: true, default: "PLAN A" },
+  slug: { type: String, required: true, default: "plan-a" },
+  price: { type: Number, required: true, default: 0 },
+  monthly: { type: Number, required: true, default: 30 }, 
+  yearly: { type: Number, required: true, default: 365 },
+  validity: {
+    type: Number,
+    required: true,
+    enum: [30, 365],  
+    default: 30  
+  },
+  renewAt: { type: Date },       
+  expiresAt: { type: Date },
+  activatedAt: { type: Date, default: Date.now },
+  services: {
+    website: {
+      subdomains: { type: Number, required: true, default: 1 },
+      customDomains: { type: Number, required: true, default: 0 }
+    },
+    androidBuilds: { type: Number, required: true, default: 1 },
+    paymentGateways: { type: Number, required: true, default: 1 },
+    deliveryGateways: { type: Number, required: true, default: 1 },
+    smsGateways: { type: Number, required: true, default: 1 },
+    userAccess: { type: Number, required: true, default: 0 },
+    pushNotifications: {
+      type: Number,
+      required: true,
+      default: 500,
+      set: v => parseInt(v)
+    },
+    products: {
+      type: Number,
+      required: true,
+      default: 15,
+      set: v => parseInt(v)
+    }
+  },
 
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { _id: false, timestamps: true });
+
+const usageSchema = new mongoose.Schema({
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  subscriptionId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Subscription', 
+    required: true 
+  },
+  usage: {
+    website: {
+      subdomainsUsed: { type: Number, default: 0 },
+      customDomainsUsed: { type: Number, default: 0 }
+    },
+    androidBuildsUsed: { type: Number, default: 0 },
+    paymentGatewaysUsed: { type: Number, default: 0 },
+    deliveryGatewaysUsed: { type: Number, default: 0 },
+    smsGatewaysUsed: { type: Number, default: 0 },
+    userAccessUsed: { type: Number, default: 0 },
+    pushNotificationsUsed: { type: Number, default: 0 },
+    productsUsed: { type: Number, default: 0 }
+  },
+
+  billingCycleStart: { type: Date, default: Date.now },
+  billingCycleEnd: { 
+    type: Date, 
+    default: function() {
+      const start = this.billingCycleStart || new Date();
+      return new Date(start.getTime() + (this.subscription?.validity * 24 * 60 * 60 * 1000));
+    } 
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
 
 
 
@@ -284,6 +363,8 @@ const vendorSchema = new mongoose.Schema({
   facebookDataFeed: { type: String, default: null },
   transaction: { type: transactionFieldsSchema },
   policies: { type: String, default: null },
+  subscriptionScope: { type: subscriptionScopeSchema, default: () => ({}) },
+  usage: { type: usageSchema },
   support: { type: contactNdSupportSchema, select: true },
   notification: { type: notificationSchema, select: true },
   deliveryPartner: { type: deliveryPartnerSchema, default: null },
