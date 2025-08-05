@@ -49,28 +49,20 @@ export async function POST(request) {
   const _user = await User.findOne({ referenceId: userReferenceId, isDeleted: false, isVerified: true  });
   if (!_user)  return NextResponse.json( { success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
 
-  const staffPayload = {
-                      userId: _user._id,
-                      designation: "general_staff",
-                      status: "active",
-                      permission: ["w:shop"],
-                      addBy: data.userId,
-                      notes: []
-                    }
-
+  const staffPayload = {      userId: _user._id,
+                         designation: "general_staff",
+                              status: "active",
+                          permission: ["w:shop"],
+                               addBy: data.userId,
+                               notes: []                }
 
   try {
     if (action === "grant-permission") {
-
       const result  = await upsertStaffToVendor({ vendorId: vendor._id, staff: staffPayload })
-
-      if (!result.success) 
-        return NextResponse.json( { success: false, error: "Permission Grant failed " }, { status: 404, headers: securityHeaders } );
-
+      if (!result.success) return NextResponse.json( { success: false, error: "Permission Grant failed " }, { status: 404, headers: securityHeaders } );
     } else if (action === "remove-permission") {
       const result = await removeStaffFromVendor({ vendorId:  vendor._id, userId: _user._id })
       if (!result.success) return NextResponse.json({ success: false, error: result.message }, { status: 404, headers: securityHeaders });
-
     }
 
 
