@@ -26,7 +26,7 @@ export async function POST(request) {
   if (!parsed.success) return NextResponse.json( { success: false,error: "Validation failed",details: parsed.error.flatten(),},{ status: 422, headers: securityHeaders });
   
 
-  const { shop: shopReferenceId, action, user } = parsed.data;
+  const { shop: shopReferenceId, action, userId: userReferenceId } = parsed.data;
   const { authenticated, error, data } = await getAuthenticatedUser(request);
 
   if (!authenticated) {
@@ -36,8 +36,8 @@ export async function POST(request) {
   const vendor_db = await vendorDbConnect();
   const Vendor = vendorModel(vendor_db);
   const vendor = await Vendor.findOne({ referenceId: shopReferenceId })
-                              .select("+_id +ownerId +dbInfo")
-                              .lean();
+                             .select("+_id +ownerId +dbInfo")
+                             .lean();
 
   if (!vendor) 
     return NextResponse.json( { success: false, error: "Shop not found" }, { status: 404, headers: securityHeaders });
@@ -46,7 +46,7 @@ export async function POST(request) {
 
   const auth_db  = await authDbConnect()
   const User = userModel(auth_db);
-  const _user = await User.findOne({ referenceId: user, isDeleted: false, isVerified: true  });
+  const _user = await User.findOne({ referenceId: userReferenceId, isDeleted: false, isVerified: true  });
   if (!_user)  return NextResponse.json( { success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
 
   const staffPayload = {

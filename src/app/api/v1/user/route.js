@@ -5,7 +5,7 @@ import securityHeaders from "../utils/securityHeaders";
 import { z } from 'zod';
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
-
+import getUserByIdentifier from "@/services/user/getUserByIdentifier";
 
 export const dynamic = 'force-dynamic';
 
@@ -30,13 +30,13 @@ export async function GET(request) {
 
     const { authenticated, error, data } = await getAuthenticatedUser(request);
     if (!authenticated) return NextResponse.json({ error: "Not authorized" }, { status: 401 });
-      
+
     // Get search parameters from URL
     const { searchParams } = new URL(request.url);
-    const params = {    email: searchParams.get('email'),
-                        phone: searchParams.get('phone'),
-                     username: searchParams.get('username')         };
-
+    const params = {};
+    if (searchParams.get('email')) params.email = searchParams.get('email');
+    if (searchParams.get('phone')) params.phone = searchParams.get('phone');
+    if (searchParams.get('username')) params.username = searchParams.get('username');
     // Validate input
     const parsed = searchSchema.safeParse(params);
     if (!parsed.success) 
@@ -49,37 +49,33 @@ export async function GET(request) {
 
         // Build search query based on provided parameter
         const searchQuery = {              isDeleted: false,
-                            'status.currentStatus': 'active',
                                     'lock.isLocked': false              };
+        // 'status.currentStatus': 'active',                                    
 
         if (parsed.data.email) {
-        searchQuery.email = { $regex: new RegExp(`^${parsed.data.email}$`, 'i') };
-        searchQuery.isEmailVerified = true;
+          searchQuery.email           = parsed.data.email;
+          searchQuery.isEmailVerified = true;
         } else if (parsed.data.phone) {
-        searchQuery.phone = parsed.data.phone;
-        searchQuery.isPhoneVerified = true;
+          searchQuery.phone           = parsed.data.phone;
+          searchQuery.isPhoneVerified = true;
         } else if (parsed.data.username) {
-        searchQuery.username = parsed.data.username;
+          searchQuery.username        = parsed.data.username;
         }
-
+        // console.log(searchQuery)
         // Find user with conditions
         const user = await User.findOne(searchQuery).select('referenceId name username avatar email phone status createdAt');
 
         if (!user) {
-        return NextResponse.json(
-            { success: false, error: "Active user not found or account is locked" },
-            { status: 404, headers: securityHeaders }
-        );
-        }
+        return NextResponse.json({ success: false, error: "Active user not found or account is locked" },{ status: 404, headers: securityHeaders }); }
 
         // Prepare safe user data to return
         const userData = {         id: user.referenceId,
-                                name: user.name,
-                            username: user.username,
-                            avatar: user.avatar,
+                                 name: user.name,
+                             username: user.username,
+                               avatar: user.avatar,
                                 email: user.email,
                                 phone: user.phone,
-                            status: user.status,
+                               status: user.status,
                             createdAt: user.createdAt           };
 
         return NextResponse.json({ success: true, data: userData },{ status: 200, headers: securityHeaders });
