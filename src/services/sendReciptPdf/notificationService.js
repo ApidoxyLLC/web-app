@@ -28,7 +28,7 @@ export async function sendPaymentNotification({ userId, pdfBuffer, invoice, pdfU
     };
 
     // 1. EMAIL
-    if (user.email && isEmailVerified) {
+    if (user.email && user.isEmailVerified) {
         try {
             const emailResult = await sendReciptToEmail({
                 receiverEmail: user.email,
@@ -105,7 +105,7 @@ export async function sendPaymentNotification({ userId, pdfBuffer, invoice, pdfU
     //     }
     // }
 
-    if (user.phone && isPhoneVerified) {
+    if (user.phone && user.isPhoneVerified) {
         try {
             const cleanPhone = user.phone.replace(/\D/g, '');
             const smsText = `Payment Confirmed: ${messageDetails.amount}\n` +

@@ -13,7 +13,8 @@ export const addDomainDTOSchema = z.object({
             'apidoxy.shop',
             'apidoxy.bazar',
             'apidoxy.net',
-            'apidoxy.store'
+            'apidoxy.store',
+            'appcommerz.com'
         ].includes(val), {
             message: "Invalid domain selection"
         })
