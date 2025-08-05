@@ -8,11 +8,11 @@ const variantSchema = z.object({
 const productDTOSchema = z.object({
   shop: z.string().min(1, "Shop reference is required"),
   title: z.string().min(1, "Title is required").max(100, "Title too long"),
-  description: z.string().max(2000, "Description too long").optional(),
+  description: z.string().max(20000, "Description too long").optional(),
   images: z.array(z.string().url("Invalid image URL")).max(20, "Too many images").optional(),
   category: z.preprocess(val => val === "" ? undefined : val, z.string().max(64, "Category too long")).optional(),
   isPhysical: z.boolean().default(true),
-  weight: z.number().positive("Weight must be positive").max(1000, "Weight too high").optional(),
+  weight: z.number().positive("Weight must be positive").max(1000000, "Weight too high").optional(),
   weightUnit: z.enum(['kg', 'g', 'lb', 'og']).default('kg').optional(),
   price: z.number().positive("Price must be positive").max(1000000, "Price too high"),
   compareAtPrice: z.number().positive().max(1000000).optional(),
