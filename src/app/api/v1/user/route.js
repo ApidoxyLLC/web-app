@@ -48,8 +48,9 @@ export async function GET(request) {
         const User = userModel(db);
 
         // Build search query based on provided parameter
-        const searchQuery = {       isDeleted: false,
-                              'lock.isLocked': false   };
+        const searchQuery = {              isDeleted: false,
+                                    'lock.isLocked': false              };
+        // 'status.currentStatus': 'active',                                    
 
         if (parsed.data.email) {
           searchQuery.email           = parsed.data.email;
@@ -60,7 +61,7 @@ export async function GET(request) {
         } else if (parsed.data.username) {
           searchQuery.username        = parsed.data.username;
         }
-        console.log(searchQuery)
+        // console.log(searchQuery)
         // Find user with conditions
         const user = await User.findOne(searchQuery).select('referenceId name username avatar email phone status createdAt');
 
@@ -73,12 +74,12 @@ export async function GET(request) {
 
         // Prepare safe user data to return
         const userData = {         id: user.referenceId,
-                                name: user.name,
-                            username: user.username,
-                            avatar: user.avatar,
+                                 name: user.name,
+                             username: user.username,
+                               avatar: user.avatar,
                                 email: user.email,
                                 phone: user.phone,
-                            status: user.status,
+                               status: user.status,
                             createdAt: user.createdAt           };
 
         return NextResponse.json({ success: true, data: userData },{ status: 200, headers: securityHeaders });
