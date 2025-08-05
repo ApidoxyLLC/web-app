@@ -66,11 +66,7 @@ export async function GET(request) {
         const user = await User.findOne(searchQuery).select('referenceId name username avatar email phone status createdAt');
 
         if (!user) {
-        return NextResponse.json(
-            { success: false, error: "Active user not found or account is locked" },
-            { status: 404, headers: securityHeaders }
-        );
-        }
+        return NextResponse.json({ success: false, error: "Active user not found or account is locked" },{ status: 404, headers: securityHeaders }); }
 
         // Prepare safe user data to return
         const userData = {         id: user.referenceId,

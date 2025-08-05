@@ -7,9 +7,7 @@ import mongoose from "mongoose";
 
 export async function GET(request, { params }) {
     // Rate limiting
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-        request.headers.get('x-real-ip') ||
-        request.socket?.remoteAddress || '';
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
     
     const { allowed, retryAfter } = await applyRateLimit({ 
         key: ip, 
