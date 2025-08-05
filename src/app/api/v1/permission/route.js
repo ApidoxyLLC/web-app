@@ -47,7 +47,8 @@ export async function POST(request) {
   const auth_db  = await authDbConnect()
   const User = userModel(auth_db);
 
-  const user = await User.findOne({ referenceId: userReferenceId, isDeleted: false  });
+  const user = await User.findOne({ referenceId: userReferenceId, isDeleted: false });
+  console.log(user)
   if (!user || (!user.isVerified && !user.isEmailVerified && !user.isPhoneVerified))  return NextResponse.json( { success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
 
   const staffPayload = {      userId: user._id,
