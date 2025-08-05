@@ -45,7 +45,7 @@ export async function GET(req, { params }) {
         const minPrice = parseFloat(searchParams.get('minPrice'));
         const maxPrice = parseFloat(searchParams.get('maxPrice'));
         const searchQuery = searchParams.get('q') || '';
-        const status = searchParams.get('status') || 'active';
+        const status = searchParams.get('status');
         const type = searchParams.get('type');
         const hasVariants = searchParams.get('hasVariants');
         const isFeatured = searchParams.get('isFeatured');
@@ -72,7 +72,7 @@ export async function GET(req, { params }) {
                     ...(approvalStatus && { approvalStatus }),
                     ...(typeof hasVariants === 'string' && { hasVariants: hasVariants === 'true' }),
                     ...(isFeatured && { isFeatured: isFeatured === 'true' }),
-                    ...(category && { categories: { $in: [new mongoose.Types.ObjectId(category)] } }),
+                    ...(category?.trim() && mongoose.Types.ObjectId.isValid(category) && { categories: { $in: [new mongoose.Types.ObjectId(category)] } }),
                     ...((validMin || validMax) && { 
                         'price.base': { 
                             ...(validMin && { $gte: minPrice }),
