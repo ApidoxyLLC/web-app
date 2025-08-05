@@ -63,16 +63,22 @@ export async function GET(req, { params }) {
         const validMin = !isNaN(minPrice);
         const validMax = !isNaN(maxPrice);
 
+        const isValidCategoryId = mongoose.Types.ObjectId.isValid(category?.trim());
+
+
+        const escapeRegex = (text) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+        const escapedQuery = escapeRegex(searchQuery);
+
         // Build aggregation pipeline
         const pipeline = [
             { 
                 $match: {
-                    ...(status && { status }),
+                    ...(status?.trim() && { status: status.trim() } ),
                     ...(type && { type }),
                     ...(approvalStatus && { approvalStatus }),
-                    ...(typeof hasVariants === 'string' && { hasVariants: hasVariants === 'true' }),
+                    ...(typeof isFeatured === 'string' && { isFeatured: isFeatured === 'true' }),
                     ...(isFeatured && { isFeatured: isFeatured === 'true' }),
-                    ...(category?.trim() && mongoose.Types.ObjectId.isValid(category) && { categories: { $in: [new mongoose.Types.ObjectId(category)] } }),
+                    ...(mongoose.Types.ObjectId.isValid(category?.trim()) && { categories: { $in: [new mongoose.Types.ObjectId(category.trim())] }}),
                     ...((validMin || validMax) && { 
                         'price.base': { 
                             ...(validMin && { $gte: minPrice }),
@@ -81,11 +87,11 @@ export async function GET(req, { params }) {
                     }),
                     ...(searchQuery && { 
                         $or: [
-                            { title: { $regex: searchQuery, $options: 'i' } },
-                            { description: { $regex: searchQuery, $options: 'i' } },
-                            { tags: { $in: [new RegExp(searchQuery, 'i')] } },
-                            { 'variants.sku': { $regex: searchQuery, $options: 'i' } }
-                        ]
+                            { title: { $regex: escapedQuery, $options: 'i' } },
+                            { description: { $regex: escapedQuery, $options: 'i' } },
+                            { tags: { $in: [new RegExp(escapedQuery, 'i')] } },
+                            { 'variants.sku': { $regex: escapedQuery, $options: 'i' } }
+                            ]
                     })
                 }
             },

@@ -315,7 +315,7 @@ export async function POST(request) {
     return response;
 
   } catch (err) {
-
+    
 
     const errorMsg = err.code === 11000
       ? "A product with similar attributes already exists"
