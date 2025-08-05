@@ -53,15 +53,15 @@ export async function GET(request) {
                                     'lock.isLocked': false              };
 
         if (parsed.data.email) {
-        searchQuery.email = { $regex: new RegExp(`^${parsed.data.email}$`, 'i') };
-        searchQuery.isEmailVerified = true;
+          searchQuery.email           = parsed.data.email;
+          searchQuery.isEmailVerified = true;
         } else if (parsed.data.phone) {
-        searchQuery.phone = parsed.data.phone;
-        searchQuery.isPhoneVerified = true;
+          searchQuery.phone           = parsed.data.phone;
+          searchQuery.isPhoneVerified = true;
         } else if (parsed.data.username) {
-        searchQuery.username = parsed.data.username;
+          searchQuery.username        = parsed.data.username;
         }
-
+        console.log(searchQuery)
         // Find user with conditions
         const user = await User.findOne(searchQuery).select('referenceId name username avatar email phone status createdAt');
 
