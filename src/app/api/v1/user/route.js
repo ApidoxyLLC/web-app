@@ -30,13 +30,13 @@ export async function GET(request) {
 
     const { authenticated, error, data } = await getAuthenticatedUser(request);
     if (!authenticated) return NextResponse.json({ error: "Not authorized" }, { status: 401 });
-      
+
     // Get search parameters from URL
     const { searchParams } = new URL(request.url);
-    const params = {    email: searchParams.get('email'),
-                        phone: searchParams.get('phone'),
-                     username: searchParams.get('username')         };
-
+    const params = {};
+    if (searchParams.get('email')) params.email = searchParams.get('email');
+    if (searchParams.get('phone')) params.phone = searchParams.get('phone');
+    if (searchParams.get('username')) params.username = searchParams.get('username');
     // Validate input
     const parsed = searchSchema.safeParse(params);
     if (!parsed.success) 
