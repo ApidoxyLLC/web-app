@@ -106,7 +106,7 @@ const productSchema = new mongoose.Schema({
              options: { type: [String], enum:["size", "color", "material"] },
              details: { type: detailSchema, default: undefined },
           // categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category'}],
-            category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category'},
+            category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: undefined },
          hasVariants: { type: Boolean, default: false },
          isAvailable: { type: Boolean, default: undefined },
             // warranty: { type: warrantySchema,  default: undefined },

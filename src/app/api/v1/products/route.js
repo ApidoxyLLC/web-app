@@ -278,26 +278,27 @@ export async function POST(request) {
     return NextResponse.json({ success: false, error: "Category not found" }, { status: 404, headers: securityHeaders });
 }
 
-    const newProduct = new Product({  title, 
-                                      //  slug: title.toString().toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/--+/g, '-')  , 
-                                description, tags, 
+    const newProduct = new Product({
+                                    title,
+                                    description,
+                                    tags,
                                     gallery: images,
-                              productFormat: isPhysical ? 'physical' : 'digital',
-                                     weight,
-                                 weightUnit,
-                                   category,
-                                      price: {
-                                                base: price,
-                                                compareAt: compareAtPrice,
-                                                cost: costPerItem,
-                                                 profit: profit,
-                                                 margin: margin, 
-                                              },
-                           sellWithOutStock,
-                                  inventory: { sku, barcode },
-                            hasFreeShipment: isFreeShiping, 
-                                   variants,
-                                    });
+                                    productFormat: isPhysical ? 'physical' : 'digital',
+                                    weight,
+                                    weightUnit,
+                                    ...(category && category.trim() !== '' && { category }),
+                                    price: {
+                                            base: price,
+                                            compareAt: compareAtPrice,
+                                            cost: costPerItem,
+                                            profit: profit,
+                                            margin: margin,
+                                          },
+                                    sellWithOutStock,
+                                    inventory: { sku, barcode },
+                                    hasFreeShipment: isFreeShiping,
+                                    variants,
+                                  });
 
     const savedProduct = await newProduct.save();
 
