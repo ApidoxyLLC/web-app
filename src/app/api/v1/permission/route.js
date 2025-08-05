@@ -47,7 +47,8 @@ export async function POST(request) {
   const auth_db  = await authDbConnect()
   const User = userModel(auth_db);
 
-  const user = await User.findOne({ referenceId: userReferenceId, isDeleted: false });
+  const user = await User.findOne({ referenceId: userReferenceId, isDeleted: false })
+                         .select("_id referenceId isVerified isEmailVerified isPhoneVerified");
   console.log(user)
   if (!user || (!user.isVerified && !user.isEmailVerified && !user.isPhoneVerified))  return NextResponse.json( { success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
 
@@ -63,7 +64,7 @@ export async function POST(request) {
       const result  = await upsertStaffToVendor({ vendorId: vendor._id, staff: staffPayload })
       if (!result.success) return NextResponse.json( { success: false, error: "Permission Grant failed " }, { status: 404, headers: securityHeaders } );
     } else if (action === "remove-permission") {
-      const result = await removeStaffFromVendor({ vendorId:  vendor._id, userId: _user._id })
+      const result = await removeStaffFromVendor({ vendorId:  vendor._id, userId: user._id })
       if (!result.success) return NextResponse.json({ success: false, error: result.message }, { status: 404, headers: securityHeaders });
     }
 
