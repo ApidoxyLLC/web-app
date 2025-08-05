@@ -46,10 +46,11 @@ export async function POST(request) {
 
   const auth_db  = await authDbConnect()
   const User = userModel(auth_db);
-  const _user = await User.findOne({ referenceId: userReferenceId, isDeleted: false, isVerified: true  });
-  if (!_user)  return NextResponse.json( { success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
 
-  const staffPayload = {      userId: _user._id,
+  const user = await User.findOne({ referenceId: userReferenceId, isDeleted: false  });
+  if (!user || (!user.isVerified && !user.isEmailVerified && !user.isPhoneVerified))  return NextResponse.json( { success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
+
+  const staffPayload = {      userId: user._id,
                          designation: "general_staff",
                               status: "active",
                           permission: ["w:shop"],
