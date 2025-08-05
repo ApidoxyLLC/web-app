@@ -5,7 +5,7 @@ import securityHeaders from "../utils/securityHeaders";
 import { z } from 'zod';
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
-
+import getUserByIdentifier from "@/services/user/getUserByIdentifier";
 
 export const dynamic = 'force-dynamic';
 
