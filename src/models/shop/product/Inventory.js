@@ -24,7 +24,7 @@ export const inventorySchema = new mongoose.Schema({
               barcode: String,
                 // stock: stockSchema,
     // lowStockThreshold: { type: Number, default: 5 },
-             quantity: { type: Number, required: true, min: 0 },
+             quantity: { type: Number, required: false, min: 0 },
     //         backorder: { type: Boolean, default: false },
     //          preorder: { type: Boolean, default: false },
     //            status: { type: String, default: 'in-stock', enum: ['in-stock', 'out-of-stock', 'discontinued', 'pre-order'] },

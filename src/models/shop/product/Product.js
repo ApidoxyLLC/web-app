@@ -114,7 +114,7 @@ const productSchema = new mongoose.Schema({
       approvalStatus: { type: String, default: 'pending', enum: ['pending', 'approved', 'rejected'] },
        productFormat: { type: String, enum: ['physical', 'digital'],  default: 'physical' },
               weight: { type: String },
-          weightUnit: { type: String, enum:['kg', 'gram', 'lb', 'og'] },
+          weightUnit: { type: String, enum:['mg', 'g', 'kg'] },
      hasFreeShipment: { type: Boolean,  default: undefined },
     sellWithOutStock: { type: Boolean,  default: undefined },
        digitalAssets: { type: [digitalAssetSchema], default: undefined },
