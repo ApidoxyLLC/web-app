@@ -3,6 +3,10 @@ import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import { userModel } from "@/models/auth/User";
+import { vendorModel } from "@/models/vendor/Vendor";
+
+
 import mongoose from "mongoose";
 
 export async function GET(request, { params }) {
@@ -12,7 +16,7 @@ export async function GET(request, { params }) {
     if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
     
     try {
-        const { shop: referenceId } = params;
+        const { shop: referenceId } = await params;
         console.log("Shop Reference ID:", referenceId);
         if (!referenceId) return NextResponse.json({ error: "Shop reference is required" },{ status: 400 } );
         
@@ -22,134 +26,43 @@ export async function GET(request, { params }) {
         if (!authenticated) return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
 
         // Connect to databases
-        const [authDb, vendorDb] = await Promise.all([
-            authDbConnect(),
-            vendorDbConnect()
-        ]);
+        const [auth_db, vendor_db] = await Promise.all([ authDbConnect(), vendorDbConnect()]);
 
         // Get models
-        const User = authDb.models.User || authDb.model('User');
-        const Vendor = vendorDb.models.Vendor || vendorDb.model('Vendor');
+        const User = userModel(auth_db)
+        const Vendor = vendorModel(vendor_db)
 
         // Check if user has permission to view staff
-        const permissionFilter = {
-            referenceId,
-            $or: [
-                { ownerId: authUser.userId },
-                {
-                    staffs: {
-                        $elemMatch: {
-                            userId: new mongoose.Types.ObjectId(authUser.userId),
-                            status: "active",
-                            permission: { $in: ["r:shop", "r:staff"] }
-                        }
-                    }
-                }
-            ]
-        };
+        const permissionFilter = { referenceId,
+                                        $or: [  { ownerId: authUser.userId },
+                                                {
+                                                    staffs: {
+                                                        $elemMatch: {
+                                                            userId: new mongoose.Types.ObjectId(authUser.userId),
+                                                            status: "active",
+                                                            permission: { $in: ["r:shop", "r:staff", "w:shop", "w:staff"] }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                };
 
         const vendor = await Vendor.findOne(permissionFilter);
-        if (!vendor) {
-            return NextResponse.json(
-                { error: "Vendor not found or you don't have permission" },
-                { status: 404 }
-            );
-        }
+
+        if (!vendor) return NextResponse.json({ error: "Vendor not found or you don't have permission" },{ status: 404 });
 
         // Get all active staff user IDs
-        const activeStaffUserIds = vendor.staffs
-            .filter(staff => staff.status === 'active')
-            .map(staff => staff.userId);
+        const activeStaffUserIds = vendor.staffs.filter(staff => staff.status === 'active')
+                                                .map(staff => staff.userId);
 
-        if (activeStaffUserIds.length === 0) {
-            return NextResponse.json(
-                { data: [], message: "No active staff found" },
-                { status: 200 }
-            );
-        }
+        if (activeStaffUserIds.length === 0) return NextResponse.json({ data: [], message: "No active staff found" }, { status: 200 });
 
         // Aggregate user data with staff information
-        const staffUsers = await User.aggregate([
-            {
-                $match: {
-                    _id: { $in: activeStaffUserIds }
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    referenceId: 1,
-                    name: 1,
-                    email: 1,
-                    phone: 1,
-                    avatar: 1,
-                    role: 1,
-                    isVerified: 1,
-                    createdAt: 1
-                }
-            },
-            {
-                $lookup: {
-                    from: 'vendors',
-                    let: { userId: "$_id" },
-                    pipeline: [
-                        {
-                            $match: {
-                                referenceId: referenceId,
-                                "staffs.userId": { $in: activeStaffUserIds }
-                            }
-                        },
-                        {
-                            $unwind: "$staffs"
-                        },
-                        {
-                            $match: {
-                                $expr: { $eq: ["$staffs.userId", "$$userId"] }
-                            }
-                        },
-                        {
-                            $project: {
-                                designation: "$staffs.designation",
-                                status: "$staffs.status",
-                                permissions: "$staffs.permission",
-                                startDate: "$staffs.startDate"
-                            }
-                        }
-                    ],
-                    as: "staffInfo"
-                }
-            },
-            {
-                $unwind: "$staffInfo"
-            },
-            {
-                $addFields: {
-                    designation: "$staffInfo.designation",
-                    staffStatus: "$staffInfo.status",
-                    permissions: "$staffInfo.permissions",
-                    startDate: "$staffInfo.startDate"
-                }
-            },
-            {
-                $project: {
-                    staffInfo: 0
-                }
-            },
-            {
-                $sort: {
-                    "staffInfo.startDate": -1
-                }
-            }
-        ]);
+        const staffUsers = await User.find({ _id: { $in: activeStaffUserIds }, isDeleted: false })
+                                .select('_id referenceId name username email phone avatar role isVerified createdAt')
+                                .lean();
 
-        return NextResponse.json(
-            {
-                success: true,
-                data: staffUsers,
-                count: staffUsers.length
-            },
-            { status: 200 }
-        );
+        return NextResponse.json( { success: true, data: staffUsers, count: staffUsers.length }, { status: 200 });
 
     } catch (error) {
         console.error("GET Vendor Staff Error:", error);
