@@ -7,7 +7,7 @@ export default function hasCustomerReadAccess(vendor, userId) {
   }
 
   // Check if user exists in stuffs with r:customer or w:customer permission
-  return vendor.stuffs?.some(staff => 
+  return vendor.staffs?.some(staff => 
     staff.userId?.toString() === userId.toString() &&
     Array.isArray(staff.permission) && (staff.permission.includes('r:shop') || staff.permission.includes('w:shop')) ||
     (staff.permission.includes('r:orders') || staff.permission.includes('w:orders'))
