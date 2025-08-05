@@ -15,7 +15,9 @@ import cuid from "@bugsnag/cuid";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { createB2Bucket } from "@/services/image/blackblaze";
 import { addDNSRecord } from "@/services/cloudflare/addDNSRecord";
-import { domainModel } from "@/models/vendor/Domain"
+import { domainModel } from "@/models/vendor/Domain";
+import { PlanModel } from "@/models/subscription/Plan";
+
 export async function POST(request) {
   let body;
   try { body = await request.json(); }
@@ -44,12 +46,6 @@ export async function POST(request) {
   if (!user)
     return NextResponse.json({ error: "...not authorized" }, { status: 404 });
 
-  // Check shop limit before allowing to create
-  // const currentShopUsage = user.usage?.shops;
-  // const allowedShopLimit = user.subscriptionScope?.shops;
-
-  // if (currentShopUsage >= allowedShopLimit)
-  //   return NextResponse.json({ warning: `You have reached your shop limit (${allowedShopLimit}) for the current plan.`, success: false }, { status: 403 });
 
   const parsed = createShopDTOSchema.safeParse(body);
   if (!parsed.success)
@@ -70,33 +66,73 @@ export async function POST(request) {
     const primaryDomain = _id.toString() + '.' + process.env.DEFAULT_SHOP_DOMAIN;
     const Domain = domainModel(vendor_db);
     const existingDomain = await Domain.findOne({
-        domain: { $in: [primaryDomain] }
-      });
+      domain: { $in: [primaryDomain] }
+    });
 
-      if (existingDomain) {
-        return NextResponse.json({
-          error: `Domain ${primaryDomain} already exists in domains collection.`,
-        }, { status: 409 });
-      }
+    if (existingDomain) {
+      return NextResponse.json({
+        error: `Domain ${primaryDomain} already exists in domains collection.`,
+      }, { status: 409 });
+    }
 
-      // const domainsToAdd = [primaryDomain]; // Start with primary domain
-      // const existingDomains = await Domain.find({
-      //   domain: { $in: domainsToAdd }
-      // });
+    // const domainsToAdd = [primaryDomain]; // Start with primary domain
+    // const existingDomains = await Domain.find({
+    //   domain: { $in: domainsToAdd }
+    // });
 
-      // if (existingDomains.length > 0) {
-      //   const conflictDomains = existingDomains.map(d => d.domain);
-      //   return NextResponse.json({
-      //     error: `These domains already exist: ${conflictDomains.join(', ')}`,
-      //   }, { status: 409 });
-      // }
-        await Domain.create({
-          domain: primaryDomain,
-          shop: _id,
-          isActive: true
-        });
+    // if (existingDomains.length > 0) {
+    //   const conflictDomains = existingDomains.map(d => d.domain);
+    //   return NextResponse.json({
+    //     error: `These domains already exist: ${conflictDomains.join(', ')}`,
+    //   }, { status: 409 });
+    // }
+    await Domain.create({
+      domain: primaryDomain,
+      shop: _id,
+      isActive: true
+    });
+
+    const SubscriptionPlan = PlanModel(vendor_db);
+    console.log(SubscriptionPlan)
+
+    const defaultPlan = await SubscriptionPlan.findOne({
+      slug: "plan-a"
+    }).lean();
+    console.log(defaultPlan)
+
+    if (!defaultPlan) {
+      throw new Error("Default PLAN A not found in subscription plans");
+    }
 
 
+    console.log(defaultPlan)
+    const now = new Date();
+    const subscriptionData = {
+      name: defaultPlan.name || "PLAN A",
+      slug: defaultPlan.slug || "plan-a",
+      price: defaultPlan.price || 0,
+      monthly: defaultPlan.monthly || 30,
+      yearly: defaultPlan.yearly || 365,
+      renewAt: null,
+      expiresAt: null,
+      activatedAt: now,
+      services: {
+        website: {
+          subdomains: defaultPlan.services?.website?.subdomains || 1,
+          customDomains: defaultPlan.services?.website?.customDomains || 0
+        },
+        androidBuilds: defaultPlan.services?.androidBuilds || 1,
+        paymentGateways: defaultPlan.services?.paymentGateways || 1,
+        deliveryGateways: defaultPlan.services?.deliveryGateways || 1,
+        smsGateways: defaultPlan.services?.smsGateways || 1,
+        userAccess: defaultPlan.services?.userAccess || 0,
+        pushNotifications: defaultPlan.services?.pushNotifications || 500,
+        products: defaultPlan.services?.products || 15
+      },
+      isActive: true
+    };
+
+    console.log(subscriptionData)
     const bucket = await createB2Bucket({ bucketName, createdBy: data.userId, shopId: referenceId });
 
     if (!bucket)
@@ -114,8 +150,8 @@ export async function POST(request) {
       businessName: parsed.data.businessName?.trim(),
       location: parsed.data.location,
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() },
-      paymentMethod: "Cash on Delivery"
-
+      paymentMethod: "Cash on Delivery",
+      subscriptionScope: subscriptionData
     }
 
     const vendorPayload = {
@@ -158,6 +194,7 @@ export async function POST(request) {
       },
       primaryDomain,
       domains: [primaryDomain],
+      subscriptionScope: subscriptionData,
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
     }
 
@@ -190,7 +227,9 @@ export async function POST(request) {
         country: shop.country,
         industry: shop.industry,
         location: shop.location,
-        domains: vendor.domains
+        domains: vendor.domains,
+        subscriptionScope: subscriptionData
+
       }
 
       if (result)
