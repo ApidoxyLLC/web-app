@@ -10,8 +10,26 @@ const servicesSchema = new mongoose.Schema({
   deliveryGateways: { type: Number, default: 1 },
   smsGateways: { type: Number, default: 1 },
   userAccess: { type: Number, default: 0 },
-  pushNotifications: { type: Number, default: 500 }, 
-  products: { type: Number, default: 15 } 
+  pushNotifications: {
+    type: mongoose.Schema.Types.Mixed,
+    required: true,
+    set: function (v) {
+      return v === "unlimited" ? Number.MAX_SAFE_INTEGER : Number(v);
+    },
+    get: function (v) {
+      return v === Number.MAX_SAFE_INTEGER ? "unlimited" : v;
+    }
+  },
+  products: {
+    type: mongoose.Schema.Types.Mixed,
+    required: true,
+    set: function (v) {
+      return v === "unlimited" ? Number.MAX_SAFE_INTEGER : Number(v);
+    },
+    get: function (v) {
+      return v === Number.MAX_SAFE_INTEGER ? "unlimited" : v;
+    }
+  }
 }, { _id: false });
 
 const planSchema = new mongoose.Schema({

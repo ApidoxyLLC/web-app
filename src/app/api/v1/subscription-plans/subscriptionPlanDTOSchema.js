@@ -10,8 +10,14 @@ const servicesSchema = z.object({
     deliveryGateways: z.number().min(0).default(1),
     smsGateways: z.number().min(0).default(1),
     userAccess: z.number().min(0).default(0),
-    pushNotifications: z.number().min(0).default(500),
-    products: z.number().min(0).default(15)
+    pushNotifications: z.union([
+        z.number(),
+        z.literal("unlimited")
+    ]),
+    products: z.union([
+        z.number(),
+        z.literal("unlimited")
+    ])
 });
 
 export const subscriptionPlanDTOSchema = z.object({

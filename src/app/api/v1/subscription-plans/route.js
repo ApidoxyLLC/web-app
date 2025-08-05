@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { subscriptionPlanDTOSchema } from "./subscriptionPlanDTOSchema";
 import { PlanModel } from "@/models/subscription/Plan";
-import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
@@ -40,57 +39,14 @@ export async function POST(request) {
             );
         }
 
-        // // Authentication
-        // const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        // if (!authenticated) {
-        //     return NextResponse.json(
-        //         { error: authError || "Not authorized" },
-        //         { status: 401 }
-        //     );
-        // }
+       
 
-         /** 
-                   * fake Authentication for test purpose only 
-                   * *******************************************
-                   * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-                   * *******************************************
-                   * *              ***
-                   * *              ***
-                   * *            *******
-                   * *             *****
-                   * *              *** 
-                   * *               *           
-                   * */
-
-        const authDb = await authDbConnect()
-        const User = userModel(authDb);
-        const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
-            .select('referenceId _id name email phone role isEmailVerified')
-        console.log(user)
-        const data = {
-            sessionId: "cmdags8700000649w6qyzu8xx",
-            userReferenceId: user.referenceId,
-            userId: user?._id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-            isVerified: user.isEmailVerified || user.isPhoneVerified,
-        }
-
-        /** 
-         * fake Authentication for test purpose only 
-         * *******************************************
-         * *********FAKE AUTHENTICATION END********* *
-         * *******************************************
-        **/
-
-              const vendorDb = await vendorDbConnect();
+       
+        const vendorDb = await vendorDbConnect();
         const Plan = PlanModel(vendorDb);
 
         const planData = {
             ...parsed.data,
-            createdBy: new mongoose.Types.ObjectId(data.userId)
         };
 
         const newPlan = await Plan.create(planData);
