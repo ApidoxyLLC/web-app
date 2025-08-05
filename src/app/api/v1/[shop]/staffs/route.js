@@ -65,13 +65,7 @@ export async function GET(request, { params }) {
         return NextResponse.json( { success: true, data: staffUsers, count: staffUsers.length }, { status: 200 });
 
     } catch (error) {
-        console.error("GET Vendor Staff Error:", error);
-        return NextResponse.json(
-            {
-                error: error.message || "Failed to retrieve staff data",
-                stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-            },
-            { status: 500 }
-        );
+        console.error("Error:", error);
+        return NextResponse.json( { error: error.message || "Failed to retrieve staff data", stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined }, { status: 500 });
     }
 }

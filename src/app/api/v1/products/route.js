@@ -9,8 +9,7 @@ import { productModel } from "@/models/shop/product/Product";
 import { categoryModel } from "@/models/shop/product/Category";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import { headers } from "next/headers";
-import { authOptions } from "../auth/[...nextauth]/option";
-import { productDTOSchema } from './productDTOSchema';
+import productDTOSchema from "./productDTOSchema";
 import { getToken } from 'next-auth/jwt';
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import securityHeaders from "../utils/securityHeaders";
@@ -321,10 +320,7 @@ export async function POST(request) {
       ? "A product with similar attributes already exists"
       : err.message || "Something went wrong";
 
-    return NextResponse.json(
-      { success: false, error: errorMsg },
-      { status: 400, headers: securityHeaders });
-  } 
+    return NextResponse.json( { success: false, error: errorMsg }, { status: 400, headers: securityHeaders }); } 
   // finally {
   //   session.endSession();
   // }
