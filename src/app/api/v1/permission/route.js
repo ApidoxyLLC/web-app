@@ -36,8 +36,8 @@ export async function POST(request) {
   const vendor_db = await vendorDbConnect();
   const Vendor = vendorModel(vendor_db);
   const vendor = await Vendor.findOne({ referenceId: shopReferenceId })
-                              .select("+_id +ownerId +dbInfo")
-                              .lean();
+                             .select("+_id +ownerId +dbInfo")
+                             .lean();
 
   if (!vendor) 
     return NextResponse.json( { success: false, error: "Shop not found" }, { status: 404, headers: securityHeaders });
