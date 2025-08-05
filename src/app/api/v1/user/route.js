@@ -48,9 +48,8 @@ export async function GET(request) {
         const User = userModel(db);
 
         // Build search query based on provided parameter
-        const searchQuery = {              isDeleted: false,
-                            'status.currentStatus': 'active',
-                                    'lock.isLocked': false              };
+        const searchQuery = {       isDeleted: false,
+                              'lock.isLocked': false   };
 
         if (parsed.data.email) {
           searchQuery.email           = parsed.data.email;
