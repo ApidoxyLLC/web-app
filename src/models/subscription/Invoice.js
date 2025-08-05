@@ -13,6 +13,7 @@ const invoiceSchema = new mongoose.Schema({
   paymentGateway: { type: String, default: 'bkash' },
   gatewayInvoiceId: { type: String },
   paymentId: { type: String },
+  receiptFileId: { type: String },
   receiptUrl: {
     type: String,
     default: null,

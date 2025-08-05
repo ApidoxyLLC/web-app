@@ -4,7 +4,10 @@ import sendSMS from './smsService';
 import { userModel } from '@/models/auth/User';
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 
-export async function sendPaymentNotification({ userId, pdfBuffer, invoice, pdfUrl }) {
+export async function sendPaymentNotification({ userId, invoice, pdfUrl }) {
+
+    console.log("sent notification")
+
     const auth_db = await authDbConnect();
     const User = userModel(auth_db);
 
@@ -18,7 +21,7 @@ export async function sendPaymentNotification({ userId, pdfBuffer, invoice, pdfU
             errorCode: 'USER_NOT_FOUND'
         };
     }
-
+console.log(user)
     // Prepare consistent message content
     const messageDetails = {
         amount: `${invoice.amount} ${invoice.currency || 'USD'}`,
@@ -28,20 +31,23 @@ export async function sendPaymentNotification({ userId, pdfBuffer, invoice, pdfU
     };
 
     // 1. EMAIL
-    if (user.email && user.isEmailVerified) {
+    if (user.email) {
+
+
+        console.log("HIIIIIIIIIIIIIIIIIIIIIIII")
         try {
             const emailResult = await sendReciptToEmail({
                 receiverEmail: user.email,
                 senderEmail: process.env.EMAIL_FROM,
                 emailType: 'RECEIPT',
-                attachments: [{
-                    filename: `receipt_${invoice._id}.pdf`,
-                    content: pdfBuffer.toString('base64'),
-                    encoding: 'base64'
-                }],
-                templateData: messageDetails
-            });
+                templateData: {
+                    ...messageDetails,
+                    downloadLink: pdfUrl
+                }
+            })
 
+
+            console.log(emailResult)
             return {
                 success: true,
                 channel: 'email',
@@ -52,11 +58,7 @@ export async function sendPaymentNotification({ userId, pdfBuffer, invoice, pdfU
                 }
             };
         } catch (emailError) {
-            console.error('Email sending failed:', {
-                userId,
-                error: emailError.message,
-                stack: emailError.stack
-            });
+            console.error('Email sending failed:', emailError.message);
         }
     }
 
