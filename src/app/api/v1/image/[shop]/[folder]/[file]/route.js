@@ -5,7 +5,6 @@ import { downloadImage } from '@/services/image/blackblaze';
 export async function GET(req, { params }) {
   const { shop, folder, file } = await params;
   try {
-
     // Need to Implement basic validation 
     // 
     // Check bucket is available using Bucket Model

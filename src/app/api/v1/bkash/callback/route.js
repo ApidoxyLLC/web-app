@@ -26,7 +26,7 @@ export async function GET(request) {
 
         if (status === 'success') {
             try {
-                // Execute the payment first
+                // // Execute the payment first
                 const fakeRequest = new Request('http://localhost', {
                     method: 'POST',
                     body: JSON.stringify({ paymentID }),
@@ -41,8 +41,6 @@ export async function GET(request) {
                 }
 
                 const pdfBytes = await generateReceiptPDF(invoice);
-                console.log("pdfBytes: await fs.readFile('receipt.pdf'),")
-                console.log(pdfBytes)
                 // Upload to Backblaze
                 const uploadResult = await uploadSubscriptionReceipt({
                     pdfBytes,
@@ -55,11 +53,30 @@ export async function GET(request) {
                     throw new Error('Failed to upload receipt');
                 }
 
+
+                // Construct permanent view URL
+                const viewUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/receipts/${invoice._id}`;
+                
+              
+
+                // Update invoice with notification status
+                const updateData = {
+                    status: 'completed',
+                    receiptUrl: viewUrl,
+                    receiptFileId: uploadResult.fileId,
+                    completedAt: new Date(),
+                    paymentStatus: 'processed'
+                };
+
+                await Invoice.updateOne(
+                    { _id: invoice._id },
+                    { $set: updateData }
+                );
+
                 // Send notification
                 const notificationResult = await sendPaymentNotification({
                     userId: invoice.userId,
-                    pdfBuffer: pdfBytes,
-                    pdfUrl: uploadResult.url,
+                    pdfUrl: viewUrl,
                     invoice: {
                         _id: invoice._id,
                         paymentId: invoice.paymentId,
@@ -70,14 +87,6 @@ export async function GET(request) {
                     },
                 });
 
-                // Update invoice with notification status
-                const updateData = {
-                    status: 'completed',
-                    receiptUrl: uploadResult.url,
-                    receiptFileId: uploadResult.fileId,
-                    completedAt: new Date(),
-                    paymentStatus: 'processed'
-                };
 
                 if (notificationResult.success) {
                     updateData.notifiedVia = notificationResult.channel;
@@ -87,11 +96,7 @@ export async function GET(request) {
                     updateData.notificationError = notificationResult.message;
                 }
 
-                await Invoice.updateOne(
-                    { _id: invoice._id },
-                    { $set: updateData }
-                );
-
+                
                 return NextResponse.redirect(
                     new URL(`/payment/success?trxId=${invoice.paymentId}`, request.url)
                 );
@@ -110,10 +115,7 @@ export async function GET(request) {
 
         // Handle other statuses
         if (status === 'failure') {
-            await Invoice.updateOne(
-                { _id: invoice._id },
-                { $set: { status: 'failed' } }
-            );
+            await Invoice.deleteOne({ _id: invoice._id });
             return NextResponse.redirect(new URL('/payment/error?reason=payment-failed', request.url));
         }
 
