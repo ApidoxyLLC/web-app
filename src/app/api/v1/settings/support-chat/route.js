@@ -50,7 +50,7 @@ export async function PATCH(request) {
 
     const updatedVendor  = await vendor.save();
     const updatedItem = vendor.chatSupport.find(cs => cs.provider === provider);
-    return NextResponse.json({ message: 'Updated Successfully', chatSupport: updatedItem }, { status: 200, headers: securityHeaders() });
+    return NextResponse.json({ message: 'Updated Successfully', chatSupport: updatedItem }, { status: 200, headers: securityHeaders });
     // return NextResponse.json( { message: 'Chat support updated successfully',  chatSupport: updatedVendor.chatSupport  }, { status: 200, headers: securityHeaders() } );
   } catch (error) {
     console.error('Error updating chat support:', error);

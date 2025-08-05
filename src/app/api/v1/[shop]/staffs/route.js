@@ -8,38 +8,18 @@ import mongoose from "mongoose";
 export async function GET(request, { params }) {
     // Rate limiting
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+    if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
     
-    const { allowed, retryAfter } = await applyRateLimit({ 
-        key: ip, 
-        scope: 'getVendorStaff' 
-    });
-    
-    if (!allowed) {
-        return NextResponse.json(
-            { error: 'Too many requests. Please try again later.' },
-            { status: 429, headers: { 'Retry-After': retryAfter.toString() } }
-        );
-    }
-
     try {
         const { shop: referenceId } = params;
         console.log("Shop Reference ID:", referenceId);
-
-        if (!referenceId) {
-            return NextResponse.json(
-                { error: "Shop reference is required" },
-                { status: 400 }
-            );
-        }
+        if (!referenceId) return NextResponse.json({ error: "Shop reference is required" },{ status: 400 } );
+        
 
         // Authentication
         const { authenticated, error: authError, data: authUser } = await getAuthenticatedUser(request);
-        if (!authenticated) {
-            return NextResponse.json(
-                { error: authError || "Not authorized" },
-                { status: 401 }
-            );
-        }
+        if (!authenticated) return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
 
         // Connect to databases
         const [authDb, vendorDb] = await Promise.all([
