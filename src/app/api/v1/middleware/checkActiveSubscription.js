@@ -1,32 +1,34 @@
-export async function checkActiveSubscription(shopReferenceId, newPlanSlug = null) {
+// middleware/checkActiveSubscription.js
+import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
+import { vendorModel } from '@/models/vendor/Vendor';
+
+export async function checkActiveSubscription(shopReferenceId) {
     const vendor_db = await vendorDbConnect();
-    const Invoice = InvoiceModel(vendor_db);
-    const SubscriptionPlan = PlanModel(vendor_db);
+    const Vendor = vendorModel(vendor_db);
 
-    const activeSub = await Invoice.findOne({
-        shopReferenceId,
-        status: 'paid',
-        'validity.until': { $gte: new Date() }
-    }).sort({ 'validity.until': -1 });
+    const vendor = await Vendor.findOne(
+        { referenceId: shopReferenceId },
+        { 'subscriptionScope': 1 }
+    ).lean();
 
-    if (!activeSub) return { isActive: false };
 
-    if (newPlanSlug) {
-        const currentPlan = await SubscriptionPlan.findById(activeSub.planId);
-        const newPlan = await SubscriptionPlan.findOne({ slug: newPlanSlug });
+    console.log(vendor);
 
-        return {
-            isActive: true,
-            isUpgrade: newPlan.price > currentPlan.price,
-            isDowngrade: newPlan.price < currentPlan.price,
-            currentPlan: currentPlan.name,
-            proposedPlan: newPlan.name,
-            activeUntil: activeSub.validity.until
-        };
-    }
+    const isPaidPlan = ['plan-b', 'plan-c'].includes(vendor?.subscriptionScope?.slug);
+    console.log(isPaidPlan)
+    const currentDate = new Date();
+    const validUntil = new Date(vendor?.subscriptionScope?.validity?.until);
+
+    const hasActivePaidSubscription = isPaidPlan &&
+        vendor?.subscriptionScope?.isActive &&
+        validUntil > currentDate;
+   
+    console.log(hasActivePaidSubscription)
 
     return {
-        isActive: true,
-        subscription: activeSub
+        isActive: hasActivePaidSubscription,
+        isFreePlan: vendor?.subscriptionScope?.slug === 'plan-a',
+        subscription: vendor?.subscriptionScope || null,
+        validUntil: hasActivePaidSubscription ? validUntil : null
     };
 }

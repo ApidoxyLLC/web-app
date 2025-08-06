@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
+import authDbConnect from '@/lib/mongodb/authDbConnect'
 import { InvoiceModel } from '@/models/subscription/invoice';
 import { TransactionModel } from '@/models/subscription/transaction';
 import { getBkashToken } from '@/services/bkash/getBkashToken';
 import transactionDTOSchema from './transactionDTOSchema';
-
+import { PlanModel } from '@/models/subscription/Plan';
+import { shopModel } from '@/models/auth/Shop';
+import { vendorModel } from '@/models/vendor/Vendor';
 export async function POST(request) {
     try {
         const { paymentID } = await request.json();
@@ -38,10 +41,10 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-      
-
 
         const vendor_db = await vendorDbConnect();
+        const auth_db = await authDbConnect();
+
         const Invoice = InvoiceModel(vendor_db);
         const Transaction = TransactionModel(vendor_db);
 
@@ -80,18 +83,76 @@ export async function POST(request) {
 
         // Update invoice if payment is successful
         if (executeResult.transactionStatus === 'Completed') {
-            await Invoice.findOneAndUpdate(
+
+            // Update invoice
+            const updatedInvoice = await Invoice.findOneAndUpdate(
                 { paymentId: paymentID },
                 {
                     $set: {
                         status: 'paid',
                         trxId: executeResult.trxID,
-                        paymentTime: new Date(),
-                    },
+                        paidAt: new Date(),
+                        paymentGatewayResponse: executeResult
+                    }
+                },
+                { new: true }
+            ).lean();
+
+            if (!updatedInvoice) {
+                throw new Error('Paid invoice not found');
+            }
+
+            // Fetch complete plan document from vendor DB
+            const Plan = PlanModel(vendor_db);
+            const plan = await Plan.findById(updatedInvoice.planId).lean();
+
+            if (!plan) {
+                throw new Error('Associated plan not found');
+            }
+
+            const subscriptionData = {
+                name: plan.name,
+                slug: plan.slug,
+                price: invoice.amount,
+                billingCycle: invoice.billingCycle,
+                validity: invoice.validity,
+                services: plan.services,
+                isActive: true
+            };
+
+            // Update Shop subscription
+            const Shop = shopModel(auth_db);
+            await Shop.findOneAndUpdate(
+                { referenceId: updatedInvoice.shopReferenceId },
+                {
+                    $set: {
+                        subscriptionScope: subscriptionData
+                    }
                 }
             );
 
-            return NextResponse.json({ success: true, message: 'Payment successful', data: executeResult });
+            const Vendor = vendorModel(vendor_db);
+            await Vendor.findOneAndUpdate(
+                { referenceId: updatedInvoice.shopReferenceId },
+                {
+                    $set: {
+                        subscriptionScope: subscriptionData,
+                    }
+                }
+            );
+
+            return NextResponse.json({
+                success: true,
+                message: 'Payment and subscription updated successfully',
+                data: {
+                    invoiceId: updatedInvoice._id,
+                    subscription: {
+                        plan: subscriptionData.name,
+                        validUntil: subscriptionData.expiresAt,
+                        services: subscriptionData.services
+                    }
+                }
+            });
         }
 
         return NextResponse.json({ success: false, message: 'Payment not completed', data: executeResult });

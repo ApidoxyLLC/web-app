@@ -104,31 +104,15 @@ export async function POST(request) {
       throw new Error("Default PLAN A not found in subscription plans");
     }
 
-
-    console.log(defaultPlan)
+    console.log(defaultPlan);
     const now = new Date();
     const subscriptionData = {
-      name: defaultPlan.name || "PLAN A",
-      slug: defaultPlan.slug || "plan-a",
-      price: defaultPlan.price || 0,
-      monthly: defaultPlan.monthly || 30,
-      yearly: defaultPlan.yearly || 365,
-      renewAt: null,
-      expiresAt: null,
-      activatedAt: now,
-      services: {
-        website: {
-          subdomains: defaultPlan.services?.website?.subdomains || 1,
-          customDomains: defaultPlan.services?.website?.customDomains || 0
-        },
-        androidBuilds: defaultPlan.services?.androidBuilds || 1,
-        paymentGateways: defaultPlan.services?.paymentGateways || 1,
-        deliveryGateways: defaultPlan.services?.deliveryGateways || 1,
-        smsGateways: defaultPlan.services?.smsGateways || 1,
-        userAccess: defaultPlan.services?.userAccess || 0,
-        pushNotifications: defaultPlan.services?.pushNotifications || 500,
-        products: defaultPlan.services?.products || 15
-      },
+      name: defaultPlan.name ,
+      slug: defaultPlan.slug,
+      price: defaultPlan.price,
+      billingCycle: null,
+      validity: null,
+      services: defaultPlan.services,
       isActive: true
     };
 
