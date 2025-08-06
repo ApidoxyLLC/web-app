@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import mongoose from 'mongoose'; 
 
 export const addDomainDTOSchema = z.object({
     subdomain: z.string()
@@ -17,5 +18,9 @@ export const addDomainDTOSchema = z.object({
             'appcommerz.com'
         ].includes(val), {
             message: "Invalid domain selection"
-        })
+        }),
+    shopId: z.string().min(1, "Shop ID is required")
+        .refine(val => mongoose.Types.ObjectId.isValid(val), {
+            message: "Invalid shop ID format"
+        }),
 });

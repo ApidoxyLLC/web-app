@@ -26,7 +26,6 @@ export async function GET(request) {
 
         if (status === 'success') {
             try {
-                // // Execute the payment first
                 const fakeRequest = new Request('http://localhost', {
                     method: 'POST',
                     body: JSON.stringify({ paymentID }),
