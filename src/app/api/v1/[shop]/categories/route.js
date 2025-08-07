@@ -54,20 +54,19 @@ export async function GET(request, { params }) {
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
                                      options: { secret: config.vendorDbUriEncryptionKey }       });
     
-    const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
-    const Category = categoryModel(shop_db);
-
-    // Parse query parameters
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const searchQuery = searchParams.get('q') || '';
-    const isActive = searchParams.get('isActive');
-    const parentId = searchParams.get('parent');
-    const level = searchParams.get('level');
-    const includeChildren = searchParams.get('includeChildren') === 'true';
+    const          shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+    const         Category = categoryModel(shop_db);
+    
+    const             page = parseInt(searchParams.get('page') || '1', 10);
+    const            limit = parseInt(searchParams.get('limit') || '20', 10);
+    const      searchQuery = searchParams.get('q') || '';
+    const         isActive = searchParams.get('isActive');
+    const         parentId = searchParams.get('parent');
+    const            level = searchParams.get('level');
+    const  includeChildren = searchParams.get('includeChildren') === 'true';
     const includeAncestors = searchParams.get('includeAncestors') === 'true';
-    const sortBy = searchParams.get('sortBy') || 'title';
-    const sortOrder = searchParams.get('sortOrder') || 'asc';
+    const           sortBy = searchParams.get('sortBy') || 'title';
+    const        sortOrder = searchParams.get('sortOrder') || 'asc';
 
     // Validate pagination
     if (isNaN(page) || page < 1) 

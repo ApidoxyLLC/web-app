@@ -17,42 +17,31 @@ export async function getVendorShop(request) {
     const vendor_db = await vendorDbConnect();
     const    Vendor = vendorModel(vendor_db);
 
-    if (!vendorId && !host) 
-        return { success: false, data: null , error: "No vendor shop found" };
+    if (!vendorId && !host) return { success: false, error: "Missing host" };
+        // return { success: false, data: null , error: "No vendor shop found" };
 
-    const vendor = await Vendor.findOne({ $or: [   id ? {   referenceId: id } : null,
+    const vendor = await Vendor.findOne({ $or: [   vendorId ? {   referenceId: vendorId } : null,
                                                host ? { primaryDomain: host } : null,
                                                host ? {       domains: { $in: [host] } } : null,
                                             ].filter(Boolean), })
-                                .select(" dbInfo bucketInfo secrets expirations ")
+                                .select("dbInfo bucketInfo secrets expirations")
                                 .lean()
 
     if (!vendor) return { success: false, data: null , error: "No vendor shop found" };
     return { success: true, data: vendor };   
 }
 
-async function decryptSecret(cipherText, envKey) {
-  const secretKey = process.env[envKey];
-  if (!secretKey) throw new Error(`Missing ${envKey}`);
-  return await decrypt({ cipherText, options: { secret: secretKey } });
-}
-
-function extractAccessToken(request) {
-  const cookieStore = cookies();
-  const tokenFromCookie = cookieStore.get('access_token')?.value;
-  const tokenFromHeader = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
-  return tokenFromCookie || tokenFromHeader || null;
-}
-
-function extractRefreshToken() {
-  return cookies().get('refresh_token')?.value || null;
-}
-
 export async function authenticationStatus(request) {
   const   fingerprint = request.headers.get('x-fingerprint') || null;
-  const   accessToken = extractAccessToken(request);
-  const  refreshToken = extractRefreshToken();
-  const isUsingBearer = !cookies().get('access_token')?.value && !!accessToken;
+
+  const cookieStore = await cookies();
+
+  const tokenFromCookie = cookieStore.get('access_token')?.value;
+  const tokenFromHeader = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
+
+  const   accessToken = tokenFromCookie || tokenFromHeader || null;
+  const  refreshToken = cookieStore.get('refresh_token')?.value || null;
+  const isUsingBearerToken = (tokenFromHeader && !tokenFromCookie);
 
   if (!accessToken) return { success: false, error: "Invalid request: missing token or fingerprint" };
 
@@ -64,12 +53,10 @@ export async function authenticationStatus(request) {
                                             options: { secret: process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY } });
     try {
       const decoded = jwt.verify(accessToken, accessSecret);
-      return { success: true, isTokenRefreshed: false, data: decoded, shop };
+      return { success: true, isTokenRefreshed: false, data: decoded, vendor };
     } catch (err) {
-      if (isUsingBearer) {
-        return { success: false, error: "Unauthorized", shop };
-      }
-
+      if (isUsingBearerToken) return { success: false, error: "Unauthorized", vendor };
+      
       if (err.name === 'TokenExpiredError' && refreshToken) {
         const       accessExpire = Number(vendor.expirations?.accessTokenExpireMinutes || 15);
         const      refreshExpire = Number(vendor.expirations?.refreshTokenExpireMinutes || 1440);
@@ -79,9 +66,9 @@ export async function authenticationStatus(request) {
                                                       options: { secret: process.env.VENDOR_DB_URI_ENCRYPTION_KEY } });
 
         const        dbName = vendor.dbInfo.dbName
-        const      vendorDb = await dbConnect({ dbKey: dbName, dbUri });
+        const            db = await dbConnect({ dbKey: dbName, dbUri });
 
-        const        result = await handleRefreshToken({        db: vendorDb,
+        const        result = await handleRefreshToken({        db: db,
                                                              token: refreshToken,
                                                      access_secret: accessSecret,
                                                    accessExpireMin: accessExpire,
@@ -90,11 +77,30 @@ export async function authenticationStatus(request) {
                                                        fingerprint                
                                                       });
 
+        if(result.isTokenRefreshed ){
+          const { accessToken, refreshToken, accessTokenExpireAt, refreshTokenExpireAt }  =  result.token 
+          const now = Date.now();
+          cookieStore.set({   name: 'access_token',
+                             value: accessToken,
+                              path: '/',
+                          httpOnly: true,
+                            secure: process.env.NODE_ENV === 'production',
+                            maxAge:  Math.floor((new Date(accessTokenExpireAt).getTime() - now) / 1000),
+                          sameSite: 'lax' });
+          cookieStore.set({   name: 'refresh_token',
+                             value: refreshToken,
+                              path: '/',
+                          httpOnly: true,
+                            secure: process.env.NODE_ENV === 'production',
+                            maxAge: Math.floor((new Date(refreshTokenExpireAt).getTime() - now) / 1000),
+                          sameSite: 'lax' });
+        }
+
         if (!result.success) return { success: false, error: "Authorization Failed", vendor };
-          return { ...result, shop };
+          return { ...result, vendor };
       }
 
-      return { success: false, error: "Unauthorized", shop };
+      return { success: false, error: "Unauthorized", vendor };
     }
   } catch (error) {
     console.error("authenticationStatus error:", error);
@@ -107,8 +113,10 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
     const   decoded = jwt.verify(token, refresh_secret)
     if (decoded.fingerprint !== fingerprint)
         return { success: false, error: "Fingerprint mismatch" };
-    if(!decoded.session)
-      return { success: false, error: "unknown" };
+    if(!decoded.session) {
+      console.warn('Session not found or expired for session ID:', decoded.session);
+      return { success: false, error: "Unauthorized" };
+    }
 
     const   SessionModel = sessionModel(db)
     
@@ -126,13 +134,16 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
     const accessToken = jwt.sign( { ...payload, 
                                       tokenId: accessTokenId },
                                       access_secret,
-                                      { expiresIn: minutesToExpiresIn(accessExpireMin) } );
+                                      { expiresIn: accessExpireMin * 60 } );
     
     const refreshToken = jwt.sign( { ...payload, 
                                         tokenId: refreshTokenId },
                                       refresh_secret,
-                                      { expiresIn: minutesToExpiresIn(refreshExpireMin) } );
 
+                                      
+                                      { expiresIn: refreshExpireMin * 60 } );
+
+    if (!decoded.tokenId) return { success: false, error: "Invalid refresh token" };
     const session = await SessionModel.findOneAndUpdate({            _id: decoded.session,
                                                           refreshTokenId: decoded.tokenId,
                                                              fingerprint,

@@ -93,7 +93,7 @@ export async function POST(request) {
       }
 
       const payload = { 
-               web: { ...(image && {  logo: { _id: image._id, imageName: image.fileName} }),
+               web: { ...(image && {  logo: image.fileName }),
                                      title: parsed.data.title                  },
           metadata: { description: parsed.data.metaDescription,
                          keywords: parsed.data.metaTags.split(',').map(word => word.trim()).filter(word => word.length > 0)  }      
@@ -108,10 +108,14 @@ export async function POST(request) {
                                                                           { $set: payload },
                                                                           { new: true } ).select('metadata web')      ]);
 
-      if (!updatedVendor || !updatedShop) 
+
+        const updatedVendor  = await Vendor.findByIdAndUpdate( vendor._id,
+                                                                            { $set: payload },
+                                                                            { new: true } ).select('metadata web');
+      if (!updatedVendor) 
           throw new Error('Failed to update one or both resources');
 
-      return NextResponse.json({ success: true, data: updatedShop }, { status: 200 });
+      return NextResponse.json({ success: true, data: updatedVendor }, { status: 200 });
       
   } catch (error) {
       console.error('WebApp Creation Error:', error);
