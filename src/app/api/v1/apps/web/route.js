@@ -43,8 +43,6 @@ export async function POST(request) {
 
       let image = null;
       if(parsed.data.logo){
-          // if (!parsed.data.imageId) 
-          //     return NextResponse.json({ error: "imageId is required when providing an image" }, { status: 400 });
           const ImageModel = imageModel(vendor_db);
           const imageData = await ImageModel.findOne({ fileName: parsed.data.logo });
           if (!imageData) 
@@ -62,20 +60,14 @@ export async function POST(request) {
                 if (!image) 
                     return NextResponse.json({ error: "Image not found" }, { status: 404 });
               const fileToDelete = await ImageModel.find({ bucketName: imageData.bucketName,
-                                                          folder: imageData.folder,
-                                                          _id: { $ne: imageData._id } // not equal
+                                                               folder: imageData.folder,
+                                                                  _id: { $ne: imageData._id } 
                                                         });
                 (async () => {
                     try {
-                        await Promise.all([
-                        ...fileToDelete.map(item =>
-                            deleteImageFile({ fileName: item.fileName, fileId: item.fileId })
-                        ),
-                        ImageModel.deleteMany({
-                            bucketName: imageData.bucketName,
-                            folder: imageData.folder
-                        })
-                        ]);
+                        await Promise.all([ ...fileToDelete.map(item =>  deleteImageFile({ fileName: item.fileName, fileId: item.fileId }) ),
+                                            ImageModel.deleteMany({ bucketName: imageData.bucketName,
+                                                                        folder: imageData.folder  })  ]);
                     } catch (err) {
                         console.error("Background deletion failed:", err);
                     }
@@ -86,12 +78,21 @@ export async function POST(request) {
           }
       }
 
-      const payload = { 
-               web: { ...(image && {  logo: image.fileName }),
-                                     title: parsed.data.title                  },
-          metadata: { description: parsed.data.metaDescription,
-                         keywords: parsed.data.metaTags.split(',').map(word => word.trim()).filter(word => word.length > 0)  }      
-      };
+        // const payload = {
+        //                     ...(image && { "web.logo": image.fileName }),
+        //                                 "web.title": parsed.data.title,
+        //                     "metadata.description": parsed.data.metaDescription,
+        //                         "metadata.keywords": parsed.data.metaTags.split(',').map(word => word.trim()).filter(word => word.length > 0)
+        //                 };
+        // New (correct) version:
+        const payload = {
+            ...(image && { "web.logo": image.fileName }),
+            "web.title": parsed.data.title,
+            "metadata": {  // Properly nested metadata object
+                description: parsed.data.metaDescription,
+                keywords: parsed.data.metaTags.split(',').map(word => word.trim()).filter(word => word.length > 0)
+            }
+        };
 
         const updatedVendor  = await Vendor.findByIdAndUpdate( vendor._id,
                                                                             { $set: payload },
