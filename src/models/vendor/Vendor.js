@@ -54,9 +54,10 @@ const contactNdSupportSchema = new mongoose.Schema({
 }, { _id: false, timestamps: false });
 
 const notificationSchema = new mongoose.Schema({
-  email: { type: String, default: null },
-  phone: { type: String, default: null },
-  preferredChannel: { type: String, enum: ['email', 'sms', 'whatsapp'], default: null },
+  email: { type: String, default: undefined },
+  phone: { type: String, default: undefined },
+  whatsapp: { type: String, default: undefined },
+  preferredChannel: { type: String, enum: ['email', 'sms', 'whatsapp'], default: undefined },
 
   hourlyNotification: {
     enabled: { type: Boolean, default: false },

@@ -1,35 +1,34 @@
 import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
 import { decrypt } from '@/lib/encryption/cryptoEncryption'
-import { shopModel } from '@/models/auth/Shop'
+import { vendorModel } from '@/models/vendor/Vendor'
 import { sessionModel } from '@/models/shop/shop-user/Session'
-import centralDbConnect from '@/lib/mongodb/authDbConnect'
+import vendorDbConnect from '@/lib/mongodb/vendorDbConnect'
 import { dbConnect } from '@/lib/mongodb/db'
 import crypto from 'crypto';
 import minutesToExpiresIn from '@/app/utils/shop-user/minutesToExpiresIn'
 import minutesToExpiryTimestamp from '@/app/utils/shop-user/minutesToExpiryTimestamp'
 
-
-// End users Authentication...
 export async function getVendorShop(request) {
     const   vendorId = request.headers.get('x-vendor-identifier');
     const       host = request.headers.get('host');
     if (!vendorId && !host)
       return { success: false, error: "Missing host" };
-    const central_db = await centralDbConnect();
-    const  ShopModel = shopModel(central_db);
+    const vendor_db = await vendorDbConnect();
+    const    Vendor = vendorModel(vendor_db);
 
     if (!vendorId && !host) 
         return { success: false, data: null , error: "No vendor shop found" };
 
-    const shop = await ShopModel.findOne({ $or: [ { vendorId },
-                                                  { "domains": { $elemMatch: { domain: host } } } ] })
-                                .select("+keys +keys.ACCESS_TOKEN_SECRET +keys.REFRESH_TOKEN_SECRET "+
-                                        "+dbInfo +dbInfo.provider +dbInfo.uri +dbInfo.prefix" + 
-                                        "+timeLimitations +timeLimitations.ACCESS_TOKEN_EXPIRE_MINUTES +timeLimitations.REFRESH_TOKEN_EXPIRE_MINUTES").lean();
-    if (!shop)
-      return { success: false, data: null , error: "No vendor shop found" };
-    return { success: true, data: shop };   
+    const vendor = await Vendor.findOne({ $or: [   id ? {   referenceId: id } : null,
+                                               host ? { primaryDomain: host } : null,
+                                               host ? {       domains: { $in: [host] } } : null,
+                                            ].filter(Boolean), })
+                                .select(" dbInfo bucketInfo secrets expirations ")
+                                .lean()
+
+    if (!vendor) return { success: false, data: null , error: "No vendor shop found" };
+    return { success: true, data: vendor };   
 }
 
 async function decryptSecret(cipherText, envKey) {
@@ -55,24 +54,16 @@ export async function authenticationStatus(request) {
   const  refreshToken = extractRefreshToken();
   const isUsingBearer = !cookies().get('access_token')?.value && !!accessToken;
 
-  if (!accessToken || !fingerprint) {
-    return { success: false, error: "Invalid request: missing token or fingerprint" };
-  }
+  if (!accessToken) return { success: false, error: "Invalid request: missing token or fingerprint" };
 
   try {
-    const shopFetchResult = await getVendorShop(request);
-    if (!shopFetchResult.success) {
-      return { success: false, error: "Missing host" };
-    }
-
-    const shop = shopFetchResult.data;
-    const accessSecret = await decryptSecret(shop.keys.ACCESS_TOKEN_SECRET, 'END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY');
-
+    const vendorFetchResult = await getVendorShop(request);
+    if (!vendorFetchResult.success) return { success: false, error: "Missing host" };
+    const       vendor = vendorFetchResult.data;
+    const accessSecret = await decrypt({ cipherText: vendor.secrets.accessTokenSecret, 
+                                            options: { secret: process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY } });
     try {
       const decoded = jwt.verify(accessToken, accessSecret);
-      if (decoded.fingerprint !== fingerprint) {
-        return { success: false, error: "Fingerprint mismatch" };
-      }
       return { success: true, isTokenRefreshed: false, data: decoded, shop };
     } catch (err) {
       if (isUsingBearer) {
@@ -80,11 +71,15 @@ export async function authenticationStatus(request) {
       }
 
       if (err.name === 'TokenExpiredError' && refreshToken) {
-        const  accessExpire = Number(shop.timeLimitations?.ACCESS_TOKEN_EXPIRE_MINUTES || 15);
-        const refreshExpire = Number(shop.timeLimitations?.REFRESH_TOKEN_EXPIRE_MINUTES || 1440);
-        const refreshSecret = await decryptSecret(shop.keys.REFRESH_TOKEN_SECRET, 'END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY');
-        const         dbUri = await decryptSecret(shop.dbInfo.uri, 'VENDOR_DB_URI_ENCRYPTION_KEY');
-        const      vendorDb = await dbConnect({ dbKey: `${shop.dbInfo.prefix}${shop._id}`, dbUri });
+        const       accessExpire = Number(vendor.expirations?.accessTokenExpireMinutes || 15);
+        const      refreshExpire = Number(vendor.expirations?.refreshTokenExpireMinutes || 1440);
+        const      refreshSecret = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret, 
+                                                      options: { secret: process.env.END_USER_REFRESH_TOKEN_ENCRYPTION_KEY } });
+        const              dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri, 
+                                                      options: { secret: process.env.VENDOR_DB_URI_ENCRYPTION_KEY } });
+
+        const        dbName = vendor.dbInfo.dbName
+        const      vendorDb = await dbConnect({ dbKey: dbName, dbUri });
 
         const        result = await handleRefreshToken({        db: vendorDb,
                                                              token: refreshToken,
@@ -92,9 +87,10 @@ export async function authenticationStatus(request) {
                                                    accessExpireMin: accessExpire,
                                                     refresh_secret: refreshSecret,
                                                   refreshExpireMin: refreshExpire,
-                                                       fingerprint                });
+                                                       fingerprint                
+                                                      });
 
-        if (!result.success) return { success: false, error: "Authorization Failed", shop };
+        if (!result.success) return { success: false, error: "Authorization Failed", vendor };
           return { ...result, shop };
       }
 

@@ -11,6 +11,7 @@ import { inventoryHistoryModel } from "@/models/shop/product/InventorHistory";
 import orderDTOSchema from "./orderDTOSchema";
 import securityHeaders from "../utils/securityHeaders";
 import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,10 @@ const RETRY_DELAY_MS = 100;
 
 
 export async function POST(request) {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+    if (!allowed) return NextResponse.json( { error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
+      
     let body;
     try { body = await request.json() }
     catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}

@@ -6,8 +6,8 @@ export const notificationDTOSchema = z.object({
   count: z.string().min(1, 'Count is required and must be at least 1'),
   notifyVia: z.array(z.enum(['email', 'sms', 'whatsapp'])).min(1, 'At least one notification method is required'),
   email: z.string().email('Invalid email').optional().nullable(),
-  phone: z.string().optional(),
-  whatsapp: z.string().optional(),
+  phone: z.string().optional().nullable(),
+  whatsapp: z.string().optional().nullable(),
 })
 .refine((data) => {
   // Contact info must be provided for each selected notifyVia method
