@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { dbConnect } from "@/lib/mongodb/db";
-import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
@@ -83,9 +81,6 @@ export async function POST(request) {
                     }
                 })();
 
-
-            //   Promise.all([...fileToDelete.map(item => deleteImageFile({fileName: item.fileName, fileId: item.fileId})), 
-            //                     ImageModel.deleteMany({ bucketName: imageData.bucketName, folder: imageData.folder})]);
           } catch (error) {
               return NextResponse.json({ error: "Image transfer error" }, { status: 400 });
           }
@@ -97,16 +92,6 @@ export async function POST(request) {
           metadata: { description: parsed.data.metaDescription,
                          keywords: parsed.data.metaTags.split(',').map(word => word.trim()).filter(word => word.length > 0)  }      
       };
-
-      // Parallel updates without transaction
-    //   const [updatedVendor, 
-    //            updatedShop] = await Promise.all([ Vendor.findByIdAndUpdate( vendor._id,
-    //                                                                         { $set: payload },
-    //                                                                         { new: true } ).select('metadata web'),
-    //                                               Shop.findByIdAndUpdate( vendor._id,
-    //                                                                       { $set: payload },
-    //                                                                       { new: true } ).select('metadata web')      ]);
-
 
         const updatedVendor  = await Vendor.findByIdAndUpdate( vendor._id,
                                                                             { $set: payload },
