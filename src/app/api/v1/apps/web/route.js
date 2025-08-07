@@ -100,13 +100,13 @@ export async function POST(request) {
       };
 
       // Parallel updates without transaction
-      const [updatedVendor, 
-               updatedShop] = await Promise.all([ Vendor.findByIdAndUpdate( vendor._id,
-                                                                            { $set: payload },
-                                                                            { new: true } ).select('metadata web'),
-                                                  Shop.findByIdAndUpdate( vendor._id,
-                                                                          { $set: payload },
-                                                                          { new: true } ).select('metadata web')      ]);
+    //   const [updatedVendor, 
+    //            updatedShop] = await Promise.all([ Vendor.findByIdAndUpdate( vendor._id,
+    //                                                                         { $set: payload },
+    //                                                                         { new: true } ).select('metadata web'),
+    //                                               Shop.findByIdAndUpdate( vendor._id,
+    //                                                                       { $set: payload },
+    //                                                                       { new: true } ).select('metadata web')      ]);
 
 
         const updatedVendor  = await Vendor.findByIdAndUpdate( vendor._id,
