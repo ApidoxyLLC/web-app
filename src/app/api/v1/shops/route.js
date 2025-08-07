@@ -92,35 +92,37 @@ export async function POST(request) {
       isActive: true
     });
 
-    const SubscriptionPlan = PlanModel(vendor_db);
-    console.log(SubscriptionPlan)
 
-    const defaultPlan = await SubscriptionPlan.findOne({
-      slug: "plan-a"
-    }).lean();
-    console.log(defaultPlan)
+    // comment for testing 
+    // const SubscriptionPlan = PlanModel(vendor_db);
+    // console.log(SubscriptionPlan)
 
-    if (!defaultPlan) {
-      throw new Error("Default PLAN A not found in subscription plans");
-    }
+    // const defaultPlan = await SubscriptionPlan.findOne({
+    //   slug: "plan-a"
+    // }).lean();
+    // console.log(defaultPlan)
 
-    console.log(defaultPlan);
-    const now = new Date();
-    const subscriptionData = {
-      name: defaultPlan.name,
-      slug: defaultPlan.slug,
-      price: defaultPlan.price,
-      billingCycle: null,
-      validity: {
-        days: null,
-        from: now,
-        until: null
-      },
-      services: defaultPlan.services,
-      isActive: true
-    };
+    // if (!defaultPlan) {
+    //   throw new Error("Default PLAN A not found in subscription plans");
+    // }
 
-    console.log(subscriptionData)
+    // console.log(defaultPlan);
+    // const now = new Date();
+    // const subscriptionData = {
+    //   name: defaultPlan.name,
+    //   slug: defaultPlan.slug,
+    //   price: defaultPlan.price,
+    //   billingCycle: null,
+    //   validity: {
+    //     days: null,
+    //     from: now,
+    //     until: null
+    //   },
+    //   services: defaultPlan.services,
+    //   isActive: true
+    // };
+
+    // console.log(subscriptionData)
     const bucket = await createB2Bucket({ bucketName, createdBy: data.userId, shopId: referenceId });
 
     if (!bucket)
@@ -139,9 +141,9 @@ export async function POST(request) {
       location: parsed.data.location,
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() },
       paymentMethod: "Cash on Delivery",
-      activeSubscriptions: [{
-        ...subscriptionData,
-      }]
+      // activeSubscriptions: [{
+      //   ...subscriptionData,
+      // }]
     }
 
     console.log(shopPayload)
@@ -186,9 +188,9 @@ export async function POST(request) {
       },
       primaryDomain,
       domains: [primaryDomain],
-      activeSubscriptions: [{
-        ...subscriptionData,
-      }],
+      // activeSubscriptions: [{
+      //   ...subscriptionData,
+      // }],
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
     }
 

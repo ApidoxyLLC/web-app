@@ -15,10 +15,8 @@ export async function GET(req, { params }) {
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
 
   // Authenticate user
-//   const { authenticated, error, data } = await getAuthenticatedUser(request);
-//   if (!authenticated)  return NextResponse.json({ error: error || 'Not authorized' }, { status: 401 });
-
-
+  const { authenticated, error, data } = await getAuthenticatedUser(request);
+  if (!authenticated)  return NextResponse.json({ error: error || 'Not authorized' }, { status: 401 });
         const { shop } = await params;
 
         if (!shop) {
