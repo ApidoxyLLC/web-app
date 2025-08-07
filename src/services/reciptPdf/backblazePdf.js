@@ -51,17 +51,31 @@ export async function uploadSubscriptionReceipt({ pdfBytes, paymentId, invoiceId
     }
 }
 
-// NEW: Download helper
-export async function downloadReceipt(fileId) {
-    try {
-        const b2Client = await authorizeB2();
-        const response = await b2Client.downloadFileById({
-            fileId,
-            responseType: 'arraybuffer'
-        });
-        return Buffer.from(response.data);
-    } catch (error) {
-        console.error('Backblaze download error:', error);
-        throw new Error('Failed to fetch PDF');
-    }
-}
+// export async function downloadReceipt({ bucket, folder, file }) {
+//     try {
+//         const b2Client = await authorizeB2();
+//         const response = await b2Client.downloadFileByName({
+//             bucketName: bucket,
+//             fileName: `${folder}/${file}`,
+//             responseType: 'arraybuffer', 
+//             onDownloadProgress: (progressEvent) => {
+//                 console.log(`Download progress: ${Math.round(
+//                     (progressEvent.loaded * 100) / progressEvent.total
+//                 )}%`);
+//             }
+//         });
+
+//         return {
+//             data: Buffer.from(response.data),
+//             headers: {
+//                 'content-type': 'application/pdf',
+//                 'content-length': response.headers['content-length'],
+//                 'last-modified': response.headers['last-modified']
+//             }
+//         };
+
+//     } catch (error) {
+//         console.error('Backblaze PDF download error:', error.response?.data || error.message);
+//         throw new Error(error.response?.data?.message || 'Failed to fetch PDF');
+//     }
+// }

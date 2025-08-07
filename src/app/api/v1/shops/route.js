@@ -107,11 +107,15 @@ export async function POST(request) {
     console.log(defaultPlan);
     const now = new Date();
     const subscriptionData = {
-      name: defaultPlan.name ,
+      name: defaultPlan.name,
       slug: defaultPlan.slug,
       price: defaultPlan.price,
       billingCycle: null,
-      validity: null,
+      validity: {
+        days: null,
+        from: now,
+        until: null
+      },
       services: defaultPlan.services,
       isActive: true
     };
@@ -135,8 +139,12 @@ export async function POST(request) {
       location: parsed.data.location,
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() },
       paymentMethod: "Cash on Delivery",
-      subscriptionScope: subscriptionData
+      activeSubscriptions: [{
+        ...subscriptionData,
+      }]
     }
+
+    console.log(shopPayload)
 
     const vendorPayload = {
       _id,
@@ -178,9 +186,14 @@ export async function POST(request) {
       },
       primaryDomain,
       domains: [primaryDomain],
-      subscriptionScope: subscriptionData,
+      activeSubscriptions: [{
+        ...subscriptionData,
+      }],
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
     }
+
+    console.log(vendorPayload)
+
 
     const userUpdateQuery = {
       $push: { shops: _id },
@@ -212,13 +225,12 @@ export async function POST(request) {
         industry: shop.industry,
         location: shop.location,
         domains: vendor.domains,
-        subscriptionScope: subscriptionData
-
       }
 
       if (result)
         return NextResponse.json({ message: "Shop created successfully", success: true, data: result }, { status: 201 })
     } catch (error) {
+      console.log(error)
       await authDb_session.abortTransaction()
       try {
         await VendorModel.updateOne({ 'transaction.txId': txId },
@@ -228,7 +240,7 @@ export async function POST(request) {
               'transaction.lastTxUpdate': new Date()
             }
           });
-      } catch (e) { console.error('Failed to mark saga as failed', e) }
+      } catch (e) { console.log('Failed to mark saga as failed', e) }
 
       try {
         await ShopModel.updateOne({ 'transaction.txId': txId },
