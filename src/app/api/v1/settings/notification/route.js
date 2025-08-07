@@ -37,9 +37,6 @@ export async function POST(request) {
     // Prepare notification payload
     const updatePayload = {
       notification: {
-        // email: notifyVia.includes('email') ? email : null,
-        // phone: notifyVia.includes('sms') ? phone : null,
-
         ...((email    && notifyVia.includes('email'))      && {    email: email } ),
         ...((phone    && notifyVia.includes('sms'))        && {    phone: phone } ),
         ...((whatsapp && notifyVia.includes('whatsapp'))   && { whatsapp: whatsapp } ),
