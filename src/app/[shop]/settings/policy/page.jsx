@@ -62,8 +62,7 @@ export default function ShopUpdatePage() {
       const parser = new DOMParser();
     const doc = parser.parseFromString(policies, 'text/html');
     const plainText = doc.body.textContent || doc.body.innerText;
-      console.log(plainText)
-      const res = await fetch(`/api/v1/policy`, {
+      const res = await fetch(`/api/v1/settings/policy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

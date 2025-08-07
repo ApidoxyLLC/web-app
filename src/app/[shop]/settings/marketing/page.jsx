@@ -57,7 +57,7 @@ export default function MarketingSeoTools() {
   };
 
   try {
-    const res = await fetch("/api/v1/seo-marketing", {
+    const res = await fetch("/api/v1/settings/seo-marketing", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

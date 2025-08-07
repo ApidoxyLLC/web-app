@@ -36,7 +36,7 @@ export default function Page() {
         </div>
       </header>
       <div className="pb-4">
-          <ProductsTable data={data} />
+          <ProductsTable  />
       </div>
     </>
   );

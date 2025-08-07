@@ -50,7 +50,7 @@ export default function StoreSettings() {
 
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`/api/v1/configuration`, {
+      const res = await fetch(`/api/v1/settings/configuration`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

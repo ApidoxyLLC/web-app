@@ -1,34 +1,76 @@
 import mongoose from 'mongoose';
 
 const invoiceSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  planId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan', required: true },
-  
+  // User Information
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  userDetails: {
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String }
+  },
+
+  shopId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Shop',
+    required: true
+  },
+  shopReferenceId: { type: String, required: true },
+  shopDetails: {
+    name: { type: String, required: true },
+    domain: { type: String }
+  },
+
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubscriptionPlan',
+    required: true
+  },
+  planSlug: { type: String, required: true },
+  planDetails: {
+    name: { type: String, required: true },
+    slug: { type: String, required: true },
+    services: { type: mongoose.Schema.Types.Mixed, required: true }
+  },
+
   amount: { type: Number, required: true },
   currency: { type: String, default: 'BDT' },
+ 
+  billingCycle: { type: String, enum: ['monthly', 'yearly'] },
+  validity: {
+    days: { type: Number, required: true },
+    from: { type: Date, required: true },
+    until: { type: Date, required: true }
+  },
 
-  duration: { type: String, enum: ['monthly', 'yearly'], required: true },
-  status: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
-
+  status: {
+    type: String,
+    enum: ['pending', 'processing', 'paid', 'failed', 'cancelled'],
+    default: 'pending'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['bkash'],
+    default: 'bkash'
+  },
   paymentGateway: { type: String, default: 'bkash' },
   gatewayInvoiceId: { type: String },
   paymentId: { type: String },
+  paymentGatewayResponse: { type: mongoose.Schema.Types.Mixed },
   receiptFileId: { type: String },
-  receiptUrl: {
-    type: String,
-    default: null,
-  },
+  receiptUrl: { type: String },
   createdAt: { type: Date, default: Date.now },
+  paidAt: { type: Date }
+}, {
+  timestamps: true,
+  collection: 'invoices',
 
+});
 
-}, { timestamps: true, collection: 'invoices' });
-
-export const InvoiceModel =(db) => db.models.Invoice || db.model('Invoice', invoiceSchema);
-
-
-
-
-
+export const InvoiceModel = (db) => db.models.Invoice || db.model('Invoice', invoiceSchema);
 // import mongoose from "mongoose";
 // import cuid from "@bugsnag/cuid";
 

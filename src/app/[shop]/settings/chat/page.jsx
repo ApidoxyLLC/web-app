@@ -18,35 +18,41 @@ export default function Dashboard() {
     facebookLink : "",
     whatsappLink : ""
   })
+ 
+ const handleSubmit = async () => {
   const mainData = {
-    selected,
-    link: formData,
-    active: true
-  }
-  const handleSubmit =async () =>{
-    try {
-      const res = await fetch(`/api/v1/shops/${shop}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(mainData),
+    shop,
+    provider: selected,
+    link: selected === "facebook" ? formData.facebookLink : formData.whatsappLink,
+  };
+
+  try {
+    const res = await fetch(`/api/v1/settings/support-chat`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(mainData),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("Shop updated successfully!");
+      setFormData({
+        facebookLink: "",
+        whatsappLink: ""
       });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert("Shop updated successfully!");
-        setFormData({})
-      } else {
-        console.error(data);
-        alert(data.error || "Update failed");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Something went wrong");
+    } else {
+      console.error(data);
+      alert(data.error || "Update failed");
     }
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong");
   }
+};
+
   return (
     <div
       className="bg-muted/100 p-6 h-full

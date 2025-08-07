@@ -61,7 +61,7 @@ export default function BusinessInfoForm() {
       shop,
       ...cleanedSocialLinks,
     };
-      const res = await fetch(`/api/v1/social-links`,{
+      const res = await fetch(`/api/v1/settings/social-links`,{
         method:"POST",
         headers:{
           "Content-type":"application/json"

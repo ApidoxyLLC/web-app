@@ -102,6 +102,8 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs'
 import Link from "next/link"
+import useFetch from "@/hooks/useFetch"
+import { useParams } from "next/navigation"
 
 export const schema = z.object({
   id: z.number(),
@@ -135,180 +137,79 @@ function DragHandle({ id }) {
 
 const columns = [
   {
-    id: "drag",
-    header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.id} />,
+    accessorKey: "title",
+    header: "Title",
+    cell: ({ row }) => row.original.title,
   },
   {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
+    accessorKey: "description",
+    header: "Description",
+    cell: ({ row }) => row.original.description,
   },
   {
-    accessorKey: "header",
-    header: "Header",
-    cell: ({ row }) => {
-      return <TableCellViewer item={row.original} />
-    },
-    enableHiding: false,
+    accessorKey: "price.base",
+    header: "Base Price",
+    cell: ({ row }) => row.original.price?.base ?? "-",
   },
   {
-    accessorKey: "type",
-    header: "Section Type",
-    cell: ({ row }) => (
-      <div className="w-32">
-        <Badge variant="outline" className="px-1.5 text-muted-foreground">
-          {row.original.type}
-        </Badge>
-      </div>
-    ),
+    accessorKey: "price.compareAt",
+    header: "Compare At",
+    cell: ({ row }) => row.original.price?.compareAt ?? "-",
   },
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className="flex gap-1 px-1.5 text-muted-foreground [&_svg]:size-3"
-      >
-        {row.original.status === "Done" ? (
-          <CheckCircle2Icon className="text-green-500 dark:text-green-400" />
-        ) : (
-          <LoaderIcon />
-        )}
-        {row.original.status}
-      </Badge>
-    ),
+    cell: ({ row }) => row.original.status,
   },
   {
-    accessorKey: "target",
-    header: () => <div className="w-full text-right">Target</div>,
-    cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: "Done",
-            error: "Error",
-          })
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-target`} className="sr-only">
-          Target
-        </Label>
-        <Input
-          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
-          defaultValue={row.original.target}
-          id={`${row.original.id}-target`}
-        />
-      </form>
-    ),
+    accessorKey: "approvalStatus",
+    header: "Approval",
+    cell: ({ row }) => row.original.approvalStatus,
   },
   {
-    accessorKey: "limit",
-    header: () => <div className="w-full text-right">Limit</div>,
-    cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: "Done",
-            error: "Error",
-          })
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-          Limit
-        </Label>
-        <Input
-          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
-          defaultValue={row.original.limit}
-          id={`${row.original.id}-limit`}
-        />
-      </form>
-    ),
+    accessorKey: "isFeatured",
+    header: "Featured",
+    cell: ({ row }) => (row.original.isFeatured ? "Yes" : "No"),
   },
   {
-    accessorKey: "reviewer",
-    header: "Reviewer",
-    cell: ({ row }) => {
-      const isAssigned = row.original.reviewer !== "Assign reviewer"
-
-      if (isAssigned) {
-        return row.original.reviewer
-      }
-
-      return (
-        <>
-          <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
-            Reviewer
-          </Label>
-          <Select>
-            <SelectTrigger
-              className="h-8 w-40"
-              id={`${row.original.id}-reviewer`}
-            >
-              <SelectValue placeholder="Assign reviewer" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-              <SelectItem value="Jamik Tashpulatov">
-                Jamik Tashpulatov
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </>
-      )
-    },
+    accessorKey: "hasVariants",
+    header: "Has Variants",
+    cell: ({ row }) => (row.original.hasVariants ? "Yes" : "No"),
   },
   {
-    id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
-            size="icon"
-          >
-            <MoreVerticalIcon />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Make a copy</DropdownMenuItem>
-          <DropdownMenuItem>Favorite</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Delete</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    accessorKey: "variants",
+    header: "Variants",
+    cell: ({ row }) =>
+      row.original.variants?.length
+        ? row.original.variants
+            .map((v, i) => `#${i + 1}: ${v.options.join(", ")}`)
+            .join(" | ")
+        : "—",
+  },
+  {
+    accessorKey: "tags",
+    header: "Tags",
+    cell: ({ row }) =>
+      row.original.tags?.length ? row.original.tags.join(", ") : "—",
+  },
+  
+  {
+    accessorKey: "ratings",
+    header: "Ratings",
+    cell: ({ row }) =>
+      row.original.ratings
+        ? `⭐ ${row.original.ratings.average} (${row.original.ratings.count})`
+        : "—",
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Created At",
+    cell: ({ row }) =>
+      new Date(row.original.createdAt).toLocaleDateString(),
   },
 ]
+
+
 
 function DraggableRow({ row }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
@@ -335,13 +236,19 @@ function DraggableRow({ row }) {
   )
 }
 
-export function ProductsTable({
-  data: initialData,
-}) {
-  const [data, setData] = React.useState(() => initialData)
+export function ProductsTable() {
+  const {shop} = useParams()
+  const { data, loading, error } = useFetch(`/${shop}/products`)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState({})
+    React.useState({
+      tags: false,
+      categories: false,
+      hasVariants: false,
+      isFeatured: false,
+      ratings : false,
+      variants: false,
+    })
   const [columnFilters, setColumnFilters] = React.useState(
     []
   )
@@ -358,12 +265,12 @@ export function ProductsTable({
   )
 
   const dataIds = React.useMemo(
-    () => data?.map(({ id }) => id) || [],
+    () => data?.data?.map(({ id }) => id) || [],
     [data]
   )
 
   const table = useReactTable({
-    data,
+    data : data.data,
     columns,
     state: {
       sorting,
@@ -393,56 +300,34 @@ export function ProductsTable({
       setData((data) => {
         const oldIndex = dataIds.indexOf(active.id)
         const newIndex = dataIds.indexOf(over.id)
-        return arrayMove(data, oldIndex, newIndex)
+        return arrayMove(data.data, oldIndex, newIndex)
       })
     }
   }
-
+ if (loading) {
+      return (
+        <div className="flex h-64 items-center justify-center">
+          <LoaderIcon className="h-8 w-8 animate-spin" />
+        </div>
+      )
+    }
+  
+    if (error) {
+      return (
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-center text-red-500">
+            Failed to load customers: {error.message}
+          </div>
+        </div>
+      )
+    }
   return (
     <Tabs
       defaultValue="outline"
       className="flex w-full flex-col justify-start gap-6"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-        <Select defaultValue="outline">
-          <SelectTrigger
-            className="@4xl/main:hidden flex w-fit"
-            id="view-selector"
-          >
-            <SelectValue placeholder="Select a view" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="outline">Outline</SelectItem>
-            <SelectItem value="past-performance">Past Performance</SelectItem>
-            <SelectItem value="key-personnel">Key Personnel</SelectItem>
-            <SelectItem value="focus-documents">Focus Documents</SelectItem>
-          </SelectContent>
-        </Select>
-        <TabsList className="@4xl/main:flex hidden">
-          <TabsTrigger value="outline">Outline</TabsTrigger>
-          <TabsTrigger value="past-performance" className="gap-1">
-            Past Performance{" "}
-            <Badge
-              variant="secondary"
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/30"
-            >
-              3
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="key-personnel" className="gap-1">
-            Key Personnel{" "}
-            <Badge
-              variant="secondary"
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/30"
-            >
-              2
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="focus-documents">Focus Documents</TabsTrigger>
-        </TabsList>
+        <div></div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

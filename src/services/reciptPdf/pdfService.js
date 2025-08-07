@@ -18,15 +18,15 @@ export async function generateReceiptPDF(invoice) {
         amount: invoice.amount ? invoice.amount.toString() : '0.00',
         currency: invoice.currency?.toString() || 'BDT',
         customer: {
-            name: invoice.customer?.name?.toString() || 'N/A',
-            business: invoice.customer?.business?.toString() || 'N/A',
-            email: invoice.customer?.email?.toString() || 'N/A',
-            phone: invoice.customer?.phone?.toString() || 'N/A'
+            name: invoice.userDetails?.name?.toString() || 'N/A',
+            business: invoice.shopDetails?.name?.toString() || 'N/A',
+            email: invoice.userDetails?.email?.toString() || 'N/A',
+            phone: invoice.userDetails?.phone?.toString() || 'N/A'
         },
         subscription: {
-            plan: invoice.subscription?.plan?.toString() || 'N/A',
-            duration: invoice.subscription?.duration?.toString() || 'N/A',
-            total: (invoice.subscription?.total || invoice.amount || '0.00').toString()
+            plan: invoice.planDetails?.name?.toString() || 'N/A',
+            duration: invoice.validity?.days?.toString() || 'N/A',
+            total: invoice.amount.toString()
         }
     };
 

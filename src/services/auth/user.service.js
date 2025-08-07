@@ -81,7 +81,6 @@ export async function createUser({ db, session, data }) {
   if (!data || typeof data !== "object") throw new Error("Invalid data format");
 
   const { name, email, phone, password } = data || {};
-  // const SubscriptionPlan = planModel(db);
   const UserModel = userModel(db);
   const salt = await bcrypt.genSalt(14);
   const hashedPassword = await bcrypt.hash(password, salt);
@@ -94,67 +93,11 @@ export async function createUser({ db, session, data }) {
 
 
 
-  // const plan = await SubscriptionPlan.findOne({ slug: "free-starter", isActive: true }).lean();
-
-  // console.log("************ Plan fetched from DB ************");
-
-  // console.log(plan)
-
-
-  // const plan = await SubscriptionPlan.findOne({ slug: "free-starter", isActive: true }).lean();
-  // console.log("************ Plan fetched from DB ************");
-  // console.log(plan);
-  // if (!plan) throw new Error("Free Starter plan not found");
 
   
 
 
-  // if (plan) {
-
-  //   // const trialDays = plan.trialPeriod?.days || 0;
-  //   // const now = new Date();
-  //   // const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
-
-  //  const subscriptionScope = {
-  //     customDomains: plan.limits?.customDomains,
-  //     subDomains: plan.limits?.subDomains,
-  //     shops: plan.limits?.shops,
-  //     androidApp: plan.limits?.apps?.android,
-  //     webApp: plan.limits?.apps?.web,
-  //     iosApp: plan.limits?.apps?.ios,
-  //     androidBuild: plan.limits?.builds?.android,
-  //     webBuild: plan.limits?.builds?.web,
-  //     iosBuild: plan.limits?.builds?.ios,
-  //     paymentIntegrations: plan.limits?.paymentIntegrations,
-  //     deliveryIntegrations: plan.limits?.deliveryIntegrations,
-  //     smsGateways: plan.limits?.smsGateways,
-  //     monthlyNotifications: plan.limits?.monthlyNotifications,
-  //     storageMB: plan.limits?.storageMB,
-  //     customerAccounts: plan.limits?.customerAccounts,
-  //     staffUsers: plan.limits?.staffUsers,
-  //     products: plan.limits?.products,
-  //     monthlyOrders: plan.limits?.monthlyOrders,
-  //     features: {
-  //       analyticsDashboard: plan.features?.analyticsDashboard,
-  //       inventoryManagement: plan.features?.inventoryManagement,
-  //       customerSupport: plan.features?.customerSupport,
-  //       socialLogin: plan.features?.socialLogin,
-  //     },
-  //     billingCycle: plan.prices?.billingCycles?.[0] || "monthly",
-  //     currency: plan.prices?.currency || "BDT",
-  //     isActive: true,
-  //     planId: plan.planId || plan._id,
-  //     planName: plan.title,
-  //     planSlug: plan.slug,
-  //     tier: plan.tier,
-  //     description: plan.description,
-  //   };
-
-  //   // tier = plan.tier;
-  // } 
-
-
-  // console.log('subscriptionScope', subscriptionScope)
+  
 
   const userData = {
     name,

@@ -109,6 +109,7 @@ export default function NewProduct() {
   vendor: "",
   tags:[]
 });
+console.log(productData)
   const handleChange = (key, value) => {
   setProductData((prev) => ({
     ...prev,

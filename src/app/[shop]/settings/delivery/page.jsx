@@ -184,7 +184,7 @@ export default function DeliverySettings() {
   console.log(payload)
 
   try {
-    const res = await fetch(`/api/v1/delivery-partner`, {
+    const res = await fetch(`/api/v1/settings/delivery-partner`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -52,7 +52,6 @@ export function ProjectsCard() {
       setSubmenuHeight(showSecuritySub ? submenuRef.current.scrollHeight : 0);
     }
   }, [showSecuritySub]);
-  console.log(userData)
   useEffect(() => {
     if (userData.status === "authenticated" && userData.data?.user) {
         router.push("http://localhost:3000/");
