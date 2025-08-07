@@ -177,8 +177,7 @@ export async function POST(request) {
     
     if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
-    const payload = {     
-                         session: sessionId.toString(),
+    const payload = {    session: sessionId.toString(),
                      fingerprint,
                             name: user.name,
                            email: user.email,
