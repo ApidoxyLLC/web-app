@@ -125,20 +125,20 @@ export async function POST(request) {
             await Shop.findOneAndUpdate(
                 { referenceId: updatedInvoice.shopReferenceId },
                 {
-                    $set: {
-                        subscriptionScope: subscriptionData
+                    $push: {
+                        activeSubscriptions: subscriptionData
                     }
-                }
+                },
             );
 
             const Vendor = vendorModel(vendor_db);
             await Vendor.findOneAndUpdate(
                 { referenceId: updatedInvoice.shopReferenceId },
                 {
-                    $set: {
-                        subscriptionScope: subscriptionData,
-                    }
-                }
+                           $push: {
+                             activeSubscriptions: subscriptionData
+                                }
+                    },
             );
 
             return NextResponse.json({
