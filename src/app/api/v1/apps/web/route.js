@@ -29,9 +29,8 @@ export async function POST(request) {
 
     try {
       const vendor_db = await vendorDbConnect();
-      const   auth_db = await authDbConnect();
       const    Vendor = vendorModel(vendor_db);
-      const      Shop = shopModel(auth_db);
+
 
       // Find vendor with user check
       const vendor = await Vendor.findOne({ referenceId: parsed.data.shop })
