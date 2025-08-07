@@ -293,7 +293,7 @@ const shopSchema = new mongoose.Schema({
             android: { type: androidAppSchema, default: null },
                 // ios: { type: iosAppSchema, default: null },
   subscriptionScope: { type: subscriptionScopeSchema, default: () => ({}) },
-  usage: { type: usageSchema },
+              usage: { type: usageSchema },
   activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription', default: undefined },
 
              stuffs: { type: [stuffSchema], default: undefined },

@@ -216,8 +216,6 @@ export async function downloadImage({bucket, folder, file}) {
                       fileName: `${folder}/${file}`,
                       responseType: 'stream',
                     });
-
-
   } catch (error) {
     console.log(error)
     throw new Error (error)
