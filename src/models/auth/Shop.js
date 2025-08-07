@@ -192,7 +192,7 @@ const marketingSchema = new mongoose.Schema({
 
 
 
-const subscriptionScopeSchema = new mongoose.Schema({
+const activeSubscriptionsSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true
@@ -208,12 +208,12 @@ const subscriptionScopeSchema = new mongoose.Schema({
   billingCycle: {
     type: String,
     enum: ['monthly', 'yearly'],
-    required: true
+    required: false
   },
   validity: {
-    days: { type: Number, required: true },
+    days: { type: Number, required: false },
     from: { type: Date, required: true },
-    until: { type: Date, required: true }
+    until: { type: Date, required: false }
   },
   services: {
     website: {
@@ -232,10 +232,7 @@ const subscriptionScopeSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   }
-}, {
-  _id: false,
-  timestamps: true
-});
+}, { _id: false, timestamps: true });
 const usageSchema = new mongoose.Schema({
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -292,10 +289,11 @@ const shopSchema = new mongoose.Schema({
                 web: { type: webAppSchema, default: null },
             android: { type: androidAppSchema, default: null },
                 // ios: { type: iosAppSchema, default: null },
-  subscriptionScope: { type: subscriptionScopeSchema, default: () => ({}) },
-              usage: { type: usageSchema },
-  activeSubscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription', default: undefined },
-
+  activeSubscriptions: {
+    type: [activeSubscriptionsSchema], 
+    default: () => [] 
+  },
+    usage: { type: usageSchema },
              stuffs: { type: [stuffSchema], default: undefined },
         transaction: { type: transactionFieldsSchema },
            policies: { type: String, default: null },

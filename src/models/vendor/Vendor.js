@@ -74,7 +74,7 @@ const notificationSchema = new mongoose.Schema({
 const deliveryPartnerSchema = new mongoose.Schema({
   pathao: { type: pathaoSchema, default: undefined },
   steadfast: { type: steadfastSchema, default: undefined },
-     pathao: { type: pathaoSchema, default: null }, 
+  pathao: { type: pathaoSchema, default: null },
   steadfast: { type: steadfastSchema, default: null }
 }, { timestamps: false, _id: false })
 
@@ -92,14 +92,14 @@ const emailProviderSchema = new mongoose.Schema({
   active: { type: Boolean, default: false },
 }, { timestamps: false, _id: false });
 
- const googleTagManagerSchema = new mongoose.Schema({
-    gtmId: { type: String, required: true },
+const googleTagManagerSchema = new mongoose.Schema({
+  gtmId: { type: String, required: true },
 }, { timestamps: true, _id: false });
 
- const facebookPixelSchema = new mongoose.Schema({
-    pixelId: { type: String, required: true },
-    accessToken: { type: String, required: true },
-    testEventId: { type: String, required: false },
+const facebookPixelSchema = new mongoose.Schema({
+  pixelId: { type: String, required: true },
+  accessToken: { type: String, required: true },
+  testEventId: { type: String, required: false },
 }, { timestamps: true, _id: false });
 
 
@@ -256,7 +256,7 @@ const staffSchema = new mongoose.Schema(
 //   password: { type: String },
 // }, { timestamps: true });
 
-const subscriptionScopeSchema = new mongoose.Schema({
+const activeSubscriptionsSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true
@@ -272,12 +272,12 @@ const subscriptionScopeSchema = new mongoose.Schema({
   billingCycle: {
     type: String,
     enum: ['monthly', 'yearly'],
-    required: true
+    required: false
   },
   validity: {
-    days: { type: Number, required: true },
+    days: { type: Number, required: false },
     from: { type: Date, required: true },
-    until: { type: Date, required: true }
+    until: { type: Date, required: false }
   },
   services: {
     website: {
@@ -296,21 +296,19 @@ const subscriptionScopeSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   }
-}, {
-  _id: false,
-  timestamps: true
-});
+}, { _id: false, timestamps: true })
+
 
 const usageSchema = new mongoose.Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  subscriptionId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Subscription', 
-    required: true 
+  subscriptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription',
+    required: true
   },
   usage: {
     website: {
@@ -327,12 +325,12 @@ const usageSchema = new mongoose.Schema({
   },
 
   billingCycleStart: { type: Date, default: Date.now },
-  billingCycleEnd: { 
-    type: Date, 
-    default: function() {
+  billingCycleEnd: {
+    type: Date,
+    default: function () {
       const start = this.billingCycleStart || new Date();
       return new Date(start.getTime() + (this.subscription?.validity * 24 * 60 * 60 * 1000));
-    } 
+    }
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -365,14 +363,17 @@ const vendorSchema = new mongoose.Schema({
   facebookDataFeed: { type: String, default: null },
   transaction: { type: transactionFieldsSchema },
   policies: { type: String, default: null },
-  subscriptionScope: { type: subscriptionScopeSchema, default: () => ({}) },
+  activeSubscriptions: {
+    type: [activeSubscriptionsSchema],
+    default: () => []
+  },
   usage: { type: usageSchema },
   support: { type: contactNdSupportSchema, select: true },
   notification: { type: notificationSchema, select: true },
   deliveryPartner: { type: deliveryPartnerSchema, default: null },
   smsProvider: { type: smsProviderSchema, default: {} },
   paymentPartner: { type: paymentPartnerSchema, default: null },
-  paymentMethod: { type: String, enum: ['Cash on Delivery'], default: 'Cash on Delivery'},
+  paymentMethod: { type: String, enum: ['Cash on Delivery'], default: 'Cash on Delivery' },
   chatSupport: { type: [chatSupportSchema], default: null },
   marketing: { type: marketingSchema, default: null },
   activeApps: { type: [String], default: [], enum: ['web', 'android', 'ios'] },
