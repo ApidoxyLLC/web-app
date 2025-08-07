@@ -84,7 +84,6 @@ export default function Categories() {
       body: JSON.stringify({ ...newCategory, parent: parentId, shop: shopId })
     });
     const data = await res.json();
-    console.log(data)
     if (data.success) {
       alert("Category created successfully. Please refresh to see it.");
       setNewCategory({ title: "", slug: "", description: "", image: undefined });

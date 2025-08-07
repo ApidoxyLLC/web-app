@@ -24,7 +24,6 @@ import { toast } from "sonner";
 export default function CreatShop() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const {shop}= useParams()
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -35,7 +34,6 @@ export default function CreatShop() {
       businessName: form.get("businessName"),
       location: form.get("businessLocation"),
     };
-
     try {
       const res = await fetch("http://localhost:3000/api/v1/shops", {
         method: "POST",
@@ -44,10 +42,10 @@ export default function CreatShop() {
         },
         body: JSON.stringify(formData),
       });
-
       if (res.ok) {
         toast.success("Shop created");
-        router.push(`http://localhost:3000/${shop}/dashboard`);
+        setOpen(false)
+        router.push(`http://localhost:3000`);
       } else {
         toast.error("Error creating shop");
       }

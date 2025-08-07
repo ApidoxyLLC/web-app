@@ -3,7 +3,7 @@ import React from 'react'
 import { Upload, X, Check } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
-export default function UploadImage({ shopId }) {
+export default function UploadImage({ shopId, onImageUpload }) {
   const [images, setImages] = useState([])
   const [state, setState] = useState({ dragActive: false })
   const inputRef = useRef(null)
@@ -79,6 +79,9 @@ async function uploadFile({ file, shopId, onProgress }) {
               updated[index].status = 'uploaded'
               return updated
             })
+            if (res?.url && onImageUpload) {
+    onImageUpload(res.url) // 👈 এখানে parent কে url পাঠানো হচ্ছে
+  }
           })
           .catch((err) => {
             console.error('Upload failed', err)

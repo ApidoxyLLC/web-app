@@ -109,7 +109,7 @@ export default function NewProduct() {
   vendor: "",
   tags:[]
 });
-console.log(productData)
+  console.log(productData)
   const handleChange = (key, value) => {
   setProductData((prev) => ({
     ...prev,
@@ -202,6 +202,12 @@ console.log(productData)
       [key]: value === true,
     }));
   };
+  const handleImageUpload = (url) => {
+  setProductData((prev) => ({
+    ...prev,
+    images: [...prev.images, url],
+  }))
+}
   const handleSubmit = async () => {
    try {
   const response = await fetch("http://localhost:3000/api/v1/products", {
@@ -252,7 +258,7 @@ console.log(productData)
 
             <Textarea placeholder="Product description"         onChange={(e) => handleChange("description", e.target.value)}
  />
-            <UploadImage shopId = {shop}></UploadImage>
+            <UploadImage shopId = {shop} onImageUpload={handleImageUpload} ></UploadImage>
 
             <ControlGroup>
               <ControlGroupItem className="flex-1">
@@ -438,7 +444,7 @@ console.log(productData)
             <Checkbox
             checked={productData.isPhysical}
             onCheckedChange={(val) => handleCheckbox("isPhysical", val)}
-          />s
+          />
             <Label htmlFor="physicalProduct">This is a physical product</Label>
           </div>
           

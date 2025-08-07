@@ -23,11 +23,11 @@ export default function Page() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbPage>Website & Apps</BreadcrumbPage>
+                <BreadcrumbPage>Store Manager</BreadcrumbPage>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>Customers</BreadcrumbPage>
+                <BreadcrumbPage>Products</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>

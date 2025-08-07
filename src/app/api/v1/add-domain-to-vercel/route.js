@@ -16,6 +16,7 @@ export async function POST(req) {
 
     try {
         const requestBody = await req.json();
+        console.log(requestBody)
         const { subdomain, domain, shopId  } = addDomainDTOSchema.parse(requestBody);
         const fullDomain = `${subdomain}.${domain}`;
 
