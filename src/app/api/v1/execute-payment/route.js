@@ -124,45 +124,21 @@ export async function POST(request) {
             const Shop = shopModel(auth_db);
             await Shop.findOneAndUpdate(
                 { referenceId: updatedInvoice.shopReferenceId },
-                [
-                    {
-                        $set: {
-                            activeSubscriptions: {
-                                $concatArrays: [
-                                    {
-                                        $filter: {
-                                            input: "$activeSubscriptions",
-                                            cond: { $ne: ["$$this.slug", "plan-a"] }
-                                        }
-                                    },
-                                    [subscriptionData]
-                                ]
-                            }
-                        }
+                {
+                    $push: {
+                        activeSubscriptions: subscriptionData
                     }
-                ],
+                },
             );
 
             const Vendor = vendorModel(vendor_db);
             await Vendor.findOneAndUpdate(
                 { referenceId: updatedInvoice.shopReferenceId },
-                [
-                    {
-                        $set: {
-                            activeSubscriptions: {
-                                $concatArrays: [
-                                    {
-                                        $filter: {
-                                            input: "$activeSubscriptions",
-                                            cond: { $ne: ["$$this.slug", "plan-a"] }
-                                        }
-                                    },
-                                    [subscriptionData]
-                                ]
-                            }
-                        }
-                    }
-                ],
+                {
+                           $push: {
+                             activeSubscriptions: subscriptionData
+                                }
+                    },
             );
 
             return NextResponse.json({
