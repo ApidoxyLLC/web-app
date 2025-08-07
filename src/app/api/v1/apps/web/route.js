@@ -78,13 +78,6 @@ export async function POST(request) {
           }
       }
 
-        // const payload = {
-        //                     ...(image && { "web.logo": image.fileName }),
-        //                                 "web.title": parsed.data.title,
-        //                     "metadata.description": parsed.data.metaDescription,
-        //                         "metadata.keywords": parsed.data.metaTags.split(',').map(word => word.trim()).filter(word => word.length > 0)
-        //                 };
-        // New (correct) version:
         const payload = {
             ...(image && { "web.logo": image.fileName }),
             "web.title": parsed.data.title,
