@@ -45,3 +45,52 @@ export async function GET(req, { params }) {
         );
     }
 }
+
+
+// export async function DELETE(req, { params }) {
+//     const vendor_db = await vendorDbConnect();
+//     const Vendor = vendorModel(vendor_db);
+
+//     try {
+//         const { shopId } = params;
+//         const { domain } = await req.json(); 
+//         if (!shopId || !domain) {
+//             throw new Error('shopId (URL) and domain (body) are required');
+//         }
+
+//         if (!mongoose.Types.ObjectId.isValid(shopId)) {
+//             throw new Error('Invalid shop ID format');
+//         }
+
+//         // Delete from Vercel/Cloudflare first (if needed)
+//         // await domainService.deleteVercelDomain(domain);
+//         // await domainService.deleteCloudflareRecord(domain);
+
+//         // Update Vendor document
+//         const vendor = await Vendor.findByIdAndUpdate(
+//             shopId,
+//             {
+//                 $pull: { domains: domain }, // Remove domain from array
+              
+//             },
+//             { new: true }
+//         );
+
+//         if (!vendor) {
+//             throw new Error('Vendor not found');
+//         }
+
+//         return NextResponse.json({
+//             success: true,
+//             message: 'Domain deleted successfully',
+//             updatedDomains: vendor.domains
+//         });
+
+//     } catch (error) {
+//         console.error('Domain deletion error:', error);
+//         return NextResponse.json(
+//             { error: error.message },
+//             { status: 500 }
+//         );
+//     }
+// }

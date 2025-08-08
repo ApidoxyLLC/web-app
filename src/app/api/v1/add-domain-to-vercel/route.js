@@ -16,39 +16,34 @@ export async function POST(req) {
 
     try {
         const requestBody = await req.json();
-        const { subdomain, domain, shopId  } = addDomainDTOSchema.parse(requestBody);
+        const { subdomain, domain, shopId } = addDomainDTOSchema.parse(requestBody);
         const fullDomain = `${subdomain}.${domain}`;
 
         if (!shopId) throw new Error('shopId is required');
-        if (!mongoose.Types.ObjectId.isValid(shopId)) {
-            throw new Error('Invalid shop ID format');
-        }
+
         const vercelResponse = await domainService.addVercelSubdomain(fullDomain);
-        console.log("vercelResponse**************************")
-        console.log(vercelResponse)
+        
         if (!vercelResponse.verified && vercelResponse.verification) {
             const txtResult = await domainService.addTxtRecord(fullDomain, vercelResponse);
             console.log('TXT record status:', txtResult.exists ? 'exists' : 'created');
         }
 
-
         const cloudflareResponse = await domainService.addCloudflareRecord(fullDomain);
 
         const verification = await domainService.verifyDomain(fullDomain);
 
-
-
         await Domain.create({
             domain: fullDomain,
-            shop: new mongoose.Types.ObjectId(shopId),
+            shop: shopId,
             isActive: verification.verified,
         });
 
-        await VendorModel.findByIdAndUpdate(
-            shopId,
+        await VendorModel.findOneAndUpdate(
+            { referenceId: shopId },
             { $addToSet: { domains: fullDomain } },
             { new: true }
         );
+
         return NextResponse.json({
             success: true,
             domain: fullDomain,
@@ -65,7 +60,7 @@ export async function POST(req) {
         });
 
     } catch (error) {
-        console.error('Domain configuration error:', error);
+        console.log('Domain configuration error:', error);
 
         if (error.name === 'ZodError') {
             return NextResponse.json(
