@@ -4,7 +4,6 @@ import { addDomainDTOSchema } from './addDomainDTOSchema';
 import { domainModel } from "@/models/vendor/Domain";
 import { vendorModel } from "@/models/vendor/Vendor";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-import mongoose from 'mongoose';
 
 const domainService = new DomainService();
 
