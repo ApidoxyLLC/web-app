@@ -42,6 +42,7 @@ import { Button } from "@/components/ui/button";
 export function ProjectsCard() {
   const router = useRouter()
   const userData = useSession()
+  console.log(userData)
   const [showSecuritySub, setShowSecuritySub] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const submenuRef = useRef(null);
@@ -273,7 +274,7 @@ export function ProjectsCard() {
                 </div>
                 <div className="flex items-center gap-1">
                   <User2 className="w-4 h-4" />
-                  <span>{data.data?.user?.name}</span>
+                  <span>{userData?.data?.user?.name}</span>
                 </div>
               </div>
             </CardFooter>

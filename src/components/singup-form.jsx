@@ -288,12 +288,12 @@ export function SignUp({ className, ...props }) {
     }}
     className="space-y-6"
   >
-    <div className="grid gap-4">
-      <div className="grid gap-2">
+    <div className="grid gap-4 ">
+      <div className="flex gap-2 ">
         <Label htmlFor="otp" className="text-sm font-medium">
           OTP Code
         </Label>
-        <InputOTP onChange={setOtp} maxLength={6} id="otp" name="otp">
+        <InputOTP onChange={setOtp} maxLength={6} id="otp" name="otp" className="ml-16">
           <InputOTPGroup>
             <InputOTPSlot index={0} />
             <InputOTPSlot index={1} />

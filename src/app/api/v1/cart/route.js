@@ -135,27 +135,27 @@ const productIdMap = new Map(products.map(p => [p._id.toString(), p.productId]))
   const response = NextResponse.json(responseData, { status: 200, headers: securityHeaders });
 
   // Handle token refresh if needed
-  if (authenticated && isTokenRefreshed && token) {
-    const ACCESS_TOKEN_EXPIRY = Number(shop.timeLimitations?.ACCESS_TOKEN_EXPIRE_MINUTES) || 15;
-    const REFRESH_TOKEN_EXPIRY = Number(shop.timeLimitations?.REFRESH_TOKEN_EXPIRE_MINUTES) || 1440;
-    const accessTokenExpiry = minutesToExpiryTimestamp(ACCESS_TOKEN_EXPIRY);
-    const refreshTokenExpiry = minutesToExpiryTimestamp(REFRESH_TOKEN_EXPIRY);
+  // if (authenticated && isTokenRefreshed && token) {
+  //   const ACCESS_TOKEN_EXPIRY = Number(shop.timeLimitations?.ACCESS_TOKEN_EXPIRE_MINUTES) || 15;
+  //   const REFRESH_TOKEN_EXPIRY = Number(shop.timeLimitations?.REFRESH_TOKEN_EXPIRE_MINUTES) || 1440;
+  //   const accessTokenExpiry = minutesToExpiryTimestamp(ACCESS_TOKEN_EXPIRY);
+  //   const refreshTokenExpiry = minutesToExpiryTimestamp(REFRESH_TOKEN_EXPIRY);
 
-    response.cookies.set('access_token', token.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      path: '/',
-      maxAge: Math.floor((accessTokenExpiry - Date.now()) / 1000),
-    });
-    response.cookies.set('refresh_token', token.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      path: '/',
-      maxAge: Math.floor((refreshTokenExpiry - Date.now()) / 1000),
-    });
-  }
+  //   response.cookies.set('access_token', token.accessToken, {
+  //     httpOnly: true,
+  //     secure: process.env.NODE_ENV === 'production',
+  //     sameSite: 'Lax',
+  //     path: '/',
+  //     maxAge: Math.floor((accessTokenExpiry - Date.now()) / 1000),
+  //   });
+  //   response.cookies.set('refresh_token', token.refreshToken, {
+  //     httpOnly: true,
+  //     secure: process.env.NODE_ENV === 'production',
+  //     sameSite: 'Lax',
+  //     path: '/',
+  //     maxAge: Math.floor((refreshTokenExpiry - Date.now()) / 1000),
+  //   });
+  // }
 
   return response;
 }

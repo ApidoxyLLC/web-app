@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useParams } from "next/navigation";
 
 export default function Domain() {
   // make domains stateful so UI can update after adding
@@ -42,7 +43,8 @@ export default function Domain() {
   const [subdomain, setSubdomain] = useState(""); // user enters subdomain (e.g. "test")
   const [selectedDomain, setSelectedDomain] = useState(""); // one of allowed domains
   const [loading, setLoading] = useState(false);
-
+  const shop = useParams()
+  const shopId = shop.shop
   // allowed domains (keeps logic in one place)
   const allowedDomains = [
     "apidoxy.com",
@@ -64,7 +66,7 @@ export default function Domain() {
     // basic client-side validation (server still validates)
     const subdomainTrim = subdomain.trim().toLowerCase();
     const domain = selectedDomain;
-
+    console.log("kotai harai gelo domain",domain,shopId,subdomainTrim)
     if (!subdomainTrim) {
       toast.error("Please enter a subdomain (e.g. `test`).");
       return;
@@ -94,13 +96,12 @@ export default function Domain() {
       const res = await fetch(apiPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subdomain: subdomainTrim, domain }),
+        body: JSON.stringify({ subdomain: subdomainTrim, domain, shopId }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        // If your API returns the Zod error shape you showed earlier:
         if (data?.error === "Validation error" && Array.isArray(data.details)) {
           data.details.forEach((d) => toast.error(`${d.field}: ${d.message}`));
         } else {

@@ -36,7 +36,7 @@ export async function POST(request) {
         return NextResponse.json( { error: "Validation failed", details: parsed.error.flatten() }, { status: 422 } )
     const { shippingMethod, shippingAddress, paymentMethod } = parsed.data;
 
-    const { success: authenticated, shop, data: user, isTokenRefreshed, token } = await authenticationStatus(request);
+    const { success: authenticated, shop, data: vendorData, isTokenRefreshed, token } = await authenticationStatus(request);
     if (!authenticated || !user?._id) 
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

@@ -21,11 +21,11 @@ export default function Layout({children}) {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Website & Apps</BreadcrumbPage>
+                  <BreadcrumbPage>Subscriptions</BreadcrumbPage>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Categories</BreadcrumbPage>
+                  <BreadcrumbPage>Billing History</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>

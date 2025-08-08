@@ -15,7 +15,8 @@ export async function POST(req) {
 
     try {
         const requestBody = await req.json();
-        const { subdomain, domain, shopId } = addDomainDTOSchema.parse(requestBody);
+       
+        const { subdomain, domain, shopId  } = addDomainDTOSchema.parse(requestBody);
         const fullDomain = `${subdomain}.${domain}`;
 
         if (!shopId) throw new Error('shopId is required');

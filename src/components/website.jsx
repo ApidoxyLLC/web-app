@@ -11,14 +11,35 @@ import { toast } from "sonner";
 
 export default function Website() {
   const {shop} = useParams()
-
+  const [pic, setPic] = useState(null)
   const [formData, setFormData] = useState({
-    shop: shop,
+    shop,
     title: "",
     logo: "",
     metaDescription: "",
     metaTags: "",
   })
+  console.log(formData)
+  const uploadImage = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("shop", shop);
+
+    const res = await fetch("http://localhost:3000/api/v1/upload-image", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || "Image upload failed");
+    }
+
+    const imageUrl = `http://localhost:3000/api/v1/image/${shop}/${data.data.fileName}`;
+    setPic(imageUrl);
+
+  return data?.data?.fileName;
+  };
   const handleChange = (key,value)=>{
     setFormData((prev)=>({
       ...prev,
@@ -36,6 +57,10 @@ export default function Website() {
     })
     console.log(res)
     if(res.ok){
+      setFormData({title: "",
+    logo: "",
+    metaDescription: "",
+    metaTags: "",})
       toast.success("Website info saved and deployment started!");
     }
     }catch(err){
@@ -52,7 +77,20 @@ export default function Website() {
         <div className="flex flex-col gap-6 -mt-7">
           <Input placeholder="Website Title"  onChange={(e)=> handleChange("title", e.target.value)} />
           <div className="flex flex-row gap-4">
-            <PicturePreviewInput size={80} />
+            <PicturePreviewInput size={80} picture={pic ? pic : null}
+              onChange={async (file) => {
+    if (file instanceof File) {
+      try {
+        const uploadedUrl = await uploadImage(file);
+        console.log("poc okoi",uploadedUrl)
+        setFormData(prev => ({...prev, logo:uploadedUrl}))
+        } catch (err) {
+        console.error("Upload failed", err);
+        alert("Image upload failed");
+      }
+    }else{
+      console.log("err")
+    }}}/>
             <Textarea placeholder="Meta description" onChange={(e)=> handleChange("metaDescription", e.target.value)}  />
           </div>
           <div className="flex flex-row gap-4 mb-6 md:mb-0">
