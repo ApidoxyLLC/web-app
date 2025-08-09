@@ -78,12 +78,12 @@
     steadfast: { type: steadfastSchema, default: null }
   }, { timestamps: false, _id: false })
 
-
   const smsProviderSchema = new mongoose.Schema({
     bulk_sms_bd: { type: bulkSmsBdSchema, default: undefined },
     alpha_net_bd: { type: alphaNetBdSchema, default: undefined },
     adn_diginet_bd: { type: adnDiginetBdSchema, default: undefined },
-  }, { timestamps: true, _id: false });
+    // activeProvider: { type: String, enum: ['bulk-sms-bd', 'alpha-net-bd', 'adn-diginet-bd' ], default: 'bulk_sms_bd' },
+  }, { timestamps: false, _id: false });
 
 
   const emailProviderSchema = new mongoose.Schema({
@@ -212,7 +212,7 @@
     facebookPixel: { type: facebookPixelSchema },
     smsProviders: { type: smsProviderSchema },
     emailProviders: { type: emailProviderSchema }
-  }, { timestamps: true, _id: false });
+  }, { timestamps: false, _id: false });
 
   const staffSchema = new mongoose.Schema(
     {
