@@ -231,8 +231,16 @@ const activeSubscriptionsSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  priority: {
+    type: Number,
+    required: false  
   }
-}, { _id: false, timestamps: true });
+}, {
+  _id: false,
+  timestamps: true
+});
+
 const usageSchema = new mongoose.Schema({
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 

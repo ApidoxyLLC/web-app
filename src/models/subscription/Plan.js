@@ -1,4 +1,5 @@
-import mongoose from 'mongoose';
+
+import mongoose from "mongoose";
 
 const servicesSchema = new mongoose.Schema({
   website: {
@@ -6,7 +7,7 @@ const servicesSchema = new mongoose.Schema({
     customDomains: { type: Number, default: 0 }
   },
   androidBuilds: { type: Number, default: 1 },
-  paymentGateways: { type: Number, default: 1 }, 
+  paymentGateways: { type: Number, default: 1 },
   deliveryGateways: { type: Number, default: 1 },
   smsGateways: { type: Number, default: 1 },
   userAccess: { type: Number, default: 0 },
@@ -32,13 +33,27 @@ const servicesSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+
+
+// export const planSnapshotSchema = new mongoose.Schema({
+//   name: { type: String, required: true },
+//   slug: { type: String, required: true },
+//   price: { type: Number, required: true },
+//   monthly: { type: Number, required: true },
+//   yearly: { type: Number, required: true },
+//   services: { type: subscriptionServicesSchema, required: true },
+//   priority: { type: Number, required: false, default: 0 }
+// }, { _id: false, timestamps: true });
+
+
 const planSchema = new mongoose.Schema({
   name: { type: String, enum: ['PLAN A', 'PLAN B', 'PLAN C'], required: true },
-  slug: { type: String, unique: true, required: true }, 
+  slug: { type: String, unique: true, required: true },
   price: { type: Number, default: 0 },
   monthly: { type: Number, required: true },
   yearly: { type: Number, required: true },
-  services: { type: servicesSchema, required: true }
+  services: { type: servicesSchema, required: true },
+  priority: { type: Number, required: true }
 }, { timestamps: true, collection: 'subscription_plans' });
 
 export const PlanModel = (db) => db.models.Plan || db.model('Plan', planSchema);
