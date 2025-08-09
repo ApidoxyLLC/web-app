@@ -34,19 +34,26 @@ function streamToBuffer(stream) {
   });
 }
 
+function isReadableStream(obj) {
+  return obj && typeof obj.on === 'function' && typeof obj.read === 'function';
+}
 export async function uploadAPKFile({ file, vendor, uploadBy, version, releaseNotes }) {
-  let buffer;
+    let buffer;
 
-  // Detect if file is Blob (Web API) or stream/Buffer (Node.js)
   if (file && typeof file.arrayBuffer === 'function') {
-    // Browser-style Blob/File
+    // Blob or File
     buffer = Buffer.from(await file.arrayBuffer());
   } else if (Buffer.isBuffer(file)) {
-    // Already a Node.js Buffer
+    // Node Buffer
     buffer = file;
-  } else {
-    // Likely a Readable stream
+  } else if (isReadableStream(file)) {
+    // Node Stream
     buffer = await streamToBuffer(file);
+  } else if (file && file.buffer && Buffer.isBuffer(file.buffer)) {
+    // Sometimes file object has .buffer property with actual Buffer
+    buffer = file.buffer;
+  } else {
+    throw new Error('Invalid file type. Expected Blob, Buffer, or ReadableStream.');
   }
 
   const uploadData = await b2.getUploadUrl({
