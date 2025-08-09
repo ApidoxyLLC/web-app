@@ -59,6 +59,9 @@ export async function uploadAPKFile({ file, vendor, uploadBy, version, releaseNo
     bucketId: vendor.bucketInfo.bucketId
   });
 
+  console.log('uploadData:', uploadData);
+    console.log('uploadData.uploadUrl:', uploadData?.uploadUrl);
+    
   const uploadResponse = await b2.uploadFile({
     uploadUrl: uploadData.uploadUrl,
     uploadAuthToken: uploadData.authorizationToken,
