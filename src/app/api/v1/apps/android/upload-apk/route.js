@@ -17,11 +17,6 @@ export async function POST(req) {
   
 
   // Authentication
-<<<<<<< HEAD
-  const { authenticated, data } = await getAuthenticatedUser(req);
-  if (!authenticated) return NextResponse.json({ error: 'Not authorized' }, { status: 401, headers: securityHeaders });
-  
-=======
   // const { authenticated, data } = await getAuthenticatedUser(req);
   // if (!authenticated) {
   //   return NextResponse.json(
@@ -29,7 +24,7 @@ export async function POST(req) {
   //     { status: 401, headers: securityHeaders }
   //   );
   // }
->>>>>>> da26218628ba5cb3e59e8b961143d73b54383c90
+
 
   // Validate content type
   const contentType = req.headers.get('content-type') || '';
