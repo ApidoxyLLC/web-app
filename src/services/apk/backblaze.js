@@ -72,7 +72,7 @@ export async function uploadAPKFile({ file, vendor, uploadBy, version, releaseNo
   });
 
   return {
-    url: `${process.env.B2_DOWNLOAD_URL}/file/${vendor.bucketInfo.bucketName}/${uploadResponse.data.fileName}`,
+    url: `https://f000.backblazeb2.com/file/${vendor.bucketInfo.bucketName}/${uploadResponse.data.fileName}`,
     version,
     uploadedAt: new Date(),
     fileSize: buffer.length
