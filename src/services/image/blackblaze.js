@@ -197,6 +197,35 @@ async function createBucketIfNotExists({createdBy, shopId, referenceId, bucketNa
   }
 }
 
+export async function checkBucketExists(bucketName) {
+  try {
+    const b2 = await authorizeB2();
+    
+    // List all buckets in the account
+    const response = await b2.listBuckets();
+    
+    // Find the bucket by name
+    const bucket = response.data.buckets.find(b => b.bucketName === bucketName);
+    
+    if (bucket) {
+      return {
+        exists: true,
+        bucket: {
+          id: bucket.bucketId,
+          name: bucket.bucketName,
+          type: bucket.bucketType,
+          createdAt: new Date(bucket.createdAt).toISOString()
+        }
+      };
+    }
+    
+    return { exists: false };
+  } catch (error) {
+    console.error('Error checking bucket existence:', error);
+    throw new Error(`Failed to check bucket existence: ${error.message}`);
+  }
+}
+
 export async function getImageDetails(fileName, bucketId) {
   const b2 = await authorizeB2();
 
