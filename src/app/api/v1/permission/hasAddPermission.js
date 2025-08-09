@@ -3,7 +3,6 @@ export default function hasUpdatePermission(vendor, userId) {
   if (vendor.ownerId.toString() === userId.toString()) {
     return true;
   }
-
   // Check if user exists in stuffs with r:customer or w:customer permission
   return vendor.staffs?.some(staff => 
     staff.userId?.toString() === userId.toString() &&

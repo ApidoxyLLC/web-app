@@ -108,21 +108,21 @@ export async function uploadShopImage({ file, vendor, folder, uploadBy, extraDat
 
     // const shop_db = await dbConnect({ dbKey: dbInfo.dbName, dbUri });
     const vendor_db = await vendorDbConnect();
-    const   Image = imageModel(vendor_db)
-    const  result = await Image.create({      _id,
-                                         provider: 'b2',
-                                         uploadBy,
-                                         fileName: uploadResponse.data.fileName,
-                                           fileId: uploadResponse.data.fileId,
-                                         fileInfo: { ...uploadResponse.data.fileInfo, size: compressedBuffer.length, width: metadata.width, height: metadata.height, format: metadata.format, ...extraData },
-                                           shopId: vendor._id,
-                                    shopReference: vendor.referenceId,
-                                           folder,
-                                     backblazeUrl,
-                                         mimeType: file.type,
-                                         isActive: false,
-                                         bucketId: uploadResponse.data.bucketId, 
-                                       bucketName: bucketName                    });
+    const     Image = imageModel(vendor_db)
+    const    result = await Image.create({       _id,
+                                            provider: 'b2',
+                                            uploadBy,
+                                            fileName: uploadResponse.data.fileName,
+                                              fileId: uploadResponse.data.fileId,
+                                            fileInfo: { ...uploadResponse.data.fileInfo, size: compressedBuffer.length, width: metadata.width, height: metadata.height, format: metadata.format, ...extraData },
+                                              shopId: vendor._id,
+                                       shopReference: vendor.referenceId,
+                                              folder,
+                                        backblazeUrl,
+                                            mimeType: file.type,
+                                            isActive: false,
+                                            bucketId: uploadResponse.data.bucketId, 
+                                          bucketName: bucketName                    });
 
   return {                  id: result._id,
                       provider: result.provider,
