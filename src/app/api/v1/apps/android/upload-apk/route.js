@@ -4,13 +4,13 @@ import { vendorModel } from '@/models/vendor/Vendor';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import getAuthenticatedUser from '../../../auth/utils/getAuthenticatedUser';
 import securityHeaders from '../../../utils/securityHeaders';
-// import { uploadAPKFile } from '@/services/file/blackblaze';
-
-import uploadAPKFileDTOSchema from './uploadAPKFileDTOSchema'; // You'll need to create this schema
+import { uploadAPKFile } from '@/services/apk/backblaze';
+import uploadAPKFileDTOSchema from './uploadAPKFileDTOSchema';
+// import uploadAPKFileDTOSchema from './uploadAPKFileDTOSchema'; // You'll need to create this schema
 
 export async function POST(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
-  const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'uploadAPKFile' });
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip });
   if (!allowed)
     return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
   
