@@ -274,12 +274,12 @@ export function OrdersTable(
   const {data,loading,error}= useFetch(`/${shop}/orders`)
   console.log("ddddd",data)
   const dataIds = React.useMemo(
-    () => data?.data?.map(({ id }) => id) || [],
+    () => data?.map(({ id }) => id) || [],
     [data]
   )
 
 const table = useReactTable({
-  data: data.data || [],
+  data: data || [],
   columns,
   state: {
     rowSelection,

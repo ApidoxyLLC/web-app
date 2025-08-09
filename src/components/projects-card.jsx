@@ -62,6 +62,7 @@ export function ProjectsCard() {
   }, [userData, userData.status, router]);
   
   const { data, loading } = useFetch("/shops")
+  console.log(data)
   if (loading) {
   return (
     <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 gap-6 px-4 py-6 lg:px-6">
@@ -246,7 +247,7 @@ export function ProjectsCard() {
       </div>
       <div className="*:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-3 grid grid-cols-1 gap-6 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card lg:px-6 py-6  auto-rows-fr">
         
-         {data?.data?.map((shop)=> (
+         {data?.map((shop)=> (
           <Link key={shop?.businessName} href={`${shop?.id}/dashboard`} >
             <Card className="@container/card cursor-pointer hover:bg-muted/100">
             <CardHeader className="relative">

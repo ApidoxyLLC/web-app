@@ -52,7 +52,7 @@ export default function Categories() {
     loading,
     error,
   } = useFetch(`/${shopId}/categories`);
-  const collections = response?.data || [];
+  const collections = response || [];
   console.log(collections)
   useEffect(()=>{
     if (!debounchedValue){

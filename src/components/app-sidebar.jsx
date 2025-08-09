@@ -127,7 +127,7 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher shop={props.shop} teams={data?.data} />
+        <TeamSwitcher shop={props.shop} teams={data} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={datas.navMain} />

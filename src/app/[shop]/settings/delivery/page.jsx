@@ -161,7 +161,7 @@ const markets = {
 };
 
 export default function DeliverySettings() {
-    const [refundable, setRefundable] = useState(true);
+  const [refundable, setRefundable] = useState(true);
   const [selectedCourier, setSelectedCourier] = useState(null);
   const [deliveryOptions, setDelivaryOptions] = useState("districts");
   const [zoneInput, setZoneInput] = useState({ name: "", charge: "" });
@@ -171,17 +171,15 @@ export default function DeliverySettings() {
   const [upazilaInput, setUpazilaInput] = useState({ name: "", charge: "" });
   const [upazilasList, setUpazilasList] = useState([]);
   const [country, setCountry] = useState(markets.bd);
-  const [courierForm, setCourierForm] = useState({}); // input form state
-  const [savedCourierData, setSavedCourierData] = useState({}); // <-- NEW: saved DB data for couriers
-
+  const [courierForm, setCourierForm] = useState({}); 
+  const [savedCourierData, setSavedCourierData] = useState({}); 
   const { shop } = useParams();
 
-  const { data, error } = useFetch(`/${shop}/delevery-partner`);
+  const { data } = useFetch(`/${shop}/delivery-partner`);
 
   React.useEffect(() => {
     if (data) {
       setSavedCourierData(data);
-      // Also pre-fill courierForm with saved data for selected courier if any
       if (selectedCourier && data[selectedCourier?.toLowerCase()]) {
         setCourierForm(data[selectedCourier.toLowerCase()]);
       } else {
@@ -190,7 +188,6 @@ export default function DeliverySettings() {
     }
   }, [data, selectedCourier]);
 
-  // When selectedCourier changes, update courierForm to match saved data or empty
   React.useEffect(() => {
     if (selectedCourier) {
       const key = selectedCourier.toLowerCase();
@@ -223,7 +220,6 @@ export default function DeliverySettings() {
 
       if (res.ok) {
         toast.success("Courier credentials updated!");
-        // Update savedCourierData with new data
         setSavedCourierData((prev) => ({
           ...prev,
           [selectedCourier.toLowerCase()]: { ...courierForm },
