@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ import steadfast from "../../../../../public/images/steadfast.png";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import useFetch from "@/hooks/useFetch";
 const markets = {
   bd: {
     name: "Bangladesh",
@@ -160,7 +161,7 @@ const markets = {
 };
 
 export default function DeliverySettings() {
-  const [refundable, setRefundable] = useState(true);
+    const [refundable, setRefundable] = useState(true);
   const [selectedCourier, setSelectedCourier] = useState(null);
   const [deliveryOptions, setDelivaryOptions] = useState("districts");
   const [zoneInput, setZoneInput] = useState({ name: "", charge: "" });
@@ -170,42 +171,101 @@ export default function DeliverySettings() {
   const [upazilaInput, setUpazilaInput] = useState({ name: "", charge: "" });
   const [upazilasList, setUpazilasList] = useState([]);
   const [country, setCountry] = useState(markets.bd);
-  const [courierForm, setCourierForm] = useState({}); // Example: "Pathao" or "Steadfast"
-  const {shop}=useParams()
+  const [courierForm, setCourierForm] = useState({}); // input form state
+  const [savedCourierData, setSavedCourierData] = useState({}); // <-- NEW: saved DB data for couriers
 
+  const { shop } = useParams();
+
+  const { data, error } = useFetch(`/${shop}/delevery-partner`);
+
+  React.useEffect(() => {
+    if (data) {
+      setSavedCourierData(data);
+      // Also pre-fill courierForm with saved data for selected courier if any
+      if (selectedCourier && data[selectedCourier?.toLowerCase()]) {
+        setCourierForm(data[selectedCourier.toLowerCase()]);
+      } else {
+        setCourierForm({});
+      }
+    }
+  }, [data, selectedCourier]);
+
+  // When selectedCourier changes, update courierForm to match saved data or empty
+  React.useEffect(() => {
+    if (selectedCourier) {
+      const key = selectedCourier.toLowerCase();
+      if (savedCourierData[key]) {
+        setCourierForm(savedCourierData[key]);
+      } else {
+        setCourierForm({});
+      }
+    }
+  }, [selectedCourier, savedCourierData]);
 
   const handleCourierSubmit = async () => {
+    if (!selectedCourier) return;
+    const payload = {
+      partner: selectedCourier.toLowerCase(),
+      shop: shop,
+      ...courierForm,
+    };
 
-  const payload = {
-    partner: selectedCourier?.toLowerCase(),
-    shop: shop,
-    ...courierForm
-  };
-  console.log(payload)
+    try {
+      const res = await fetch(`/api/v1/settings/delivery-partner`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-  try {
-    const res = await fetch(`/api/v1/settings/delivery-partner`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+      const result = await res.json();
 
-    const result = await res.json();
-
-    if (res.ok) {
-      toast.success("Courier credentials updated!");
-      setCourierForm({});
-    } else {
-      toast.error(result?.error || "Failed to update");
+      if (res.ok) {
+        toast.success("Courier credentials updated!");
+        // Update savedCourierData with new data
+        setSavedCourierData((prev) => ({
+          ...prev,
+          [selectedCourier.toLowerCase()]: { ...courierForm },
+        }));
+      } else {
+        toast.error(result?.error || "Failed to update");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred.");
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("An error occurred.");
-  }
-};
+  };
+  const handleDeleteCourier = async () => {
+    if (!selectedCourier) return;
+    const partnerKey = selectedCourier.toLowerCase();
 
+    try {
+      const res = await fetch(`/api/v1/settings/delivery-partner`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ partner: partnerKey, shop }),
+      });
+
+      if (res.ok) {
+        toast.success("Courier credentials deleted!");
+        setSavedCourierData((prev) => {
+          const copy = { ...prev };
+          delete copy[partnerKey];
+          return copy;
+        });
+        setCourierForm({});
+      } else {
+        const result = await res.json();
+        toast.error(result?.error || "Failed to delete");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred.");
+    }
+  };
   return (
     <div className=" w-full mx-auto p-6 space-y-6 bg-muted/100">
       <Card >
@@ -661,72 +721,77 @@ export default function DeliverySettings() {
       </Card>
 
       <Card>
-        <CardContent className="space-y-6 pt-4">
-          <Label className="text-md font-semibold">
-            Integrate Delivery Services
-          </Label>
+      <CardContent className="space-y-6 pt-4">
+        <Label className="text-md font-semibold">Integrate Delivery Services</Label>
 
-          <div className="space-y-6">
-            <div className="flex gap-6">
-              {country.gateway.map((courier) => (
-                <Button
-                  key={courier.shortCode}
-                  variant="outline"
-                  onClick={() => setSelectedCourier(courier.name)}
-                  className={
-                    selectedCourier === courier.name
-                      ? "border-2 p-2  border-foreground rounded-lg"
-                      : "border-2 p-2  rounded-lg"
-                  }
-                >
-                  <Image
-                    src={courier.logo}
-                    alt="Steadfast"
-                    width={100}
-                    height={30}
-                  />
-                </Button>
-              ))}
-            </div>
+        <div className="space-y-6">
+          <div className="flex gap-6">
+            {country.gateway.map((courier) => (
+              <Button
+                key={courier.shortCode}
+                variant="outline"
+                onClick={() => setSelectedCourier(courier.name)}
+                className={
+                  selectedCourier === courier.name
+                    ? "border-2 p-2 border-foreground rounded-lg"
+                    : "border-2 p-2 rounded-lg"
+                }
+              >
+                <Image src={courier.logo} alt={courier.name} width={100} height={30} />
+              </Button>
+            ))}
           </div>
-          {country.gateway.map(
-            (courier) =>
-              selectedCourier === courier.name && (
-                <div key={courier.shortCode} className="space-y-6">
-                  {courier.fields.map((field) => (
-                    <ControlGroup className="w-full h-10" key={field.name}>
-                      <ControlGroupItem>
-                        <InputBase><InputBaseAdornment>{field.name}</InputBaseAdornment></InputBase>
-                      </ControlGroupItem>
-                      <ControlGroupItem className="flex-1">
-                        <InputBase>
-                          <InputBaseControl>
-                            <InputBaseInput
-                              type={field.type}
-                              required={field.required}
-                              placeholder={`Enter ${field.name}`}
-                              onChange={(e) =>
-                                setCourierForm((prev) => ({
-                                  ...prev,
-                                  [field.key]: e.target.value,
-                              }))}
-                            />
-                         </InputBaseControl>
-                        </InputBase>
-                      </ControlGroupItem>
-                    </ControlGroup>
-                  ))}
-                  <div  className="flex justify-end">
+        </div>
+
+        {country.gateway.map(
+          (courier) =>
+            selectedCourier === courier.name && (
+              <div key={courier.shortCode} className="space-y-6">
+                {courier.fields.map((field) => (
+                  <ControlGroup className="w-full h-10" key={field.name}>
+                    <ControlGroupItem>
+                      <InputBase>
+                        <InputBaseAdornment>{field.name}</InputBaseAdornment>
+                      </InputBase>
+                    </ControlGroupItem>
+                    <ControlGroupItem className="flex-1">
+                      <InputBase>
+                        <InputBaseControl>
+                          <InputBaseInput
+                            type={field.type}
+                            required={field.required}
+                            placeholder={`Enter ${field.name}`}
+                            value={courierForm[field.key] || ""}
+                            readOnly={!!savedCourierData[selectedCourier.toLowerCase()]}
+                            onChange={(e) =>
+                              setCourierForm((prev) => ({
+                                ...prev,
+                                [field.key]: e.target.value,
+                              }))
+                            }
+                          />
+                        </InputBaseControl>
+                      </InputBase>
+                    </ControlGroupItem>
+                  </ControlGroup>
+                ))}
+
+                <div className="flex justify-end">
+                  {savedCourierData[selectedCourier.toLowerCase()] ? (
+                    <Button variant="destructive" onClick={handleDeleteCourier}>
+                      Delete <Trash2 className="inline ml-2" size={16} />
+                    </Button>
+                  ) : (
                     <Button onClick={handleCourierSubmit}>
-                    Add <span className="text-xl">+</span>
-                  </Button>
-                  </div>
-                
+                      Add <span className="text-xl">+</span>
+                    </Button>
+                  )}
                 </div>
-              )
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            )
+        )}
+      </CardContent>
+    </Card>
     </div>
   );
 }

@@ -17,9 +17,19 @@ export async function POST(req) {
   
 
   // Authentication
+<<<<<<< HEAD
   const { authenticated, data } = await getAuthenticatedUser(req);
   if (!authenticated) return NextResponse.json({ error: 'Not authorized' }, { status: 401, headers: securityHeaders });
   
+=======
+  // const { authenticated, data } = await getAuthenticatedUser(req);
+  // if (!authenticated) {
+  //   return NextResponse.json(
+  //     { error: 'Not authorized' },
+  //     { status: 401, headers: securityHeaders }
+  //   );
+  // }
+>>>>>>> da26218628ba5cb3e59e8b961143d73b54383c90
 
   // Validate content type
   const contentType = req.headers.get('content-type') || '';
@@ -105,9 +115,9 @@ export async function POST(req) {
     const apkData = await uploadAPKFile({
       file,
       vendor,
-      uploadBy: data.userId,
-      version: parsed.data.version,
-      releaseNotes: parsed.data.releaseNotes,
+      uploadBy: "68760517518176e300eddf60",
+      version: "0.0.1",
+      releaseNotes: "hgjhgjhfgdfhjgkjh",
     });
 
     if (!apkData) {
