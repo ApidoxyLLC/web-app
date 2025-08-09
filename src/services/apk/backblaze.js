@@ -38,23 +38,22 @@ function isReadableStream(obj) {
   return obj && typeof obj.on === 'function' && typeof obj.read === 'function';
 }
 export async function uploadAPKFile({ file, vendor, uploadBy, version, releaseNotes }) {
-    let buffer;
+  let buffer;
 
   if (file && typeof file.arrayBuffer === 'function') {
-    // Blob or File
     buffer = Buffer.from(await file.arrayBuffer());
   } else if (Buffer.isBuffer(file)) {
-    // Node Buffer
     buffer = file;
   } else if (isReadableStream(file)) {
-    // Node Stream
     buffer = await streamToBuffer(file);
   } else if (file && file.buffer && Buffer.isBuffer(file.buffer)) {
-    // Sometimes file object has .buffer property with actual Buffer
     buffer = file.buffer;
   } else {
     throw new Error('Invalid file type. Expected Blob, Buffer, or ReadableStream.');
   }
+
+  // Ensure B2 client is authorized before requesting upload URL
+  await authorizeB2();
 
   const uploadData = await b2.getUploadUrl({
     bucketId: vendor.bucketInfo.bucketId
@@ -74,7 +73,6 @@ export async function uploadAPKFile({ file, vendor, uploadBy, version, releaseNo
     fileSize: buffer.length
   };
 }
-
 async function createBucketIfNotExists({createdBy, shopId, referenceId, bucketName, bucketType = 'allPrivate'}) {
   const b2 = await authorizeB2();
   if (!bucketName) bucketName = `${referenceId}`;
