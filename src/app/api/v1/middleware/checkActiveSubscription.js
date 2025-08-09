@@ -1,4 +1,3 @@
-// middleware/checkActiveSubscription.js
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 

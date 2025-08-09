@@ -17,7 +17,7 @@ import { createB2Bucket } from "@/services/image/blackblaze";
 import { addDNSRecord } from "@/services/cloudflare/addDNSRecord";
 import { domainModel } from "@/models/vendor/Domain";
 import { PlanModel } from "@/models/subscription/Plan";
-
+import { subscriptionModel } from "@/models/subscription/Subscribe"
 export async function POST(request) {
   let body;
   try { body = await request.json(); }
@@ -93,36 +93,36 @@ export async function POST(request) {
     });
 
 
-    // comment for testing 
-    // const SubscriptionPlan = PlanModel(vendor_db);
-    // console.log(SubscriptionPlan)
+    const SubscriptionPlan = PlanModel(vendor_db);
+    console.log(SubscriptionPlan)
 
-    // const defaultPlan = await SubscriptionPlan.findOne({
-    //   slug: "plan-a"
-    // }).lean();
-    // console.log(defaultPlan)
+    const defaultPlan = await SubscriptionPlan.findOne({
+      slug: "plan-a"
+    }).lean();
+    console.log(defaultPlan)
 
-    // if (!defaultPlan) {
-    //   throw new Error("Default PLAN A not found in subscription plans");
-    // }
+    if (!defaultPlan) {
+      throw new Error("Default PLAN A not found in subscription plans");
+    }
 
-    // console.log(defaultPlan);
-    // const now = new Date();
-    // const subscriptionData = {
-    //   name: defaultPlan.name,
-    //   slug: defaultPlan.slug,
-    //   price: defaultPlan.price,
-    //   billingCycle: null,
-    //   validity: {
-    //     days: null,
-    //     from: now,
-    //     until: null
-    //   },
-    //   services: defaultPlan.services,
-    //   isActive: true
-    // };
+    console.log(defaultPlan);
+    const now = new Date();
+    const subscriptionData = {
+      name: defaultPlan.name,
+      slug: defaultPlan.slug,
+      price: defaultPlan.price,
+      billingCycle: null,
+      validity: {
+        days: null,
+        from: now,
+        until: null
+      },
+      services: defaultPlan.services,
+      priority: defaultPlan.priority,
+      isActive: true
+    };
 
-    // console.log(subscriptionData)
+    console.log(subscriptionData)
     const bucket = await createB2Bucket({ bucketName, createdBy: data.userId, shopId: referenceId });
 
     if (!bucket)
@@ -141,9 +141,9 @@ export async function POST(request) {
       location: parsed.data.location,
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() },
       paymentMethod: "Cash on Delivery",
-      // activeSubscriptions: [{
-      //   ...subscriptionData,
-      // }]
+      activeSubscriptions: [{
+        ...subscriptionData,
+      }]
     }
 
     console.log(shopPayload)
@@ -188,9 +188,9 @@ export async function POST(request) {
       },
       primaryDomain,
       domains: [primaryDomain],
-      // activeSubscriptions: [{
-      //   ...subscriptionData,
-      // }],
+      activeSubscriptions: [{
+        ...subscriptionData,
+      }],
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
     }
 
@@ -202,11 +202,29 @@ export async function POST(request) {
       $inc: { 'usage.shops': 1 }
     }
 
-    const authDb_session = await auth_db.startSession()
-    const VendorModel = vendorModel(vendor_db)
+    const authDb_session = await auth_db.startSession();
+    const VendorModel = vendorModel(vendor_db);
+    const SubscriptionModel = subscriptionModel(vendor_db);
     const ShopModel = shopModel(auth_db);
-    await authDb_session.startTransaction()
+    await authDb_session.startTransaction();
     try {
+      await SubscriptionModel.create({
+        userId: data.userId,
+        shopId: _id,
+        planSnapshot: defaultPlan,
+        planName: defaultPlan.name,
+        planSlug: defaultPlan.slug,
+        price: defaultPlan.price,
+        billingCycle: null,
+        validity: {
+          days: null,
+          from: now,
+          until: null
+        },
+        services: defaultPlan.services,
+        priority: defaultPlan.priority
+      });
+
       const [shop] = await ShopModel.create([{ ...shopPayload }], { session: authDb_session })
       if (!shop || !shop._id) throw new Error("Shop creation failed");
       await UserModel.updateOne({ _id: data.userId }, userUpdateQuery, { session: authDb_session })
@@ -218,6 +236,7 @@ export async function POST(request) {
 
       await Promise.all([ShopModel.updateOne({ _id: shop._id }, { $set: updateSagaSuccess }, { session: authDb_session }),
       VendorModel.updateOne({ _id: vendor._id }, { $set: updateSagaSuccess })]);
+
 
       await authDb_session.commitTransaction()
       const result = {

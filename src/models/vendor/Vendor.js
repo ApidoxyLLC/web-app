@@ -256,48 +256,54 @@
   //   password: { type: String },
   // }, { timestamps: true });
 
-  const activeSubscriptionsSchema = new mongoose.Schema({
-    name: {
-      type: String,
-      required: true
+const activeSubscriptionsSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  slug: {
+    type: String,
+    required: true
+  },
+  price: {
+    type: Number,
+    required: true
+  },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'yearly'],
+    required: false
+  },
+  validity: {
+    days: { type: Number, required: false },
+    from: { type: Date, required: true },
+    until: { type: Date, required: false }
+  },
+  services: {
+    website: {
+      subdomains: { type: Number, required: true },
+      customDomains: { type: Number, required: true }
     },
-    slug: {
-      type: String,
-      required: true
-    },
-    price: {
-      type: Number,
-      required: true
-    },
-    billingCycle: {
-      type: String,
-      enum: ['monthly', 'yearly'],
-      required: false
-    },
-    validity: {
-      days: { type: Number, required: false },
-      from: { type: Date, required: true },
-      until: { type: Date, required: false }
-    },
-    services: {
-      website: {
-        subdomains: { type: Number, required: true },
-        customDomains: { type: Number, required: true }
-      },
-      androidBuilds: { type: Number, required: true },
-      paymentGateways: { type: Number, required: true },
-      deliveryGateways: { type: Number, required: true },
-      smsGateways: { type: Number, required: true },
-      userAccess: { type: Number, required: true },
-      pushNotifications: { type: Number, required: true },
-      products: { type: Number, required: true }
-    },
-    isActive: {
-      type: Boolean,
-      default: true
-    }
-  }, { _id: false, timestamps: true })
-
+    androidBuilds: { type: Number, required: true },
+    paymentGateways: { type: Number, required: true },
+    deliveryGateways: { type: Number, required: true },
+    smsGateways: { type: Number, required: true },
+    userAccess: { type: Number, required: true },
+    pushNotifications: { type: Number, required: true },
+    products: { type: Number, required: true }
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  priority: {
+    type: Number,
+    required: false  
+  }
+}, {
+  _id: false,
+  timestamps: true
+});
 
   const usageSchema = new mongoose.Schema({
     userId: {

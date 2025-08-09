@@ -9,7 +9,6 @@ import invoiceDTOSchema from './invoiceDTOSchema';
 import { PlanModel } from "@/models/subscription/Plan";
 import { initiateBkashPayment } from '@/services/bkash/initiateBkashPayment';
 import {shopModel} from '@/models/auth/Shop';
-import  {checkActiveSubscription} from '../middleware/checkActiveSubscription';
 
 export async function POST(request) {
     const body = await request.json();
@@ -69,21 +68,7 @@ export async function POST(request) {
     // if (!session?.user) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
 
     const { planSlug, duration, shopReferenceId } = body;
-    const { isActive, subscription } = await checkActiveSubscription(shopReferenceId);
-    console.log("isActiveeeeeeeeeeeeeeeeeeeee")
-    console.log(isActive, subscription)
-    if (isActive) {
-        return NextResponse.json(
-            {
-                success: false,
-                message: 'Shop already has an active subscription',
-                activeUntil: subscription.validity.until,
-                currentPlan: subscription.name
-            },
-            { status: 400 }
-        );
-    }
-
+  
     if (!planSlug || !duration || !shopReferenceId) {
         return NextResponse.json(
             {
