@@ -420,9 +420,7 @@ function DraggableRow({ row }) {
 }
 
 export function CustomersTable(
-  // data: initialData,
 ) {
-  // const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState({
   currency: false,
@@ -448,11 +446,11 @@ export function CustomersTable(
   const {data,loading,error}= useFetch(`/${shop}/customers`)
   console.log(data)
   const dataIds = React.useMemo(
-    () => data.data?.map(({ id }) => id) || [],
+    () => data?.map(({ id }) => id) || [],
     [data]
   )
  const table = useReactTable({
-    data: data.data || [], // Fallback to empty array if data is undefined
+    data: data || [], 
     columns,
     state: {
       sorting,

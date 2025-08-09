@@ -289,12 +289,12 @@ export function ProductsTable() {
   )
 
   const dataIds = React.useMemo(
-    () => data?.data?.map(({ id }) => id) || [],
+    () => data?.map(({ id }) => id) || [],
     [data]
   )
 
   const table = useReactTable({
-    data : data.data,
+    data : data,
     columns,
     state: {
       sorting,
@@ -324,7 +324,7 @@ export function ProductsTable() {
       setData((data) => {
         const oldIndex = dataIds.indexOf(active.id)
         const newIndex = dataIds.indexOf(over.id)
-        return arrayMove(data.data, oldIndex, newIndex)
+        return arrayMove(data, oldIndex, newIndex)
       })
     }
   }
