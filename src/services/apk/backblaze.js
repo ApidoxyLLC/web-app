@@ -55,13 +55,15 @@ export async function uploadAPKFile({ file, vendor, uploadBy, version, releaseNo
   // Ensure B2 client is authorized before requesting upload URL
   await authorizeB2();
 
-  const uploadData = await b2.getUploadUrl({
-    bucketId: vendor.bucketInfo.bucketId
-  });
+//   const uploadData = await b2.getUploadUrl({
+//     bucketId: vendor.bucketInfo.bucketId
+//   });
 
-  console.log('uploadData:', uploadData);
-    console.log('uploadData.uploadUrl:', uploadData?.uploadUrl);
-    
+  const { data: uploadData } = await b2.getUploadUrl({ bucketId });
+
+//   console.log('uploadData:', uploadData);
+//     console.log('uploadData.uploadUrl:', uploadData?.uploadUrl);
+
   const uploadResponse = await b2.uploadFile({
     uploadUrl: uploadData.uploadUrl,
     uploadAuthToken: uploadData.authorizationToken,
