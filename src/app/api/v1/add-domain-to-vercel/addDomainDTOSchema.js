@@ -20,7 +20,4 @@ export const addDomainDTOSchema = z.object({
             message: "Invalid domain selection"
         }),
     shopId: z.string().min(1, "Shop ID is required")
-        .refine(val => mongoose.Types.ObjectId.isValid(val), {
-            message: "Invalid shop ID format"
-        }),
 });

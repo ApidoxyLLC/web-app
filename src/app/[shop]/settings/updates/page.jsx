@@ -48,13 +48,14 @@ export default function Dashboard() {
           whatsapp: notifyMethod === "whatsapp" ? input.whatsapp : null,
         }),
       });
-      console.log(shop, 
-          triggerBasis,
-          count,
-           [notifyMethod],
-    notifyMethod === "email" ? input.email : null,
-    notifyMethod === "sms" ? input.phone : null,
-          notifyMethod === "whatsapp" ? input.whatsapp : null,)
+      
+      console.log("shop",shop)
+      console.log("basis",triggerBasis)
+      console.log("count",count)
+      console.log("notifyVia",[notifyMethod])
+      console.log("email",notifyMethod === "email" ? input.email : null)
+      console.log("phone",notifyMethod === "sms" ? input.phone : null)
+      console.log("whatsapp",notifyMethod === "whatsapp" ? input.whatsapp : null)
       const result = await res.json();
       if (res.ok) {
         alert("Notification settings updated successfully");

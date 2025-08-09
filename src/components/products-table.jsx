@@ -50,7 +50,6 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 import { useIsMobile } from '@/hooks/use-mobile'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   ChartConfig,
@@ -104,7 +103,7 @@ import {
 import Link from "next/link"
 import useFetch from "@/hooks/useFetch"
 import { useParams } from "next/navigation"
-
+import { Trash2Icon } from "lucide-react";
 export const schema = z.object({
   id: z.number(),
   header: z.string(),
@@ -192,7 +191,6 @@ const columns = [
     cell: ({ row }) =>
       row.original.tags?.length ? row.original.tags.join(", ") : "—",
   },
-  
   {
     accessorKey: "ratings",
     header: "Ratings",
@@ -207,8 +205,34 @@ const columns = [
     cell: ({ row }) =>
       new Date(row.original.createdAt).toLocaleDateString(),
   },
+  {
+  id: "actions",
+  header: "Actions",
+  cell: ({ row }) => {
+    const product = row.original;
+
+    
+
+    return (
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={handleDelete}
+        className="text-xs"
+      >
+        <Trash2Icon className="h-4 w-4" />
+      </Button>
+    );
+  },
+  }
 ]
 
+const handleDelete = () => {
+  const confirm = window.confirm("Are you sure you want to delete this product?");
+  if (!confirm) return;
+
+  console.log("Deleting product with ID:", product.id);
+};
 
 
 function DraggableRow({ row }) {

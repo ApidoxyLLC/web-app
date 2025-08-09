@@ -1,4 +1,6 @@
-import { userModel } from '../models/shop/shop-user/ShopUser.js';
+// import { userModel } from '../models/shop/shop-user/ShopUser.js';
+// import { userModel } from '@/models/shop/shop-user/ShopUser';
+import { userModel } from '../src/models/shop/shop-user/ShopUser.js';
 import mongoose from 'mongoose'; 
 
 const users = [
