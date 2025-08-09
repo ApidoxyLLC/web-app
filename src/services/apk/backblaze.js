@@ -3,7 +3,8 @@ import B2 from 'backblaze-b2';
 // import { createBucketIfNotExists } from '@/services/bucket/blackblaze';
 
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
-import { apkModel } from '@/models/apk/Apk'; // You'll need to create this model
+import { apkModel } from '@/models/vendor/Apk';
+// import { apkModel } from '@/models/apk/Apk'; // You'll need to create this model
 
 const b2 = new B2({ applicationKeyId: process.env.B2_APPLICATION_KEY_ID,
                       applicationKey: process.env.B2_APPLICATION_KEY      });

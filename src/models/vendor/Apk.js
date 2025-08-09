@@ -31,3 +31,4 @@ const ApkSchema = new mongoose.Schema({
 }, { timestamps: true, collection: 'apks' });
 
 export const apkModel = (db) => db.models.Image || db.model('Apk', ApkSchema);  
+export default apkModel
