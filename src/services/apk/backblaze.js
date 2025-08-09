@@ -59,7 +59,7 @@ export async function uploadAPKFile({ file, vendor, uploadBy, version, releaseNo
 //     bucketId: vendor.bucketInfo.bucketId
 //   });
 
-  const { data: uploadData } = await b2.getUploadUrl({ bucketId });
+  const { data: uploadData } = await b2.getUploadUrl({ bucketId: vendor.bucketInfo.bucketId });
 
 //   console.log('uploadData:', uploadData);
 //     console.log('uploadData.uploadUrl:', uploadData?.uploadUrl);
