@@ -47,50 +47,64 @@ export async function GET(request, { params }) {
 }
 
 
-// export async function DELETE(req, { params }) {
-//     const vendor_db = await vendorDbConnect();
-//     const Vendor = vendorModel(vendor_db);
+export async function DELETE(req) {
+    const vendor_db = await vendorDbConnect();
+    const Domain = domainModel(vendor_db);
+    const VendorModel = vendorModel(vendor_db);
 
-//     try {
-//         const { shopId } = params;
-//         const { domain } = await req.json(); 
-//         if (!shopId || !domain) {
-//             throw new Error('shopId (URL) and domain (body) are required');
-//         }
+    try {
+        const { searchParams } = new URL(req.url);
+        const domainId = searchParams.get('domainId');
+        const shopId = searchParams.get('shopId');
 
-//         if (!mongoose.Types.ObjectId.isValid(shopId)) {
-//             throw new Error('Invalid shop ID format');
-//         }
+        if (!domainId || !shopId) {
+            throw new Error('Both domainId and shopId query parameters are required');
+        }
 
-//         // Delete from Vercel/Cloudflare first (if needed)
-//         // await domainService.deleteVercelDomain(domain);
-//         // await domainService.deleteCloudflareRecord(domain);
+        if (!mongoose.Types.ObjectId.isValid(domainId) || !mongoose.Types.ObjectId.isValid(shopId)) {
+            throw new Error('Invalid ID format');
+        }
 
-//         // Update Vendor document
-//         const vendor = await Vendor.findByIdAndUpdate(
-//             shopId,
-//             {
-//                 $pull: { domains: domain }, // Remove domain from array
-              
-//             },
-//             { new: true }
-//         );
+        const domain = await Domain.findOne({
+            _id: new mongoose.Types.ObjectId(domainId),
+            shop: new mongoose.Types.ObjectId(shopId)
+        });
 
-//         if (!vendor) {
-//             throw new Error('Vendor not found');
-//         }
+        if (!domain) {
+            throw new Error('Domain not found or does not belong to this shop');
+        }
 
-//         return NextResponse.json({
-//             success: true,
-//             message: 'Domain deleted successfully',
-//             updatedDomains: vendor.domains
-//         });
+        // Delete from Vercel
+        const vercelResponse = await domainService.deleteVercelDomain(domain.domain);
 
-//     } catch (error) {
-//         console.error('Domain deletion error:', error);
-//         return NextResponse.json(
-//             { error: error.message },
-//             { status: 500 }
-//         );
-//     }
-// }
+        // Delete from Cloudflare (if applicable)
+        const cloudflareResponse = await domainService.deleteCloudflareRecord(domain.domain);
+
+        // Remove from MongoDB
+        await Domain.deleteOne({ _id: domain._id });
+
+        // Update vendor's domains array
+        await VendorModel.findByIdAndUpdate(
+            shopId,
+            { $pull: { domains: domain.domain } },
+            { new: true }
+        );
+
+        return NextResponse.json({
+            success: true,
+            message: 'Domain successfully deleted',
+            vercel: vercelResponse,
+            cloudflare: cloudflareResponse
+        });
+
+    } catch (error) {
+        console.error('Domain deletion error:', error);
+        return NextResponse.json(
+            {
+                error: error.message,
+                type: error.type || 'domain_deletion_error'
+            },
+            { status: error.statusCode || 500 }
+        );
+    }
+}
