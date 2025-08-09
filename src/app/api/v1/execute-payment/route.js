@@ -11,10 +11,10 @@ import { vendorModel } from '@/models/vendor/Vendor';
 import { subscriptionModel } from '@/models/subscription/Subscribe';
 
 export async function POST(request) {
-
     try {
         const { paymentID } = await request.json();
 
+        // Validate payment ID
         if (!paymentID) {
             return NextResponse.json({
                 success: false,
@@ -45,6 +45,7 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
+        // Connect to databases
         const vendor_db = await vendorDbConnect();
         const auth_db = await authDbConnect();
 
@@ -65,19 +66,13 @@ export async function POST(request) {
             }, { status: 404 });
         }
 
-        // Check for existing active subscription
-        const existingSubscription = await Subscription.findOne({
-            shopId: invoice.shopId,
-            isActive: true
-        });
-
         // Get plan details
         const plan = await Plan.findById(invoice.planId).lean();
         if (!plan) {
             throw new Error('Associated plan not found');
         }
 
-        // Prepare transaction data
+        // Prepare and validate transaction data
         const transactionData = {
             userId: invoice.userId?.toString(),
             invoiceId: invoice._id.toString(),
@@ -91,7 +86,6 @@ export async function POST(request) {
             gatewayResponse: executeResult,
         };
 
-        // Validate transaction data
         const parsed = transactionDTOSchema.safeParse(transactionData);
         if (!parsed.success) {
             return NextResponse.json({
@@ -105,7 +99,7 @@ export async function POST(request) {
         await Transaction.create([parsed.data]);
 
         if (executeResult.transactionStatus === 'Completed') {
-            // Update invoice
+            // Update invoice status
             const updatedInvoice = await Invoice.findOneAndUpdate(
                 { paymentId: paymentID },
                 {
@@ -116,23 +110,22 @@ export async function POST(request) {
                         paymentGatewayResponse: executeResult
                     }
                 },
-                { new: true}
+                { new: true }
             ).lean();
 
             if (!updatedInvoice) {
                 throw new Error('Paid invoice not found');
             }
 
-            // Calculate new validity period
             const now = new Date();
-            const validityExtensionMs = invoice.validity.days * 24 * 60 * 60 * 1000;
             const newValidityUntil = new Date(
-                (existingSubscription?.validity?.until?.getTime() || now.getTime()) +
-                validityExtensionMs
+                now.getTime() + (invoice.validity.days * 24 * 60 * 60 * 1000)
             );
 
-            // Prepare complete subscription data
-            const subscriptionData = {
+            // =============================================
+            // SUBSCRIPTION COLLECTION LOGIC (ALWAYS CREATE NEW)
+            // =============================================
+            const newSubscription = {
                 userId: invoice.userId,
                 shopId: invoice.shopId,
                 shopReferenceId: invoice.shopReferenceId,
@@ -143,82 +136,91 @@ export async function POST(request) {
                 price: invoice.amount,
                 billingCycle: invoice.billingCycle,
                 validity: {
-                    days: invoice.validity.days + (existingSubscription?.validity?.days || 0),
-                    from: existingSubscription?.validity?.from || now,
+                    days: invoice.validity.days,
+                    from: now,
                     until: newValidityUntil
                 },
                 services: plan.services,
+                features: plan.features || {},
+                limitations: plan.limitations || {},
                 priority: plan.priority,
                 paymentStatus: 'paid',
                 paymentGateway: 'bKash',
                 transactionId: executeResult.trxID,
-                isActive: true
+                isActive: true,
+                createdAt: now,
+                updatedAt: now
             };
 
-            // Handle subscription creation/upgrade
-            if (existingSubscription) {
-                await Subscription.findByIdAndUpdate(
-                    existingSubscription._id,
-                    { $set: subscriptionData },
-                    { new: true, upsert: true }
-                );
-            } else {
-                await Subscription.create([subscriptionData]);
-            }
-            const updateOperation = {
-                $set: {
-                    currentPlan: plan.name,
-                    'activeSubscriptions.$[sub].planId': plan._id,
-                    'activeSubscriptions.$[sub].name': plan.name,
-                    'activeSubscriptions.$[sub].validUntil': newValidityUntil,
-                    'activeSubscriptions.$[sub].validity': subscriptionData.validity,
-                    'activeSubscriptions.$[sub].services': plan.services,
-                    'activeSubscriptions.$[sub].price': invoice.amount,
-                    'activeSubscriptions.$[sub].billingCycle': invoice.billingCycle
-                }
-            };
+            // Create new subscription record (always)
+            await Subscription.create([newSubscription]);
 
-            const pushOperation = {
-                $push: {
-                    activeSubscriptions: {
-                        $each: [{
-                            planId: plan._id,
-                            name: plan.name,
-                            validUntil: newValidityUntil,
-                            validity: subscriptionData.validity,
-                            services: plan.services,
-                            price: invoice.amount,
-                            billingCycle: invoice.billingCycle
-                        }],
-                       
-                    }
+            // =============================================
+            // SHOP/VENDOR COLLECTION LOGIC (UPDATE IF EXISTS)
+            // =============================================
+            const subscriptionObject = {
+                planId: plan._id,
+                name: plan.name,
+                planSlug: plan.slug,
+                validUntil: newValidityUntil,
+                validity: {
+                    days: invoice.validity.days,
+                    from: now,
+                    until: newValidityUntil
                 },
-                $set: {
-                    currentPlan: plan.name
-                }
+                services: plan.services,
+                features: plan.features || {},
+                limitations: plan.limitations || {},
+                price: invoice.amount,
+                billingCycle: invoice.billingCycle,
+                updatedAt: now
             };
 
-            if (existingSubscription) {
-                await Shop.findOneAndUpdate(
+            // Check if plan already exists in Shop/Vendor
+            const shop = await Shop.findOne({ referenceId: invoice.shopReferenceId });
+            const existingPlanIndex = shop?.activeSubscriptions?.findIndex(
+                sub => sub.planSlug === plan.slug
+            );
+
+            if (existingPlanIndex !== undefined && existingPlanIndex >= 0) {
+                // UPDATE existing subscription in Shop/Vendor
+                const updateOperation = {
+                    $set: {
+                        [`activeSubscriptions.${existingPlanIndex}`]: subscriptionObject,
+                        currentPlan: plan.name,
+                        updatedAt: now
+                    }
+                };
+
+                await Shop.updateOne(
                     { referenceId: invoice.shopReferenceId },
-                    updateOperation,
-                    
+                    updateOperation
                 );
 
-                await Vendor.findOneAndUpdate(
+                await Vendor.updateOne(
                     { referenceId: invoice.shopReferenceId },
-                    updateOperation,
-                    
+                    updateOperation
                 );
             } else {
-                await Shop.findOneAndUpdate(
+                // ADD new subscription to Shop/Vendor
+                const pushOperation = {
+                    $push: {
+                        activeSubscriptions: subscriptionObject
+                    },
+                    $set: {
+                        currentPlan: plan.name,
+                        updatedAt: now
+                    }
+                };
+
+                await Shop.updateOne(
                     { referenceId: invoice.shopReferenceId },
-                    pushOperation,
+                    pushOperation
                 );
 
-                await Vendor.findOneAndUpdate(
+                await Vendor.updateOne(
                     { referenceId: invoice.shopReferenceId },
-                    pushOperation,
+                    pushOperation
                 );
             }
 
@@ -249,5 +251,5 @@ export async function POST(request) {
             message: 'Server error',
             error: error.message
         }, { status: 500 });
-    } 
+    }
 }
