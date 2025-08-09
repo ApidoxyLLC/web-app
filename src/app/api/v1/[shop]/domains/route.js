@@ -4,7 +4,7 @@ import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
 
-export async function GET(req, { params }) {
+export async function GET(request, { params }) {
     const vendor_db = await vendorDbConnect();
     const Vendor = vendorModel(vendor_db);
 

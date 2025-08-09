@@ -18,10 +18,11 @@ export default function Dashboard() {
   const [role] = useState("Admin");
   const [open, setOpen] = useState(true);
   const [suggestions, setSuggestions] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 const [loading, setLoading] = useState(false);
 const shop = useParams()
 const shopId =shop.shop
-
+console.log(users)
 useEffect(() => {
   const delayDebounce = setTimeout(async () => {
     if (!value.trim()) {
@@ -55,7 +56,6 @@ useEffect(() => {
   return () => clearTimeout(delayDebounce);
 }, [value]);
 
-  // ✅ Only update users when session is ready
   useEffect(() => {
     if (session?.user?.name && session?.user?.email) {
       setUsers([
@@ -72,9 +72,15 @@ useEffect(() => {
     setOpen(true);
   };
 
+  const {data, error} = useFetch(`/${shopId}/staffs`)
+  console.log(data)
+  useEffect(() => {
+  if (data) {
+    setUsers((prev) => [...prev, ...data]);
+  }
+}, [data]);
   const handleDoneClick = async () => {
     const selected = suggestions.find((s) => s.email === value);
-    console.log(selected,shopId)
     if (!selected) return alert("don't get selected");
 
     try {
@@ -179,8 +185,12 @@ useEffect(() => {
           </Button>
         </div>
       )}
-
-      {users.map((user, index) => (
+      {loadingUsers && (
+  <div className="text-center py-4 text-muted-foreground">
+    Loading users...
+  </div>
+)}
+      {users?.map((user, index) => (
         <div
           key={index}
           className="bg-muted rounded-md px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between"

@@ -16,7 +16,7 @@ const useFetch = (url) => {
                 const res = await fetch(`http://localhost:3000/api/v1${url}`)
                 if(!res.ok) throw new Error("Failed to fetch")
                 const data = await res.json()
-                setData(data)
+                setData(data.data)
                 setError(null)
             }catch(err){
                 console.log(err)
