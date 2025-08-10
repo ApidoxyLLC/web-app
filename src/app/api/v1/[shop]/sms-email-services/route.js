@@ -154,11 +154,12 @@ export async function GET(request, { params }) {
 
  
 
+
 export async function DELETE(request, { params }) {
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
         request.socket?.remoteAddress || '';
-    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'deleteSmsEmail' });
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'deleteSmsProvider' });
     if (!allowed) {
         return NextResponse.json(
             { error: 'Too many requests. Please try again later.' },
@@ -167,8 +168,9 @@ export async function DELETE(request, { params }) {
     }
 
     try {
-        const { shop: referenceId } = params;
-        const { providerType } = await request.json(); 
+        const { shop: referenceId } =await params;
+        const { providerName } = await request.json(); 
+
         if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },
@@ -176,20 +178,59 @@ export async function DELETE(request, { params }) {
             );
         }
 
-        if (!providerType || !['smsProvider', 'emailProvider'].includes(providerType)) {
+        if (!providerName || typeof providerName !== 'string') {
             return NextResponse.json(
-                { error: "Valid provider type is required ('smsProvider' or 'emailProvider')" },
+                { error: "Valid provider name is required (e.g., 'bulk_sms_bd')" },
                 { status: 400 }
             );
         }
 
-        // const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        // if (!authenticated) {
-        //     return NextResponse.json(
-        //         { error: authError || "Not authorized" },
-        //         { status: 401 }
-        //     );
+        /**
+                          * fake Authentication for test purpose only
+                          * *******************************************
+                          * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+                          * *******************************************
+                          * *              ***
+                          * *              ***
+                          * *            *******
+                          * *             *****
+                          * *              ***
+                          * *               *
+                          * */
+
+        // const authDb = await authDbConnect()
+        // const User = userModel(authDb);
+        // const user = await User.findOne({ referenceId: "cmdwxn2sg0000o09w6morw1mv" })
+        //     .select('referenceId _id name email phone role isEmailVerified')
+        // console.log(user)
+        // const data = {
+        //     // sessionId: "cmdags8700000649w6qyzu8xx",
+        //     userReferenceId: user.referenceId,
+        //     userId: user?._id,
+        //     name: user.name,
+        //     email: user.email,
+        //     phone: user.phone,
+        //     role: user.role,
+        //     isVerified: user.isEmailVerified || user.isPhoneVerified,
         // }
+
+        /**
+         * fake Authentication for test purpose only 
+         * *******************************************
+         * *********FAKE AUTHENTICATION END********* *
+         * *******************************************
+        **/
+
+
+
+        // Authentication
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json(
+                { error: authError || "Not authorized" },
+                { status: 401 }
+            );
+        }
 
         if (!mongoose.Types.ObjectId.isValid(data.userId)) {
             return NextResponse.json(
@@ -217,17 +258,17 @@ export async function DELETE(request, { params }) {
                         $elemMatch: {
                             userId: new mongoose.Types.ObjectId(data.userId),
                             status: "active",
-                            permission: { $in: ["w:sms-provider", "w:email-provider", "w:shop"] }
+                            permission: { $in: ["w:sms-provider", "w:shop"] }
                         }
                     }
                 }
             ],
-            [providerType]: { $exists: true } 
+            [`smsProvider.${providerName}`]: { $exists: true } 
         };
 
         const updateOperation = {
             $unset: {
-                [providerType]: ""
+                [`smsProvider.${providerName}`]: ""
             },
             $set: {
                 updatedAt: new Date()
@@ -243,7 +284,7 @@ export async function DELETE(request, { params }) {
             return NextResponse.json(
                 {
                     success: false,
-                    message: "Provider configuration not found or no permission to delete"
+                    message: "SMS provider not found or no permission to delete"
                 },
                 { status: 404 }
             );
@@ -252,18 +293,18 @@ export async function DELETE(request, { params }) {
         return NextResponse.json(
             {
                 success: true,
-                message: "Provider configuration removed successfully",
-                removedProvider: providerType,
+                message: "SMS provider removed successfully",
+                removedProvider: providerName,
                 referenceId: referenceId
             },
             { status: 200 }
         );
 
     } catch (error) {
-        console.error("DELETE SMS/Email Provider Error:", error);
+        console.error("DELETE SMS Provider Error:", error);
         return NextResponse.json(
             {
-                error: error.message || "Failed to delete provider configuration",
+                error: error.message || "Failed to delete SMS provider",
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
             },
             { status: 500 }

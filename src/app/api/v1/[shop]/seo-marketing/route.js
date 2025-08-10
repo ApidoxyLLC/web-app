@@ -173,7 +173,7 @@ export async function DELETE(request) {
         const url = new URL(request.url);
         const pathSegments = url.pathname.split('/');
         const referenceId = pathSegments[pathSegments.indexOf('v1') + 1];
-        const { marketingType } = await request.json(); 
+        const { marketingType } = await request.json();
 
         if (!referenceId) {
             return NextResponse.json(
@@ -196,6 +196,41 @@ export async function DELETE(request) {
                 { status: 401 }
             );
         }
+        /**
+                                 * fake Authentication for test purpose only
+                                 * *******************************************
+                                 * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+                                 * *******************************************
+                                 * *              ***
+                                 * *              ***
+                                 * *            *******
+                                 * *             *****
+                                 * *              ***
+                                 * *               *
+                                 * */
+
+        // const authDb = await authDbConnect()
+        // const User = userModel(authDb);
+        // const user = await User.findOne({ referenceId: "cmdwxn2sg0000o09w6morw1mv" })
+        //     .select('referenceId _id name email phone role isEmailVerified')
+        // console.log(user)
+        // const data = {
+        //     // sessionId: "cmdags8700000649w6qyzu8xx",
+        //     userReferenceId: user.referenceId,
+        //     userId: user?._id,
+        //     name: user.name,
+        //     email: user.email,
+        //     phone: user.phone,
+        //     role: user.role,
+        //     isVerified: user.isEmailVerified || user.isPhoneVerified,
+        // }
+
+        /**
+         * fake Authentication for test purpose only 
+         * *******************************************
+         * *********FAKE AUTHENTICATION END********* *
+         * *******************************************
+        **/
 
         if (!mongoose.Types.ObjectId.isValid(data.userId)) {
             return NextResponse.json(
@@ -228,7 +263,7 @@ export async function DELETE(request) {
                     }
                 }
             ],
-            [`marketing.${marketingType}`]: { $exists: true } 
+            [`marketing.${marketingType}`]: { $exists: true }
         };
 
         const updateOperation = {
