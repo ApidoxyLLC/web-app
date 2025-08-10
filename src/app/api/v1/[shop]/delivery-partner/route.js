@@ -7,6 +7,8 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 // import { userModel } from "@/models/auth/user";
+
+
 export async function GET(request) {
         console.log("hello*****")
     // Rate limiting
@@ -152,9 +154,6 @@ export async function GET(request) {
         );
     }
 }
-
-
-
 
 export async function DELETE(request) {
     // Rate limiting
