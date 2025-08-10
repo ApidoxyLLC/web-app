@@ -8,6 +8,11 @@ import { categoryModel } from '@/models/shop/product/Category';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { dbConnect } from '@/lib/mongodb/db';
+import { imageModel } from '@/models/vendor/Image';
+import { deleteImage } from '@/services/image/blackblaze';
+import getAuthenticatedUser from '../../../auth/utils/getAuthenticatedUser';
+import hasWriteCategoryPermission from './hasWriteCategoryPermission';
+
 
 export async function GET(request, { params }) {
   // Rate limiting
@@ -180,5 +185,93 @@ export async function GET(request, { params }) {
       },
       { status: 500, headers: securityHeaders }
     );
+  }
+}
+
+export async function DELETE(request, { params }) {
+  // --- Rate Limiting ---
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'deleteCategory' });
+  if (!allowed) return NextResponse.json( { error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString(), ...securityHeaders } });
+  // Add authentication
+  const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+  if (!authenticated) return NextResponse.json( { success: false, error: 'Not authenticated' }, { status: 401, headers: securityHeaders });
+    
+  if (!hasWriteCategoryPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 403,headers: securityHeaders });
+            
+
+  try {
+    const { shop: shopReferenceId, category: categoryId } = await params;
+
+    // --- Validate params ---
+    if (!shopReferenceId || !categoryId) return NextResponse.json( { success: false, error: 'Shop reference and category ID are required' }, { status: 400, headers: securityHeaders });
+  
+    // --- Validate ObjectId ---
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) 
+      return NextResponse.json({ success: false, error: 'Invalid category ID format' }, { status: 400, headers: securityHeaders });    
+
+    // --- Connect to Vendor DB ---
+    const vendor_db = await vendorDbConnect();
+    const Vendor = vendorModel(vendor_db);
+    const vendor = await Vendor.findOne({ referenceId: shopReferenceId })
+                               .select("+_id +dbInfo +secrets +expirations")
+                               .lean();
+
+    if (!vendor) return NextResponse.json({ success: false, error: 'Shop not found' }, { status: 404, headers: securityHeaders });
+    
+    // --- Connect to Shop DB ---
+    const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
+                                     options: { secret: config.vendorDbUriEncryptionKey }    });
+    const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+    const Category = categoryModel(shop_db);
+
+    const session = await shop_db.startSession();
+    
+    try {
+      let categoryTitle;
+      await session.withTransaction(async () => {
+        const category = await Category.findOne({ _id: categoryId }).session(session);
+        if (!category) throw new Error('Category not found');
+        categoryTitle = category.title;
+
+        if(category.image) {
+          const Image = imageModel(shop_db);
+          const image = await Image.findOne({  fileName: category.image.imageName, 
+                                                 folder:'category'                  }).session(session);
+
+          if(image) {
+            const deleteResult = await deleteImage({ bucketId: image.bucketId, 
+                                                     fileName: image.fileName, 
+                                                       fileId: image.fileId        });
+
+            if (!deleteResult.success || deleteResult.data?.fileId !== image.fileId) throw new Error('Failed to delete image from storage');
+            await Image.deleteOne({ _id: image._id }).session(session);
+          }
+        }
+        const { deletedCount } = await Category.deleteOne({ _id: categoryId }).session(session);
+        if (deletedCount === 0) throw new Error('Category not found');
+      });
+
+      const response = NextResponse.json(
+        { 
+          success: true, 
+          message: 'Category deleted successfully',
+          data: { id: categoryId, title: categoryTitle } 
+        },
+        { status: 200 }
+      );
+      Object.entries(securityHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+      return response;
+
+    } catch (error) {
+      console.log(error)
+      return NextResponse.json( {  success: false,  error: error.message || 'Internal Server Error', ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }) }, { status: 500, headers: securityHeaders } );
+    } finally {  await session.endSession() }
+    
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    return NextResponse.json( { success: false,  error: 'Internal Server Error', ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }) }, { status: 500, headers: securityHeaders });
   }
 }

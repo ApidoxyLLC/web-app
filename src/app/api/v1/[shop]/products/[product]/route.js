@@ -7,6 +7,15 @@ import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import config from "../../../../../../../config";
 import securityHeaders from "../../../utils/securityHeaders";
 import mongoose from "mongoose";
+import getAuthenticatedUser from "../../../auth/utils/getAuthenticatedUser";
+import hasProductWritePermission from "./hasProductWritePermission";
+
+const apiResponse = (data, status = 200, headers = {}) => {
+    const response = NextResponse.json(data, { status });
+    Object.entries(securityHeaders).forEach(([key, value]) => response.headers.set(key, value));
+    return response;
+};
+
 
 export async function GET(req, { params }) {
     try {
@@ -40,7 +49,6 @@ export async function GET(req, { params }) {
         
         // Build aggregation pipeline to get single product with all details
         const pipeline = [ { $match: { _id: new mongoose.Types.ObjectId(productId) } },
-                           { $limit: 1 },
                            { $lookup: {         from: 'categories',
                                           localField: 'categories',
                                         foreignField: '_id',
@@ -146,8 +154,134 @@ export async function GET(req, { params }) {
     }
 }
 
-const apiResponse = (data, status = 200, headers = {}) => {
-    const response = NextResponse.json(data, { status });
-    Object.entries(securityHeaders).forEach(([key, value]) => response.headers.set(key, value));
-    return response;
-};
+
+export async function DELETE(request, { params }) {
+    // --- Rate Limiting ---
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||  request.headers.get('x-real-ip') ||  request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+    if (!allowed)  return NextResponse.json( { success: false, error: 'Too many requests. Please try again later.' }, { status: 429, headers: {  'Retry-After': retryAfter.toString(),  ...securityHeaders  } } );
+  
+    // Authentication
+    const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+    if (!authenticated) return NextResponse.json({ success: false, error: authError || 'Not authenticated' }, { status: 401, headers: securityHeaders });
+
+  try {
+    const { shop: shopReferenceId, product: productId } = params;
+
+    // Validate params
+    if (!shopReferenceId || !productId) return NextResponse.json( { success: false, error: 'Shop reference and product ID are required' }, { status: 400, headers: securityHeaders });
+
+    // Connect to Vendor DB
+    const vendor_db = await vendorDbConnect();
+    const Vendor = vendorModel(vendor_db);
+    const vendor = await Vendor.findOne({ referenceId: shopReferenceId })
+                               .select("+_id +dbInfo +secrets +expirations +ownerId")
+                               .lean();
+    if (!vendor) return NextResponse.json({ success: false, error: 'Shop not found' },  { status: 404, headers: securityHeaders });
+    if (!hasProductWritePermission(vendor, data.userId)) return NextResponse.json( { success: false, error: 'Authorization failed' },  { status: 403, headers: securityHeaders });
+    
+    // Connect to Shop DB
+    const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
+                                     options: { secret: config.vendorDbUriEncryptionKey }  });
+    const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+    const Product = productModel(shop_db);
+    const Image = imageModel(shop_db);
+    const session = await shop_db.startSession();
+
+    try {
+      let productTitle;
+      await session.withTransaction(async () => {
+        // Get product with all necessary data
+        const product = await Product.findOne({ _id: productId })
+                                     .select('title gallery variants')
+        
+        if (!product) throw new Error('Product not found');
+        productTitle = product.title;
+
+        // Delete all product images
+        const imagesToDelete = [];
+
+        // Add main gallery images
+        if (product.gallery && product.gallery.length > 0) imagesToDelete.push(...product.gallery.map(img => img.name));
+
+        // Add variant images if they exist
+        if (product.variants && product.variants.length > 0) product.variants.forEach(variant => (variant.images && variant.images.length > 0) && imagesToDelete.push(...variant.images));
+        
+
+        // Delete all images from storage and database
+        if (imagesToDelete.length > 0) {
+            const images = await Image.find({ fileName: { $in: imagesToDelete },
+                                                folder: 'products'              }).session(session);
+
+            if (images.length === 0) return;
+
+            // Step 1: delete from storage in parallel
+            const deleteResults = await Promise.all(
+                    images.map(image => deleteImage({ bucketId: image.bucketId,
+                                                      fileName: image.fileName,
+                                                        fileId: image.fileId }).then(res => ({ res, image }))
+                )
+            );
+
+            // Step 2: validate results
+            const failed = deleteResults.find(({ res, image }) =>
+                !res.success || res.data?.fileId !== image.fileId
+            );
+            if (failed) throw new Error(`Failed to delete image ${failed.image.fileName} from storage`);
+                // Step 3: delete DB docs in parallel
+            await Image.deleteMany({ _id: { $in: images.map(img => img._id) }}).session(session);
+            }
+
+        // Delete digital assets if product is digital
+        // if (product.productFormat === 'digital' && product.digitalAssets) {
+        //   // Add logic here to delete digital assets from storage
+        //   // This would depend on your digital asset storage system
+        // }
+
+        // Finally delete the product
+        const { deletedCount } = await Product.deleteOne({ _id: productId }).session(session);
+        if (deletedCount === 0) throw new Error('Product not found');
+      });
+
+      const response = NextResponse.json(
+        { 
+          success: true, 
+          message: 'Product deleted successfully',
+          data: { id: productId, title: productTitle } 
+        },
+        { status: 200 }
+      );
+      
+      Object.entries(securityHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+      
+      return response;
+      
+    } catch (error) {
+      console.error("Transaction error:", error);
+      return NextResponse.json(
+        { 
+          success: false,  
+          error: error.message || 'Internal Server Error',
+          ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }) 
+        }, 
+        { status: 500, headers: securityHeaders }
+      );
+    } finally { 
+      await session.endSession(); 
+    }
+    
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    return NextResponse.json(
+      { 
+        success: false,  
+        error: 'Internal Server Error',
+        ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }) 
+      }, 
+      { status: 500, headers: securityHeaders }
+    );
+  }
+}
+

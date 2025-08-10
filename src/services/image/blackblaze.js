@@ -252,15 +252,47 @@ export async function downloadImage({bucket, folder, file}) {
     
 }
 
-export async function deleteImageFile({fileName, fileId}) {
-  const b2 = await authorizeB2();
+// export async function deleteImageFile({fileName, fileId}) {
+//   const b2 = await authorizeB2();
+//   const response = await b2.deleteFileVersion({ fileName, fileId });
+//   return response.data;
+// }  
 
-  const response = await b2.deleteFileVersion({ fileName,
-                                                fileId });
 
-  return response.data;
-}  
+export async function deleteImage({ bucketId, fileName, fileId }) {
+  if (!bucketId || (!fileName && !fileId)) return { success: false, message: 'bucketId and either fileName or fileId are required.' };
+  
+  try {
+    // Authenticate
+    const b2 = await authorizeB2();
 
+    // If we have only fileName, fetch fileId
+    let finalFileId = fileId;
+    if (!finalFileId && fileName) {
+      const { data } = await b2.listFileNames({ bucketId,
+                                                startFileName: fileName,
+                                                maxFileCount: 1
+                                              });
+
+      const file = data.files.find(f => f.fileName === fileName);
+      if (!file) {
+        return { success: false, message: 'File not found in bucket.' };
+      }
+      finalFileId = file.fileId;
+    }
+
+    // Delete file
+    await b2.deleteFileVersion({
+      fileId: finalFileId,
+      fileName: fileName || undefined
+    });
+
+    return { success: true, message: 'File deleted successfully.' };
+  } catch (error) {
+    console.error('Error deleting file from B2:', error);
+    return { success: false, message: error.message };
+  }
+}
 export function buildPrivateDownloadUrl({ bucketName, fileName, authToken }) {
   return `https://f000.backblazeb2.com/file/${bucketName}/${fileName}?Authorization=${authToken}`;
 }
