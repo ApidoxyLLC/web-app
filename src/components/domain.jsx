@@ -30,14 +30,13 @@ export default function Domain() {
   const [tab, setTab] = useState("default");
   const [subdomain, setSubdomain] = useState("");
   const [selectedDomain, setSelectedDomain] = useState("");
-  const [loading, setLoading] = useState(false);
-
+  const [loadingState, setLoadingState] = useState(false);
   const shop = useParams();
   const shopId = shop.shop;
   console.log(shopId)
-  const { data, refetch } = useFetch(`/${shopId}/domains`);
-  const domainsList = data || [];
-  console.log(data,domainsList)
+  const { data, refetch, loading } = useFetch(`/${shopId}/domains`);
+  const domainsList = data?.domains || [];
+  console.log(domainsList)
   const allowedDomains = [
     "apidoxy.com",
     "apidoxy.shop",
@@ -51,7 +50,7 @@ export default function Domain() {
     toast("Copied", { description: "Link copied to clipboard" });
   };
 
-  const apiPath = "/api/v1/add-domain-to-vercel";
+  const apiPath = "/api/v1/add-domain";
 
   async function addCustomDomain() {
     const subdomainTrim = subdomain.trim().toLowerCase();
@@ -78,7 +77,7 @@ export default function Domain() {
       return;
     }
 
-    setLoading(true);
+    setLoadingState(true);
 
     try {
       const res = await fetch(apiPath, {
@@ -102,12 +101,12 @@ export default function Domain() {
       console.error(err);
       toast.error("An unexpected error occurred.");
     } finally {
-      setLoading(false);
+      setLoadingState(false);
     }
   }
 
   const defaultDomain = domainsList[0] ? [{ name: domainsList[0], isActive: true, isDeletable: false }] : [];
-  const customDomains = domainsList.slice(1).map(d => ({ name: d, isActive: true, isDeletable: true }));
+  const customDomains = domainsList?.slice(1).map(d => ({ name: d, isActive: true, isDeletable: true }));
 
   return (
     <Card className="p-6">
@@ -145,8 +144,8 @@ export default function Domain() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <Button className="h-9" onClick={addCustomDomain} disabled={loading}>
-                {loading ? "Connecting..." : "Connect"}
+              <Button className="h-9" onClick={addCustomDomain} disabled={loadingState}>
+                {loadingState ? "Connecting..." : "Connect"}
               </Button>
             </div>
           )}
@@ -155,7 +154,13 @@ export default function Domain() {
         {/* Default domains list */}
         <TabsContent value="default">
           <div className="flex flex-col justify-between border rounded-md">
-            {defaultDomain.length === 0 ? (
+            {loading ? (
+  <div className="flex justify-center items-center p-10 text-sm italic">
+    Loading domains...
+  </div>
+) :
+
+            defaultDomain.length === 0 ? (
               <div className="flex justify-center items-center p-10 text-sm italic">
                 No domain connected
               </div>
@@ -197,7 +202,13 @@ export default function Domain() {
         {/* Custom domains list */}
         <TabsContent value="custom">
           <div className="flex flex-col justify-between border rounded-md">
-            {customDomains.length === 0 ? (
+            {loading ? (
+  <div className="flex justify-center items-center p-10 text-sm italic">
+    Loading domains...
+  </div>
+):
+
+            customDomains.length === 0 ? (
               <div className="flex justify-center items-center p-10 text-sm italic">
                 No domain connected
               </div>

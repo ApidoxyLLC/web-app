@@ -31,7 +31,9 @@ export async function GET(request, { params }) {
 
         return NextResponse.json({
             success: true,
-            domains: vendor.domains || []
+            data: {
+                domains: vendor.domains || []
+            }
         });
 
     } catch (error) {
