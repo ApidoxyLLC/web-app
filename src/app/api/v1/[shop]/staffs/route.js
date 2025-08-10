@@ -5,7 +5,10 @@ import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { userModel } from "@/models/auth/User";
 import { vendorModel } from "@/models/vendor/Vendor";
+import securityHeaders from "../../utils/securityHeaders";
 
+import { removeStaffFromVendor } from '@/services/vendor/removeStuff';
+import { hasDeletePermission } from './hasWritePermission';
 
 import mongoose from "mongoose";
 
@@ -67,5 +70,121 @@ export async function GET(request, { params }) {
     } catch (error) {
         console.error("Error:", error);
         return NextResponse.json( { error: error.message || "Failed to retrieve staff data", stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined }, { status: 500 });
+    }
+}
+
+
+
+
+export async function DELETE(request, { params }) {
+    // Rate Limiting
+    const ip = request.ip || request.headers.get('x-real-ip');
+    const rateLimit = await applyRateLimit(ip);
+    if (!rateLimit.allowed) {
+        return NextResponse.json(
+            { error: 'Too many requests' },
+            { status: 429, headers: { 'Retry-After': rateLimit.retryAfter } }
+        );
+    }
+
+    const { shopId } =await params;
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!shopId || !userId) {
+        return NextResponse.json(
+            { error: 'Missing required parameters' },
+            { status: 400, headers: securityHeaders }
+        );
+    }
+  // const authDb = await authDbConnect()
+        // const User = userModel(authDb);
+        // const user = await User.findOne({ referenceId: "cmdwxn2sg0000o09w6morw1mv" })
+        //     .select('referenceId _id name email phone role isEmailVerified')
+        // console.log(user)
+        // const data = {
+        //     // sessionId: "cmdags8700000649w6qyzu8xx",
+        //     userReferenceId: user.referenceId,
+        //     userId: user?._id,
+        //     name: user.name,
+        //     email: user.email,
+        //     phone: user.phone,
+        //     role: user.role,
+        //     isVerified: user.isEmailVerified || user.isPhoneVerified,
+        // }
+
+    const { authenticated, user: requester } = await getAuthenticatedUser(request);
+    if (!authenticated) {
+        return NextResponse.json(
+            { error: 'Unauthorized' },
+            { status: 401, headers: securityHeaders }
+        );
+    }
+
+    const vendorDb = await vendorDbConnect();
+    const Vendor = vendorModel(vendorDb);
+    const authDb = await authDbConnect();
+    const User = userModel(authDb);
+
+    try {
+        const vendor = await Vendor.findOne({ referenceId: shopId })
+            .select('+ownerId +staffs')
+            .lean();
+
+        if (!vendor) {
+            return NextResponse.json(
+                { error: 'Vendor not found' },
+                { status: 404, headers: securityHeaders }
+            );
+        }
+
+        if (!hasDeletePermission(vendor, requester.userId)) {
+            return NextResponse.json(
+                { error: 'Insufficient permissions' },
+                { status: 403, headers: securityHeaders }
+            );
+        }
+
+        const staffUser = await User.findOne({
+            referenceId: userId,
+            isDeleted: false
+        }).select('_id referenceId email');
+
+        if (!staffUser) {
+            return NextResponse.json(
+                { error: 'Staff user not found' },
+                { status: 404, headers: securityHeaders }
+            );
+        }
+
+        const removalResult = await removeStaffFromVendor({
+            vendorId: vendor._id,
+            userId: staffUser._id,
+            email: staffUser.email
+        });
+
+        if (!removalResult.success) {
+            return NextResponse.json(
+                { error: removalResult.message },
+                { status: 400, headers: securityHeaders }
+            );
+        }
+
+        return NextResponse.json(
+            {
+                success: true,
+                data: {
+                    removedUserId: userId,
+                    removedEmail: staffUser.email
+                }
+            },
+            { status: 200, headers: securityHeaders }
+        );
+
+    } catch (error) {
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500, headers: securityHeaders }
+        );
     }
 }

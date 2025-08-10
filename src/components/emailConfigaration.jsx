@@ -62,10 +62,11 @@ export default function EmailConfigDashboard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({  providerName: "smtp",shop }),
+        body: JSON.stringify({  providerName: "smtp", providerType:"email", referenceId: shop}),
       });
 
       if (response.ok) {
+
         toast.success("Deleted Email Service");
         refetch();
       } else {
