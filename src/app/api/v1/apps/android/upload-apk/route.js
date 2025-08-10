@@ -122,15 +122,10 @@ export async function POST(req) {
     return NextResponse.json(
       {
         success: true,
-        data: {
-          url: apkData.url,
-          version: apkData.version,
-          uploadedAt: apkData.uploadedAt,
-          fileSize: apkData.fileSize,
-        },
-      },
-      { status: 201 }
-    );
+        data: {        url: apkData.url, 
+                   version: apkData.version, 
+                uploadedAt: apkData.uploadedAt, 
+                  fileSize: apkData.fileSize }, }, { status: 201 } );
   } catch (err) {
     console.error('Upload error:', err);
     return NextResponse.json(
