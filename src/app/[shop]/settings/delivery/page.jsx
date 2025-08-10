@@ -237,14 +237,14 @@ export default function DeliverySettings() {
     const partnerKey = selectedCourier.toLowerCase();
 
     try {
-      const res = await fetch(`/api/v1/settings/delivery-partner`, {
+      const res = await fetch(`/api/v1/${shop}/delivery-partner`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ partner: partnerKey, shop }),
+        body: JSON.stringify({ deliveryPartnerName: partnerKey, shop: shop }),
       });
-
+      console.log(res)
       if (res.ok) {
         toast.success("Courier credentials deleted!");
         setSavedCourierData((prev) => {

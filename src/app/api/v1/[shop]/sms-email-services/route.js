@@ -155,11 +155,12 @@ export async function GET(request, { params }) {
  
 
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request) {
+
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
         request.socket?.remoteAddress || '';
-    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'deleteSmsProvider' });
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'deleteProvider' });
     if (!allowed) {
         return NextResponse.json(
             { error: 'Too many requests. Please try again later.' },
@@ -169,8 +170,11 @@ export async function DELETE(request, { params }) {
 
     try {
         const { shop: referenceId } =await params;
-        const { providerName } = await request.json(); 
-
+        const { providerName, providerType } = await request.json();
+    //   const referenceId = params.shop;
+        // const { shop: referenceId } =await params;
+        // const { providerName, shop: referenceId  } = await request.json(); 
+        // console.log("data kjoi",providerName, referenceId)
         if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },
@@ -185,43 +189,12 @@ export async function DELETE(request, { params }) {
             );
         }
 
-        /**
-                          * fake Authentication for test purpose only
-                          * *******************************************
-                          * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-                          * *******************************************
-                          * *              ***
-                          * *              ***
-                          * *            *******
-                          * *             *****
-                          * *              ***
-                          * *               *
-                          * */
-
-        // const authDb = await authDbConnect()
-        // const User = userModel(authDb);
-        // const user = await User.findOne({ referenceId: "cmdwxn2sg0000o09w6morw1mv" })
-        //     .select('referenceId _id name email phone role isEmailVerified')
-        // console.log(user)
-        // const data = {
-        //     // sessionId: "cmdags8700000649w6qyzu8xx",
-        //     userReferenceId: user.referenceId,
-        //     userId: user?._id,
-        //     name: user.name,
-        //     email: user.email,
-        //     phone: user.phone,
-        //     role: user.role,
-        //     isVerified: user.isEmailVerified || user.isPhoneVerified,
-        // }
-
-        /**
-         * fake Authentication for test purpose only 
-         * *******************************************
-         * *********FAKE AUTHENTICATION END********* *
-         * *******************************************
-        **/
-
-
+        if (!providerType || !['sms', 'email'].includes(providerType)) {
+            return NextResponse.json(
+                { error: "Valid provider type is required ('sms' or 'email')" },
+                { status: 400 }
+            );
+        }
 
         // Authentication
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
@@ -249,6 +222,10 @@ export async function DELETE(request, { params }) {
             vendorModel(vendor_db)
         ];
 
+        const requiredPermissions = providerType === 'sms'
+            ? ["w:sms-provider", "w:shop"]
+            : ["w:email-provider", "w:shop"];
+
         const permissionFilter = {
             referenceId,
             $or: [
@@ -258,17 +235,17 @@ export async function DELETE(request, { params }) {
                         $elemMatch: {
                             userId: new mongoose.Types.ObjectId(data.userId),
                             status: "active",
-                            permission: { $in: ["w:sms-provider", "w:shop"] }
+                            permission: { $in: requiredPermissions }
                         }
                     }
                 }
             ],
-            [`smsProvider.${providerName}`]: { $exists: true } 
+            [`${providerType}Provider.${providerName}`]: { $exists: true }
         };
 
         const updateOperation = {
             $unset: {
-                [`smsProvider.${providerName}`]: ""
+                [`${providerType}Provider.${providerName}`]: ""
             },
             $set: {
                 updatedAt: new Date()
@@ -284,27 +261,28 @@ export async function DELETE(request, { params }) {
             return NextResponse.json(
                 {
                     success: false,
-                    message: "SMS provider not found or no permission to delete"
+                    message: `${providerType.toUpperCase()} provider not found or no permission to delete`
                 },
                 { status: 404 }
-            );
+               );
         }
 
         return NextResponse.json(
             {
                 success: true,
-                message: "SMS provider removed successfully",
+                message: `${providerType.toUpperCase()} provider removed successfully`,
                 removedProvider: providerName,
+                providerType: providerType,
                 referenceId: referenceId
             },
             { status: 200 }
         );
 
     } catch (error) {
-        console.error("DELETE SMS Provider Error:", error);
+        console.error(`DELETE ${providerType} Provider Error:`, error);
         return NextResponse.json(
             {
-                error: error.message || "Failed to delete SMS provider",
+                error: error.message || `Failed to delete ${providerType} provider`,
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
             },
             { status: 500 }

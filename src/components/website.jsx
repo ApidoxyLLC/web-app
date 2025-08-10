@@ -25,7 +25,7 @@ export default function Website() {
     formData.append("file", file);
     formData.append("shop", shop);
 
-    const res = await fetch("http://localhost:3000/api/v1/upload-image", {
+    const res = await fetch("/api/v1/upload-image", {
       method: "POST",
       body: formData,
     });
@@ -48,7 +48,7 @@ export default function Website() {
   }
   const handleSubmit = async()=>{
     try{
-      const res = await fetch("http://localhost:3000/api/v1/apps/web", {
+      const res = await fetch("/api/v1/apps/web", {
       method:"POST",
       headers:{
         "Content-type":"application/json"

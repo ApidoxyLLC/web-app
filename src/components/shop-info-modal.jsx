@@ -35,7 +35,7 @@ export default function CreatShop() {
       location: form.get("businessLocation"),
     };
     try {
-      const res = await fetch("http://localhost:3000/api/v1/shops", {
+      const res = await fetch("/api/v1/shops", {
         method: "POST",
         headers: {
           "Content-type": "application/json",
@@ -45,7 +45,7 @@ export default function CreatShop() {
       if (res.ok) {
         toast.success("Shop created");
         setOpen(false)
-        router.push(`http://localhost:3000`);
+        router.push(`/`);
       } else {
         toast.error("Error creating shop");
       }

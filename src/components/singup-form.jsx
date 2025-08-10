@@ -62,7 +62,7 @@ export function SignUp({ className, ...props }) {
     }
     const formDataWithOutEmail = { name, phone, password };
     try {
-      const res = await fetch("http://localhost:3000/api/v1/auth/register", {
+      const res = await fetch("/api/v1/auth/register", {
         method: "POST",
         headers: {
           "Content-type": "application/json",
