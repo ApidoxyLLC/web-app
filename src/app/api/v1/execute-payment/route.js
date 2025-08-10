@@ -14,7 +14,6 @@ export async function POST(request) {
     try {
         const { paymentID } = await request.json();
 
-        // Validate payment ID
         if (!paymentID) {
             return NextResponse.json({
                 success: false,
@@ -22,7 +21,6 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        // Execute bKash payment
         const token = await getBkashToken();
         const executeRes = await fetch(`${process.env.BKASH_BASE_URL}/tokenized/checkout/execute`, {
             method: 'POST',
@@ -45,11 +43,9 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        // Connect to databases
         const vendor_db = await vendorDbConnect();
         const auth_db = await authDbConnect();
 
-        // Get models
         const Invoice = InvoiceModel(vendor_db);
         const Transaction = TransactionModel(vendor_db);
         const Plan = PlanModel(vendor_db);
@@ -57,7 +53,6 @@ export async function POST(request) {
         const Shop = shopModel(auth_db);
         const Vendor = vendorModel(vendor_db);
 
-        // Find and validate invoice
         const invoice = await Invoice.findOne({ paymentId: paymentID });
         if (!invoice) {
             return NextResponse.json({
@@ -66,13 +61,11 @@ export async function POST(request) {
             }, { status: 404 });
         }
 
-        // Get plan details
         const plan = await Plan.findById(invoice.planId).lean();
         if (!plan) {
             throw new Error('Associated plan not found');
         }
 
-        // Prepare and validate transaction data
         const transactionData = {
             userId: invoice.userId?.toString(),
             invoiceId: invoice._id.toString(),
@@ -95,11 +88,9 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        // Store transaction
         await Transaction.create([parsed.data]);
 
         if (executeResult.transactionStatus === 'Completed') {
-            // Update invoice status
             const updatedInvoice = await Invoice.findOneAndUpdate(
                 { paymentId: paymentID },
                 {
@@ -122,9 +113,7 @@ export async function POST(request) {
                 now.getTime() + (invoice.validity.days * 24 * 60 * 60 * 1000)
             );
 
-            // =============================================
-            // SUBSCRIPTION COLLECTION LOGIC (ALWAYS CREATE NEW)
-            // =============================================
+           
             const newSubscription = {
                 userId: invoice.userId,
                 shopId: invoice.shopId,
@@ -152,12 +141,9 @@ export async function POST(request) {
                 updatedAt: now
             };
 
-            // Create new subscription record (always)
             await Subscription.create([newSubscription]);
 
-            // =============================================
-            // SHOP/VENDOR COLLECTION LOGIC (UPDATE IF EXISTS)
-            // =============================================
+           
             const subscriptionObject = {
                 planId: plan._id,
                 name: plan.name,
@@ -176,14 +162,12 @@ export async function POST(request) {
                 updatedAt: now
             };
 
-            // Check if plan already exists in Shop/Vendor
             const shop = await Shop.findOne({ referenceId: invoice.shopReferenceId });
             const existingPlanIndex = shop?.activeSubscriptions?.findIndex(
                 sub => sub.planSlug === plan.slug
             );
 
             if (existingPlanIndex !== undefined && existingPlanIndex >= 0) {
-                // UPDATE existing subscription in Shop/Vendor
                 const updateOperation = {
                     $set: {
                         [`activeSubscriptions.${existingPlanIndex}`]: subscriptionObject,
@@ -202,7 +186,6 @@ export async function POST(request) {
                     updateOperation
                 );
             } else {
-                // ADD new subscription to Shop/Vendor
                 const pushOperation = {
                     $push: {
                         activeSubscriptions: subscriptionObject

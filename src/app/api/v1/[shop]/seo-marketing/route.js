@@ -153,3 +153,126 @@ export async function GET(request) {
         );
     }
 }
+
+
+
+
+export async function DELETE(request) {
+    const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+        request.headers['x-real-ip'] ||
+        request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'deleteMarketing' });
+    if (!allowed) {
+        return NextResponse.json(
+            { error: 'Too many requests. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': retryAfter.toString() } }
+        );
+    }
+
+    try {
+        const url = new URL(request.url);
+        const pathSegments = url.pathname.split('/');
+        const referenceId = pathSegments[pathSegments.indexOf('v1') + 1];
+        const { marketingType } = await request.json(); 
+
+        if (!referenceId) {
+            return NextResponse.json(
+                { error: "Shop reference is required" },
+                { status: 400 }
+            );
+        }
+
+        if (!marketingType || !['googleTagManager', 'facebookPixel'].includes(marketingType)) {
+            return NextResponse.json(
+                { error: "Valid marketing type is required ('googleTagManager' or 'facebookPixel')" },
+                { status: 400 }
+            );
+        }
+
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json(
+                { error: authError || "Not authorized" },
+                { status: 401 }
+            );
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(data.userId)) {
+            return NextResponse.json(
+                { error: "Invalid user ID format" },
+                { status: 400 }
+            );
+        }
+
+        const [auth_db, vendor_db] = await Promise.all([
+            authDbConnect(),
+            vendorDbConnect()
+        ]);
+
+        const [Shop, Vendor] = [
+            shopModel(auth_db),
+            vendorModel(vendor_db)
+        ];
+
+        const permissionFilter = {
+            referenceId,
+            $or: [
+                { ownerId: data.userId },
+                {
+                    stuffs: {
+                        $elemMatch: {
+                            userId: new mongoose.Types.ObjectId(data.userId),
+                            status: "active",
+                            permission: { $in: ["w:marketing", "w:shop"] }
+                        }
+                    }
+                }
+            ],
+            [`marketing.${marketingType}`]: { $exists: true } 
+        };
+
+        const updateOperation = {
+            $unset: {
+                [`marketing.${marketingType}`]: ""
+            },
+            $set: {
+                updatedAt: new Date()
+            }
+        };
+
+        const [vendorUpdate, shopUpdate] = await Promise.all([
+            Vendor.updateOne(permissionFilter, updateOperation),
+            Shop.updateOne(permissionFilter, updateOperation)
+        ]);
+
+        if (vendorUpdate.modifiedCount === 0 && shopUpdate.modifiedCount === 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "No matching marketing data found or no permission to delete"
+                },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json(
+            {
+                success: true,
+                message: "Marketing data removed successfully",
+                removedType: marketingType,
+                referenceId: referenceId
+            },
+            { status: 200 }
+        );
+
+    } catch (error) {
+        console.error("DELETE Marketing Error:", error);
+        return NextResponse.json(
+            {
+                error: error.message || "Failed to delete marketing data",
+                stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+            },
+            { status: 500 }
+        );
+    }
+}
