@@ -223,6 +223,7 @@
   const staffSchema = new mongoose.Schema(
     {
       userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+      email: { type: String, required: true },
       designation: { type: String, enum: ['general_staff', 'store_manager', 'assistant_manager', 'cashier', 'sales_associate', 'inventory_clerk', 'security', 'janitor', 'other'], required: false },
       status: { type: String, enum: ['active', 'terminated', 'on_leave', 'resigned'], default: 'active' },
       permission: { type: [String], enum: ['r:delivery-partner', 'w:delivery-partner', 'r:shop', 'w:shop', 'r:product', 'c:product', 'w:shop', 'r:category', 'c:category', 'w:category', 'r:customer', 'w:customer'] },
@@ -234,7 +235,7 @@
         author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         content: String
       }],
-    }, { timestamps: true, _id: false });
+    }, { timestamps: true, _id: true });
 
 
   // const integrationSchema = new mongoose.Schema({

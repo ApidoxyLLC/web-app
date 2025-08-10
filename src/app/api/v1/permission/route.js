@@ -15,16 +15,16 @@ export const dynamic = 'force-dynamic';
 export async function POST(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
 
 
   let body;
-  try { body = await request.json(); } 
-  catch { return NextResponse.json( { success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders } );}
+  try { body = await request.json(); }
+  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders }); }
 
   const parsed = permissionDTOSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json( { success: false,error: "Validation failed",details: parsed.error.flatten(),},{ status: 422, headers: securityHeaders });
-  
+  if (!parsed.success) return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten(), }, { status: 422, headers: securityHeaders });
+
 
   const { shop: shopReferenceId, action, userId: userReferenceId } = parsed.data;
   const { authenticated, error, data } = await getAuthenticatedUser(request);
@@ -36,35 +36,38 @@ export async function POST(request) {
   const vendor_db = await vendorDbConnect();
   const Vendor = vendorModel(vendor_db);
   const vendor = await Vendor.findOne({ referenceId: shopReferenceId })
-                             .select("+_id +ownerId +dbInfo")
-                             .lean();
+    .select("+_id +ownerId +dbInfo")
+    .lean();
 
-  if (!vendor) 
-    return NextResponse.json( { success: false, error: "Shop not found" }, { status: 404, headers: securityHeaders });
-  if (vendor.ownerId.toString() !== data.userId.toString()) 
-    return NextResponse.json({ success: false, error: "You are not authorized to modify permissions" },{ status: 403, headers: securityHeaders });
+  if (!vendor)
+    return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404, headers: securityHeaders });
+  if (vendor.ownerId.toString() !== data.userId.toString())
+    return NextResponse.json({ success: false, error: "You are not authorized to modify permissions" }, { status: 403, headers: securityHeaders });
 
-  const auth_db  = await authDbConnect()
+  const auth_db = await authDbConnect()
   const User = userModel(auth_db);
 
   const user = await User.findOne({ referenceId: userReferenceId, isDeleted: false })
-                         .select("_id referenceId isVerified isEmailVerified isPhoneVerified");
+    .select("_id referenceId isVerified isEmailVerified isPhoneVerified email");
   console.log(user)
-  if (!user || (!user.isVerified && !user.isEmailVerified && !user.isPhoneVerified))  return NextResponse.json( { success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
+  if (!user || (!user.isVerified && !user.isEmailVerified && !user.isPhoneVerified)) return NextResponse.json({ success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
 
-  const staffPayload = {      userId: user._id,
-                         designation: "general_staff",
-                              status: "active",
-                          permission: ["w:shop"],
-                               addBy: data.userId,
-                               notes: []                }
+  const staffPayload = {
+    userId: user._id,
+    email: user.email,
+    designation: "general_staff",
+    status: "active",
+    permission: ["w:shop"],
+    addBy: data.userId,
+    notes: []
+  }
 
   try {
     if (action === "grant-permission") {
-      const result  = await upsertStaffToVendor({ vendorId: vendor._id, staff: staffPayload })
-      if (!result.success) return NextResponse.json( { success: false, error: "Permission Grant failed " }, { status: 404, headers: securityHeaders } );
+      const result = await upsertStaffToVendor({ vendorId: vendor._id, staff: staffPayload })
+      if (!result.success) return NextResponse.json({ success: false, error: "Permission Grant failed " }, { status: 404, headers: securityHeaders });
     } else if (action === "remove-permission") {
-      const result = await removeStaffFromVendor({ vendorId:  vendor._id, userId: user._id })
+      const result = await removeStaffFromVendor({ vendorId: vendor._id, userId: user._id })
       if (!result.success) return NextResponse.json({ success: false, error: result.message }, { status: 404, headers: securityHeaders });
     }
 
