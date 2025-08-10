@@ -155,7 +155,7 @@ export async function GET(request, { params }) {
  
 
 
-export async function DELETE(request) {
+export async function DELETE(request, {params}) {
 
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
@@ -169,8 +169,8 @@ export async function DELETE(request) {
     }
 
     try {
-        const { shop: referenceId } =await params;
-        const { providerName, providerType } = await request.json();
+        // const { shop: referenceId } = await params;
+        const { providerName, providerType, referenceId } = await request.json();
     //   const referenceId = params.shop;
         // const { shop: referenceId } =await params;
         // const { providerName, shop: referenceId  } = await request.json(); 
@@ -279,10 +279,10 @@ export async function DELETE(request) {
         );
 
     } catch (error) {
-        console.error(`DELETE ${providerType} Provider Error:`, error);
+        console.error(`DELETE  Provider Error:`, error);
         return NextResponse.json(
             {
-                error: error.message || `Failed to delete ${providerType} provider`,
+                error: error.message || `Failed to delete provider`,
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
             },
             { status: 500 }

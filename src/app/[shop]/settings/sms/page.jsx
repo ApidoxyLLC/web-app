@@ -53,7 +53,7 @@ export default function Dashboard() {
   const [selected, setSelected] = useState("Balk SMS BD");
   const [formData, setFormData] = useState({});
   const {shop} = useParams()
-
+  console.log(shop)
   const {data, loading, refetch} = useFetch(`/${shop}/sms-email-services`)
   const handleAdd = async () => {
     const provider = smsProviders.find((p) => p.name === selected);
@@ -88,7 +88,7 @@ export default function Dashboard() {
     const res = await fetch(`/api/v1/${shop}/sms-email-services`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ providerName: name, shop }),
+      body: JSON.stringify({ providerName: name, providerType:"sms", referenceId: shop }),
     });
     if (!res.ok) throw new Error("Failed to delete");
     refetch();
