@@ -51,7 +51,7 @@ export function LoginForm({ className, ...props }) {
       console.log("Login failed", result.error);
     } else {
       // Redirect to a protected route
-      router.push("http://localhost:3000/")
+      router.push("/")
       toast.success("Login sucessful");
     }
 

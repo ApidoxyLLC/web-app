@@ -1,9 +1,10 @@
 "use client";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TbCopy } from "react-icons/tb";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";
 import {
   InputBase,
@@ -18,64 +19,83 @@ import facebookConversion from "../../../../../public/images/facebookConversion.
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import useFetch from "@/hooks/useFetch";
+
 export default function MarketingSeoTools() {
   const [copied, setCopied] = useState(false);
-  const [formData, setFormData]  = useState({
-    googleTagManager:{
-      gtmId:""
+  const { shop } = useParams();
+
+  const { data, loading, refetch } = useFetch(`/${shop}/seo-marketing`);
+
+  const [formData, setFormData] = useState({
+    googleTagManager: {
+      gtmId: "",
     },
-    facebookPixel:{
-      pixelId:"",
-      accessToken:"",
-      testEventId:""
-    }
-  })
-  const {shop} = useParams()
+    facebookPixel: {
+      pixelId: "",
+      accessToken: "",
+      testEventId: "",
+    },
+  });
+
+ useEffect(() => {
+  if (data) {
+    setFormData({
+      googleTagManager: {
+        gtmId: data.googleTagManager?.gtmId || "",
+      },
+      facebookPixel: {
+        pixelId: data.facebookPixel?.pixelId || "",
+        accessToken: data.facebookPixel?.accessToken || "",
+        testEventId: data.facebookPixel?.testEventId || "",
+      },
+    });
+  }
+}, [data]);
+
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
   const handleSubmit = async () => {
-  const payload = {
-    shop,
-    googleTagManager:
-      formData.googleTagManager.gtmId.trim() !== ""
-        ? { gtmId: formData.googleTagManager.gtmId }
-        : undefined,
-    facebookPixel:
-      formData.facebookPixel.pixelId.trim() !== "" &&
-      formData.facebookPixel.accessToken.trim() !== ""
-        ? {
-            pixelId: formData.facebookPixel.pixelId,
-            accessToken: formData.facebookPixel.accessToken,
-            testEventId:
-              formData.facebookPixel.testEventId.trim() || undefined,
-          }
-        : undefined,
+    const payload = {
+      shop,
+      googleTagManager:
+        formData.googleTagManager.gtmId.trim() !== ""
+          ? { gtmId: formData.googleTagManager.gtmId }
+          : undefined,
+      facebookPixel:
+        formData.facebookPixel.pixelId.trim() !== "" &&
+        formData.facebookPixel.accessToken.trim() !== ""
+          ? {
+              pixelId: formData.facebookPixel.pixelId,
+              accessToken: formData.facebookPixel.accessToken,
+              testEventId: formData.facebookPixel.testEventId.trim() || undefined,
+            }
+          : undefined,
+    };
+    try {
+      const res = await fetch("/api/v1/settings/seo-marketing", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Failed to submit marketing data");
+      toast.success("Marketing data updated successfully!");
+      refetch(); // ডাটা আপডেট হলে পুনরায় ফেচ করো
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
-  try {
-    const res = await fetch("/api/v1/settings/seo-marketing", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) throw new Error("Failed to submit marketing data");
-    toast.success("Marketing data updated successfully!");
-  } catch (err) {
-    toast.error(err.message);
-  }
-};
   return (
-    <div
-      className=" bg-muted/100 h-full
-     mx-auto w-full p-6 "
-    >
+    <div className="bg-muted/100 h-full mx-auto w-full p-6">
       <Card className="space-y-6 rounded-lg p-6 shadow-sm">
         <div>
           <h2 className="text-md font-semibold">Marketing & SEO Tools</h2>
@@ -84,6 +104,7 @@ export default function MarketingSeoTools() {
           </p>
         </div>
 
+        {/* Sitemaps UI */}
         <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-md ">
@@ -97,7 +118,7 @@ export default function MarketingSeoTools() {
             </p>
             <div className="relative ">
               <Input
-                value="https://shop.apidoxy.com/api/108627/sitemaps.xml"
+                value={`https://shop.apidoxy.com/api/${shop}/sitemaps.xml`}
                 readOnly
                 className="bg-muted/100 text-center font-semibold h-10"
               />
@@ -106,7 +127,7 @@ export default function MarketingSeoTools() {
                 size="sm"
                 className="absolute border-none right-2 top-1/2 -translate-y-1/2 bg-muted/100"
                 onClick={() =>
-                  handleCopy("https://shop.apidoxy.com/api/108627/sitemaps.xml")
+                  handleCopy(`https://shop.apidoxy.com/api/${shop}/sitemaps.xml`)
                 }
               >
                 <TbCopy className="h-4 w-4" />
@@ -115,10 +136,11 @@ export default function MarketingSeoTools() {
           </CardContent>
         </Card>
 
+        {/* Facebook Data Feed UI */}
         <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-md">
-              <Image src={facebook} alt="Google" width={25} />
+              <Image src={facebook} alt="Facebook" width={25} />
               Facebook Data Feed
             </CardTitle>
           </CardHeader>
@@ -128,7 +150,7 @@ export default function MarketingSeoTools() {
             </p>
             <div className="relative">
               <Input
-                value="https://shop.apidoxy.com/api/108627/facebook-product-feed.xml"
+                value={`https://shop.apidoxy.com/api/${shop}/facebook-product-feed.xml`}
                 readOnly
                 className="bg-muted/100 text-center font-semibold h-10"
               />
@@ -138,7 +160,7 @@ export default function MarketingSeoTools() {
                 className="absolute border-none right-2 top-1/2 -translate-y-1/2 bg-muted/100"
                 onClick={() =>
                   handleCopy(
-                    "https://shop.apidoxy.com/api/108627/facebook-product-feed.xml"
+                    `https://shop.apidoxy.com/api/${shop}/facebook-product-feed.xml`
                   )
                 }
               >
@@ -148,120 +170,105 @@ export default function MarketingSeoTools() {
           </CardContent>
         </Card>
 
+        {/* Google Tag Manager Setup */}
         <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-md">
-              <Image src={googleTag} alt="Google" width={25} />
-              Setup Google Tag Manager
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ControlGroup>
-              <ControlGroupItem className="shadow-none w-20 h-10 font-semibold">
-                <InputBase>
-                  <InputBaseAdornment>GTM ID</InputBaseAdornment>
-                </InputBase>
-              </ControlGroupItem>
-              <ControlGroupItem className="w-full shadow-none">
-                <InputBase>
-                  <InputBaseControl>
-                    <InputBaseInput placeholder="GTM ID" onChange={(e)=>{
-                      setFormData((prev) => ({
-                        ...prev,
-                        googleTagManager: {
-                          gtmId: e.target.value,
-                        },
-                      }));
-                    }} />
-                  </InputBaseControl>
-                </InputBase>
-              </ControlGroupItem>
-            </ControlGroup>
-          </CardContent>
-        </Card>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2 text-md">
+      <Image src={googleTag} alt="Google" width={25} />
+      Setup Google Tag Manager
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    {formData.googleTagManager.gtmId ? (
+      <div className="">
+        <p className="text-sm border rounded-md py-[9px] px-4">
+          <strong>GTM ID:</strong> {formData.googleTagManager.gtmId}
+        </p>
+        <div className="flex justify-end mt-4">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => handleDelete("googleTagManager")}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ) : (
+      <ControlGroup>
+        <ControlGroupItem className="shadow-none w-20 h-10 font-semibold">
+          <InputBase>
+            <InputBaseAdornment>GTM ID</InputBaseAdornment>
+          </InputBase>
+        </ControlGroupItem>
+        <ControlGroupItem className="w-full shadow-none">
+          <InputBase>
+            <InputBaseControl>
+              <InputBaseInput
+                placeholder="GTM ID"
+                value={formData.googleTagManager.gtmId}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    googleTagManager: { gtmId: e.target.value },
+                  }))
+                }
+              />
+            </InputBaseControl>
+          </InputBase>
+        </ControlGroupItem>
+      </ControlGroup>
+    )}
+  </CardContent>
+</Card>
+
 
         <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-md">
-              <Image src={facebookConversion} alt="Google" width={25} />
-              Setup Facebook Conversion API and Pixel
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <ControlGroup>
-                <ControlGroupItem className="shadow-none w-[86px] h-10 font-semibold">
-                  <InputBase>
-                    <InputBaseAdornment>Pixel ID</InputBaseAdornment>
-                  </InputBase>
-                </ControlGroupItem>
-                <ControlGroupItem className="w-full shadow-none">
-                  <InputBase>
-                    <InputBaseControl>
-                      <InputBaseInput placeholder="Pixel ID" onChange={(e) =>
-    setFormData((prev) => ({
-      ...prev,
-      facebookPixel: {
-        ...prev.facebookPixel,
-        pixelId: e.target.value,
-      },
-    }))
-  }/>
-                    </InputBaseControl>
-                  </InputBase>
-                </ControlGroupItem>
-              </ControlGroup>
-            </div>
-            <div>
-              <ControlGroup>
-                <ControlGroupItem className="shadow-none w-[184px] h-10 font-semibold">
-                  <InputBase>
-                    <InputBaseAdornment>Pixel Access Token</InputBaseAdornment>
-                  </InputBase>
-                </ControlGroupItem>
-                <ControlGroupItem className="w-full shadow-none">
-                  <InputBase>
-                    <InputBaseControl>
-                      <InputBaseInput placeholder="Pixel Access Token" onChange={(e) =>
-    setFormData((prev) => ({
-      ...prev,
-      facebookPixel: {
-        ...prev.facebookPixel,
-        accessToken: e.target.value,
-      },
-    }))
-  }/>
-                    </InputBaseControl>
-                  </InputBase>
-                </ControlGroupItem>
-              </ControlGroup>
-            </div>
-            <div>
-              <ControlGroup>
-                <ControlGroupItem className="shadow-none w-[180px] h-10 font-semibold">
-                  <InputBase>
-                    <InputBaseAdornment>Pixel Test Event ID</InputBaseAdornment>
-                  </InputBase>
-                </ControlGroupItem>
-                <ControlGroupItem className="w-full shadow-none">
-                  <InputBase>
-                    <InputBaseControl>
-                      <InputBaseInput placeholder="Pixel Test Event ID (Just to test. Clear after testing is done)" onChange={(e) =>
-    setFormData((prev) => ({
-      ...prev,
-      facebookPixel: {
-        ...prev.facebookPixel,
-        testEventId: e.target.value,
-      },
-    }))
-  }/>
-                    </InputBaseControl>
-                  </InputBase>
-                </ControlGroupItem>
-              </ControlGroup>
-            </div>
-          </CardContent>
-        </Card>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2 text-md">
+      <Image src={facebookConversion} alt="Facebook" width={25} />
+      Setup Facebook Conversion API and Pixel
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    {formData.facebookPixel.pixelId && formData.facebookPixel.accessToken ? (
+      <div className="flex gap-4">
+        <p className="text-sm border rounded-md py-[9px] px-4">
+          <strong>Pixel ID:</strong> {formData.facebookPixel.pixelId}
+        </p>
+        <p className="text-sm border rounded-md py-[9px] px-4">
+          <strong>Access Token:</strong>{" "}
+          <input
+            type="password"
+            value={formData.facebookPixel.accessToken}
+            readOnly
+            className="bg-transparent border-none outline-none"
+          />
+        </p>
+        {formData.facebookPixel.testEventId && (
+          <p className="text-sm border rounded-md py-[9px] px-4">
+            <strong>Test Event ID:</strong> {formData.facebookPixel.testEventId}
+          </p>
+        )}
+        <div className="flex justify-end mt-4">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => handleDelete("facebookPixel")}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ) : (
+      <>
+        {/* Your existing InputBase fields here for Pixel ID, Access Token, Test Event ID */}
+      </>
+    )}
+  </CardContent>
+</Card>
+
+
         <div className="flex justify-end">
           <Button onClick={handleSubmit}>Update</Button>
         </div>

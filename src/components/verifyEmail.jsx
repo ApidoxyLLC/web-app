@@ -15,7 +15,7 @@ export default function VerifyEmailPage() {
     const verifyEmail = async () => {
       try {
         const res = await fetch(
-          "http://localhost:3000/api/v1/auth/verify-email",
+          "/api/v1/auth/verify-email",
           {
             method: "POST",
             headers: { "Content-type": "application/json" },

@@ -55,9 +55,9 @@ export function ProjectsCard() {
   }, [showSecuritySub]);
   useEffect(() => {
     if (userData.status === "authenticated" && userData.data?.user) {
-        router.push("http://localhost:3000/");
+        router.push("/");
       } else {
-        router.push("http://localhost:3000/signup");
+        router.push("/signup");
       }
   }, [userData, userData.status, router]);
   

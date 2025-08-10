@@ -56,7 +56,7 @@ const AppBasicInfo = () => {
 
     // }
     try{
-      const res = await fetch("http://localhost:3000/api/v1/shops",{
+      const res = await fetch("/api/v1/shops",{
         method:"POST",
         headers:{
           "Content-type" :"application/json"

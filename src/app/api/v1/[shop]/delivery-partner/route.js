@@ -171,9 +171,9 @@ export async function DELETE(request) {
 
     try {
         const url = new URL(request.url);
-        const pathSegments = url.pathname.split('/');
-        const referenceId = pathSegments[pathSegments.indexOf('v1') + 1];
-        const { deliveryPartnerName } = await request.json(); 
+        // const pathSegments = url.pathname.split('/');
+        // const referenceId = pathSegments[pathSegments.indexOf('v1') + 1];
+        const { deliveryPartnerName, shop: referenceId } = await request.json(); 
         if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },

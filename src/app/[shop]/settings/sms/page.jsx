@@ -16,6 +16,7 @@ import { useState } from "react";
 import bulk from "../../../../../public/images/bulk.png"
 import alpha from "../../../../../public/images/alpha.png"
 import adn from "../../../../../public/images/adn.png"
+import useFetch from "@/hooks/useFetch";
 const smsProviders = [
   {
     name: "Balk SMS BD",
@@ -51,74 +52,87 @@ const smsProviders = [
 export default function Dashboard() {
   const [selected, setSelected] = useState("Balk SMS BD");
   const [formData, setFormData] = useState({});
-  const [savedData, setSavedData] = useState({});
   const {shop} = useParams()
+
+  const {data, loading, refetch} = useFetch(`/${shop}/sms-email-services`)
   const handleAdd = async () => {
-  const provider = smsProviders.find((p) => p.name === selected);
-  if (!provider) return;
-    console.log(formData)
-  const payload = {
-    provider: provider.id,
-    shop,
-    ...formData
-  };
-  console.log("paylod", payload)
-  
-  try {
-    const response = await fetch("/api/v1/settings/sms-email-services", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    const provider = smsProviders.find((p) => p.name === selected);
+    if (!provider) return;
 
-    if (!response.ok) {
-      throw new Error("Failed to save SMS provider");
+    const payload = {
+      provider: provider.id,
+      shop,
+      ...formData,
+    };
+
+    try {
+      const response = await fetch("/api/v1/settings/sms-email-services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error("Failed to save SMS provider");
+
+      await response.json();
+      setFormData({});
+      refetch(); // ✅ Add করার পরে DB থেকে নতুন ডাটা রিফেচ
+    } catch (error) {
+      console.error("Error saving provider:", error);
     }
+  };
 
-    const result = await response.json();
-
-    // Update local state on success
-    setSavedData((prev) => ({ ...prev, [provider.id]: formData }));
-    setFormData({});
-    console.log("Success:", result);
+ const handleDelete = async (name) => {
+  console.log(name)
+  try {
+    const res = await fetch(`/api/v1/${shop}/sms-email-services`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ providerName: name, shop }),
+    });
+    if (!res.ok) throw new Error("Failed to delete");
+    refetch();
   } catch (error) {
-    console.error("Error saving provider:", error);
+    console.error("Error deleting provider:", error);
   }
 };
 
-  const handleDelete = (id) => {
-    const newSaved = { ...savedData };
-    delete newSaved[id];
-    setSavedData(newSaved);
-  };
-
   const currentProvider = smsProviders.find((p) => p.name === selected);
-  const isAdded = savedData[currentProvider?.id];
+
+  const savedFromDB = data?.smsProvider?.[currentProvider?.id];
+  const isAdded = !!savedFromDB;
+
 
   return (
     <div className="p-6 bg-muted/100 h-full space-y-6">
-      <Card>
+       <Card>
         <CardContent className="space-y-6">
           <p className="text-md pt-4 font-semibold">Integrate SMS Service</p>
 
+          {/* Provider Select Buttons */}
           <div className="flex gap-4">
             {smsProviders.map((p) => (
-                <Button
+              <Button
                 key={p.id}
                 variant="outline"
                 onClick={() => setSelected(p.name)}
                 className={`border-2 rounded-md flex ${
                   selected === p.name ? "border-foreground" : ""
                 }`}
-              > <Image src={p.logo} alt="logo" width={30} height={30}></Image>
+              >
+                <Image src={p.logo} alt="logo" width={30} height={30} />
                 {p.name}
               </Button>
             ))}
           </div>
 
-          {!isAdded && currentProvider && (
+          {loading && (
+            <div className="flex justify-center items-center py-10">
+              <span className="text-gray-500 animate-pulse ">Loading...</span>
+            </div>
+          )}
+
+          {!loading && !isAdded && currentProvider && (
             <div>
               <div className="flex flex-col gap-4 mt-4">
                 {currentProvider.fields.map((f) => (
@@ -151,49 +165,52 @@ export default function Dashboard() {
                 ))}
               </div>
               <div className="flex justify-end">
-                <Button
-                onClick={handleAdd}
-                className="mt-4"
-              >
-                Add <span className="text-xl">+</span>
-              </Button>
+                <Button onClick={handleAdd} className="mt-4">
+                  Add <span className="text-xl">+</span>
+                </Button>
               </div>
             </div>
           )}
 
-          {(() => {
-            const current = smsProviders.find((p) => p.name === selected);
-            if (!current) return null;
+          {/* Saved Data from DB */}
+          {!loading && isAdded && (
+            <div className="mt-6 border p-4 rounded-md">
+              <h4 className="font-semibold mb-4">{selected}</h4>
+              <div className="grid grid-cols-2 items-center gap-6">
+                {Object.entries(savedFromDB).map(([key, value]) =>
+  key !== "updatedAt" ? (
+    <p
+      key={key}
+      className="text-sm border rounded-md py-[9px] col-span-1 pl-4"
+    >
+      <strong>{key.charAt(0).toUpperCase() + key.slice(1)}</strong>:{" "}
+      {["password", "secret", "apikey", "apiKey", "clientSecret"].some((secretKey) =>
+        key.toLowerCase().includes(secretKey.toLowerCase())
+      ) ? (
+        <input
+          type="password"
+          value={value}
+          readOnly
+          className="bg-transparent border-none outline-none"
+        />
+      ) : (
+        value
+      )}
+    </p>
+  ) : null
+              )}
 
-            const info = savedData[current.id];
-            if (!info) return null;
-
-            return (
-              <div key={current.id} className="mt-6 border p-4 rounded-md">
-                <h4 className="font-semibold mb-4">{current.label}</h4>
-
-                <div className={`grid grid-cols-2 items-center gap-6`}>
-                  {Object.entries(info).map(([fieldName, value]) => (
-                    <p
-                      key={fieldName}
-                      className="text-sm border rounded-md py-[9px] col-span-1 pl-4"
-                    >
-                      <strong>{fieldName}</strong>: {value}
-                    </p>
-                  ))}
-                  
-                </div>
-                <div className="flex justify-end mt-6">
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDelete(current.id)}
-                  >
-                    Delete
-                  </Button>
-                </div>
               </div>
-            );
-          })()}
+              <div className="flex justify-end mt-6">
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDelete(currentProvider.id)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       <EmailConfigDashboard></EmailConfigDashboard>
