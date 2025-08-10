@@ -74,9 +74,15 @@
   const deliveryPartnerSchema = new mongoose.Schema({
     pathao: { type: pathaoSchema, default: undefined },
     steadfast: { type: steadfastSchema, default: undefined },
-    pathao: { type: pathaoSchema, default: null },
-    steadfast: { type: steadfastSchema, default: null }
   }, { timestamps: false, _id: false })
+
+  const deliveryChargeSchema = new mongoose.Schema({
+    chargeBasedOn: { type: String, enum: ['zone', 'upazilla', 'district' ], default: 'district' },
+       regionName: { type: String },
+           charge: { type: Number, default: 0 },
+          partner: { type: String, enum: ['pathao', 'steadfast' ], default: undefined },
+  }, { timestamps: false, _id: true  })
+
 
   const smsProviderSchema = new mongoose.Schema({
     bulk_sms_bd: { type: bulkSmsBdSchema, default: undefined },
@@ -377,6 +383,7 @@ const activeSubscriptionsSchema = new mongoose.Schema({
     support: { type: contactNdSupportSchema, select: true },
     notification: { type: notificationSchema, select: true },
     deliveryPartner: { type: deliveryPartnerSchema, default: null },
+    deliveryCharges: { type: [deliveryChargeSchema], default: null },
     smsProvider: { type: smsProviderSchema, default: {} },
     paymentPartner: { type: paymentPartnerSchema, default: null },
     paymentMethod: { type: String, enum: ['Cash on Delivery'], default: 'Cash on Delivery' },

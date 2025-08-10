@@ -12,14 +12,13 @@ export async function POST(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
-  
+
   const { authenticated, error, data } = await getAuthenticatedUser(request);
   if(!authenticated) return NextResponse.json({ error: "...not authorized" }, { status: 401, headers: securityHeaders });
 
   // Validate content type
   const contentType = request.headers.get('content-type') || '';
-  if (!contentType.includes('multipart/form-data'))
-      return NextResponse.json({ error: 'Invalid content type. Use multipart/form-data' }, { status: 400 });
+  if (!contentType.includes('multipart/form-data')) return NextResponse.json({ error: 'Invalid content type. Use multipart/form-data' }, { status: 400 });
 
   try {
     // Parse form data
@@ -30,15 +29,12 @@ export async function POST(request) {
     if (typeof shopId !== 'string' || shopId.length > 64 || !/^[a-zA-Z0-9_-]+$/.test(shopId))
       return NextResponse.json({ error: 'Invalid Shop ID format' }, { status: 400 });
 
-
         const vendor_db = await vendorDbConnect()
         const    Vendor = vendorModel(vendor_db)
         const    vendor = await Vendor.findOne({ referenceId: shopId })
                                       .select('_id referenceId ownerId ownerId dbInfo bucketInfo')
                                       .lean();
-      
     if (!hasUpdateLogoPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
-      
 
     try {
       const image = await uploadShopImage({     file, vendor,
