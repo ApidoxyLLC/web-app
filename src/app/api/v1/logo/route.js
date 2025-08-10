@@ -17,8 +17,7 @@ export async function PATCH(request) {
   try   { body = await request.json(); } 
   catch { return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400, headers: securityHeaders });}
 
-//   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') ||request.socket?.remoteAddress || '';
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') ||request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip  });
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
 
@@ -39,14 +38,8 @@ export async function PATCH(request) {
                                .lean();
 
     if (!vendor) return NextResponse.json({ success: false, error: 'Inconsistent Data...' }, { status: 400, headers: securityHeaders });
+    if (!hasUpdateLogoPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
 
-    // Put authorization
-    if (!hasUpdateLogoPermission(vendor, data.userId))
-      return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
-
-
-
-    
     const imageData = await ImageModel.findOne({ fileName: image });
     if (!imageData) return NextResponse.json({ error: "Image not found" }, { status: 404 });
 
@@ -61,17 +54,16 @@ export async function PATCH(request) {
         if (imageData._id !== undefined)       update['logo._id']       = imageData._id;
         if (imageData.imageName !== undefined) update['logo.imageName'] = imageData.fileName.trim().toLowerCase();
         
-        const updatedVendor = await Vendor.findByIdAndUpdate( vendor._id,
+        const updatedVendor = await Vendor.findByIdAndUpdate(          vendor._id,
                                                                 {            $set: update },
 
                                                                 {             new: true, 
-                                                                    runValidators: true }
-                                                            );
+                                                                    runValidators: true   }       );
+
         if (!updatedVendor)  throw new Error('Image data save error');
         const fileToDelete = await ImageModel.find({ bucketName: imageData.bucketName,
                                                          folder: imageData.folder,
-                                                            _id: { $ne: imageData._id } // not equal
-                                                });
+                                                            _id: { $ne: imageData._id }     });
         (async () => {
             try {
                 await Promise.all([ ...fileToDelete.map(item => deleteImageFile({ fileName: item.fileName, fileId: item.fileId }) ),

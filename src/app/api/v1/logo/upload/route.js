@@ -5,6 +5,7 @@ import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
 import securityHeaders from '../../utils/securityHeaders';
 import { uploadShopImage } from '@/services/image/blackblaze';
+import hasUpdateLogoPermission from '../hasUpdateLogoPermission';
 import uploadLogoDTOSchema from './uploadLogoDTOSchema';
 
 export async function POST(request) {
@@ -35,6 +36,9 @@ export async function POST(request) {
         const    vendor = await Vendor.findOne({ referenceId: shopId })
                                       .select('_id referenceId ownerId ownerId dbInfo bucketInfo')
                                       .lean();
+      
+    if (!hasUpdateLogoPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
+      
 
     try {
       const image = await uploadShopImage({     file, vendor,
