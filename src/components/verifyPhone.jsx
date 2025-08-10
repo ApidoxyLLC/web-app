@@ -14,7 +14,7 @@ export default function VerifyOTPPage() {
   const handleVerify = async (e) => {
     e.preventDefault();
 
-    const res = await fetch("http://localhost:3000/api/v1/auth/verify-phone", {
+    const res = await fetch("/api/v1/auth/verify-phone", {
       method: "POST",
       headers: {
         "Content-type": "application/json",

@@ -62,7 +62,7 @@ export default function Categories() {
     const checkSlug =  async ()=>{
       setloadingState(true);
       try{
-        const res = await fetch(`http://localhost:3000/api/v1/categories/slug?slug=${debounchedValue}&title=${newCategory.title}&shop=${shopId}`);
+        const res = await fetch(`/api/v1/categories/slug?slug=${debounchedValue}&title=${newCategory.title}&shop=${shopId}`);
         const data = await res.json();
         setSlugCheck({ isAvailable: data.isAvailable, suggestions: data.recommendations || [] });
         setloadingState(false);
@@ -78,7 +78,7 @@ export default function Categories() {
   const handleCreateCategory = async () => {
     if (!slugCheck.isAvailable) return;
     const parentId = selectedCategory?.id || null ;
-    const res = await fetch(`http://localhost:3000/api/v1/categories`, {
+    const res = await fetch(`/api/v1/categories`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...newCategory, parent: parentId, shop: shopId })
@@ -107,7 +107,7 @@ export default function Categories() {
     formData.append("file", file);
     formData.append("shop", shopId);
 
-    const res = await fetch("http://localhost:3000/api/v1/upload-image", {
+    const res = await fetch("/api/v1/upload-image", {
       method: "POST",
       body: formData,
     });

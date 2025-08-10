@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/input-base";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import useFetch from "@/hooks/useFetch";
 
 const emailFields = [
   { label: "SMTP", name: "smtp", type: "text" },
@@ -22,53 +23,80 @@ const emailFields = [
 
 export default function EmailConfigDashboard() {
   const [formData, setFormData] = useState({});
-  const [savedData, setSavedData] = useState(null);
-  const {shop} = useParams()
+  const { shop } = useParams();
+
+  const { data, loading, refetch } = useFetch(`/${shop}/sms-email-services`);
+
   const handleAdd = async () => {
     const payload = {
       shop,
       provider: "smtp",
-      ...formData
-    }
+      ...formData,
+    };
     try {
-    const response = await fetch("/api/v1/sms-email-services", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    
-    const result = await response.json();
-    if (response.ok) {
-      toast.success("Configured Email Service");
-    } else {
-      toast.error(result?.error || "Failed to update");
+      const response = await fetch("/api/v1/settings/sms-email-services", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        toast.success("Configured Email Service");
+        setFormData({});
+        refetch(); // get fresh data from DB
+      } else {
+        toast.error(result?.error || "Failed to update");
+      }
+    } catch (error) {
+      console.error("Error saving provider:", error);
     }
-  } catch (error) {
-    console.error("Error saving provider:", error);
-  }
-
-      setSavedData(formData);
-      setFormData({});
   };
 
-  const handleDelete = () => {
-    setSavedData(null);
+  const handleDelete = async () => {
+    try {
+      const response = await fetch(`/api/v1/${shop}/sms-email-services`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({  providerName: "smtp",shop }),
+      });
+
+      if (response.ok) {
+        toast.success("Deleted Email Service");
+        refetch();
+      } else {
+        toast.error("Failed to delete");
+      }
+    } catch (error) {
+      console.error("Error deleting provider:", error);
+    }
   };
+
+  const emailConfig = data?.emailProvider?.smtp || null;
 
   return (
-    <div className=" bg-muted/100 ">
+    <div className="bg-muted/100">
       <Card>
         <CardContent className="space-y-6">
           <p className="text-md pt-4 font-semibold">Configure Email Service</p>
-          {!savedData && (
+
+          {loading && (
+            <div className="flex justify-center items-center py-10">
+              <span className="text-gray-500 animate-pulse ">Loading...</span>
+            </div>
+          )}
+
+          {!loading && !emailConfig && (
             <div className="flex flex-col gap-4 mt-4">
               {emailFields.map((f) => (
                 <ControlGroup key={f.name}>
                   <ControlGroupItem className="shadow-none">
                     <InputBase className="h-10">
-                      <InputBaseAdornment className=" w-[80px]">
+                      <InputBaseAdornment className="w-[80px]">
                         {f.label}
                       </InputBaseAdornment>
                     </InputBase>
@@ -94,26 +122,39 @@ export default function EmailConfigDashboard() {
                 </ControlGroup>
               ))}
               <div className="flex justify-end">
-                <Button onClick={handleAdd} className="mt-4" >
-                Add <span className="text-xl">+</span>
-              </Button>
+                <Button onClick={handleAdd} className="mt-4">
+                  Add <span className="text-xl">+</span>
+                </Button>
               </div>
             </div>
           )}
 
-          {savedData && (
+          {!loading && emailConfig && (
             <div className="mt-6 border p-4 rounded-md">
               <h4 className="font-semibold mb-4">Email Configuration</h4>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(savedData).map(([key, value]) => (
-                  <p
-                    key={key}
-                    className="text-sm border rounded-md py-2 px-3 col-span-1"
-                  >
-                    <strong>{key}</strong>: {value}
-                  </p>
-                ))}
-                
+                {Object.entries(emailConfig).map(([key, value]) => (
+  <p
+    key={key}
+    className="text-sm border rounded-md py-2 px-3 col-span-1"
+  >
+    <strong>
+      {key.charAt(0).toUpperCase() + key.slice(1)}
+    </strong>
+    :{" "}
+    {key.toLowerCase().includes("password") ||
+    key.toLowerCase().includes("secret") ? (
+      <input
+        type="password"
+        value={value}
+        readOnly
+        className="bg-transparent border-none outline-none"
+      />
+    ) : (
+      value
+    )}
+  </p>
+))}
               </div>
               <div className="flex justify-end mt-6">
                 <Button

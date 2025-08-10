@@ -155,7 +155,8 @@ export async function GET(request, { params }) {
  
 
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request) {
+
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
         request.socket?.remoteAddress || '';
@@ -168,9 +169,11 @@ export async function DELETE(request, { params }) {
     }
 
     try {
-        const { shop: referenceId } =await params;
-        const { providerName } = await request.json(); 
-
+        
+    //   const referenceId = params.shop;
+        // const { shop: referenceId } =await params;
+        const { providerName, shop: referenceId  } = await request.json(); 
+        console.log("data kjoi",providerName, referenceId)
         if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },

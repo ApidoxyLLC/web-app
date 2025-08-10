@@ -89,7 +89,7 @@ useEffect(() => {
         { name: selected.name, email: selected.email, role },
       ]);
 
-      const response = await fetch("http://localhost:3000/api/v1/permission", {
+      const response = await fetch("/api/v1/permission", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

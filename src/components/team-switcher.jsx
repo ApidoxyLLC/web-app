@@ -64,7 +64,7 @@ export function TeamSwitcher( {teams} ) {
                 key={index}
                 onClick={() => {
                   setActiveTeam(team)
-                  router.push(`http://localhost:3000/${team?.id}/dashboard`)
+                  router.push(`/${team?.id}/dashboard`)
                 }}
                 className="gap-2 p-2"
               >

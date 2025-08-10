@@ -210,7 +210,7 @@ export default function NewProduct() {
 }
   const handleSubmit = async () => {
    try {
-  const response = await fetch("http://localhost:3000/api/v1/products", {
+  const response = await fetch("/api/v1/products", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
