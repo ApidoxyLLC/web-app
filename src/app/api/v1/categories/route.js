@@ -10,7 +10,7 @@ import { imageModel } from '@/models/vendor/Image';
 import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
 import config from '../../../../../config';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
-import { deleteImageFile } from '@/services/image/blackblaze';
+import { deleteImage } from '@/services/image/blackblaze';
 
 const MAX_CATEGORY_DEPTH = parseInt(process.env.MAX_CATEGORY_DEPTH || '5', 10);
 
@@ -78,7 +78,7 @@ export async function POST(request) {
                   try {
                       await Promise.all([
                       ...fileToDelete.map(item =>
-                          deleteImageFile({ fileName: item.fileName, fileId: item.fileId })
+                          deleteImage({ bucketId: item.bucketId,  fileName: item.fileName, fileId: item.fileId })
                       ),
                       ImageModel.deleteMany({
                           bucketName: imageData.bucketName,
