@@ -39,34 +39,33 @@ export async function PATCH(request) {
 
     const existingIndex = vendor.chatSupport?.findIndex(cs => cs.provider === provider) ?? -1;
 
-      let updatedVendor;
-      if (existingIndex !== -1) {
-        // Update existing chatSupport provider entry
-        updatedVendor = await Vendor.findOneAndUpdate( { _id: vendor._id, "chatSupport.provider": provider },
-                                                        {
-                                                          $set: {
-                                                            "chatSupport.$.link": link,
-                                                            "chatSupport.$.active": true
-                                                          }
-                                                        },
-                                                        { new: true }  // Return the updated document
-                                                      );
-      } else {
-        // Add new chatSupport provider entry
-        updatedVendor = await Vendor.findOneAndUpdate( { _id: vendor._id },
+    let updatedVendor;
+    if (existingIndex !== -1) {
+      // Update existing chatSupport provider entry
+      updatedVendor = await Vendor.findOneAndUpdate( { _id: vendor._id, "chatSupport.provider": provider },
                                                       {
-                                                        $push: {
-                                                          chatSupport: { provider, link, active: true }
+                                                        $set: {
+                                                          "chatSupport.$.link": link,
+                                                          "chatSupport.$.active": true
                                                         }
                                                       },
-                                                      { new: true }
-                                                      );
-      }
+                                                      { new: true }  // Return the updated document
+                                                    );
+    } else {
+      // Add new chatSupport provider entry
+      updatedVendor = await Vendor.findOneAndUpdate( { _id: vendor._id },
+                                                    {
+                                                      $push: {
+                                                        chatSupport: { provider, link, active: true }
+                                                      }
+                                                    },
+                                                    { new: true }
+                                                    );
+    }
 
-      // Find the updated chatSupport item to return
-      const updatedItem = updatedVendor.chatSupport.find(cs => cs.provider === provider);
-
-      return NextResponse.json( { message: 'Updated Successfully', chatSupport: updatedItem }, { status: 200, headers: securityHeaders } );
+    // Find the updated chatSupport item to return
+    const updatedItem = updatedVendor.chatSupport.find(cs => cs.provider === provider);
+    return NextResponse.json( { message: 'Updated Successfully', chatSupport: updatedItem }, { status: 200, headers: securityHeaders } );
   } catch (error) {
     console.error('Error updating chat support:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
