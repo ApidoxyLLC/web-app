@@ -282,10 +282,13 @@ export async function deleteImage({ bucketId, fileName, fileId }) {
     }
 
     // Delete file
-    await b2.deleteFileVersion({
+    console.log(finalFileId)
+    console.log(fileName)
+    const deleteResult  = await b2.deleteFileVersion({
       fileId: finalFileId,
       fileName: fileName || undefined
     });
+    console.log(deleteResult)
 
     return { success: true, message: 'File deleted successfully.' };
   } catch (error) {

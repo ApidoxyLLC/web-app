@@ -19,42 +19,44 @@ export default function Dashboard() {
   const [open, setOpen] = useState(true);
   const [suggestions, setSuggestions] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-const [loading, setLoading] = useState(false);
-const shop = useParams()
-const shopId =shop.shop
-console.log(users)
-useEffect(() => {
-  const delayDebounce = setTimeout(async () => {
-    if (!value.trim()) {
-      setSuggestions([]);
-      return;
-    }
+  const [loading, setLoading] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState(null); // To track deleting user
 
-    setLoading(true);
+  const shop = useParams();
+  const shopId = shop.shop;
 
-    try {
-      const query = value.includes("@")
-        ? `email=${encodeURIComponent(value)}`
-        : `username=${encodeURIComponent(value)}`;
-        
-      const res = await fetch(`/api/v1/user?${query}`);
-      const result = await res.json();
+  useEffect(() => {
+    const delayDebounce = setTimeout(async () => {
+      if (!value.trim()) {
+        setSuggestions([]);
+        return;
+      }
 
-      if (res.ok) {
-        setSuggestions([result.data]);
-      } else {
+      setLoading(true);
+
+      try {
+        const query = value.includes("@")
+          ? `email=${encodeURIComponent(value)}`
+          : `username=${encodeURIComponent(value)}`;
+
+        const res = await fetch(`/api/v1/user?${query}`);
+        const result = await res.json();
+
+        if (res.ok) {
+          setSuggestions([result.data]);
+        } else {
+          setSuggestions([]);
+        }
+      } catch (err) {
+        console.error("Fetch suggestions error:", err);
         setSuggestions([]);
       }
-    } catch (err) {
-      console.error("Fetch suggestions error:", err);
-      setSuggestions([]);
-    }
 
-    setLoading(false);
-  }, 400); // debounce input
+      setLoading(false);
+    }, 400);
 
-  return () => clearTimeout(delayDebounce);
-}, [value]);
+    return () => clearTimeout(delayDebounce);
+  }, [value]);
 
   useEffect(() => {
     if (session?.user?.name && session?.user?.email) {
@@ -62,31 +64,32 @@ useEffect(() => {
         {
           name: session.user.name,
           email: session.user.email,
+          referenceId: "current-user", // you can assign a special ID or real one if you have it
         },
       ]);
     }
   }, [session]);
+
+  const { data } = useFetch(`/${shopId}/staffs`);
+  useEffect(() => {
+    if (data) {
+      setUsers((prev) => [...prev, ...data]);
+    }
+  }, [data]);
 
   const handleAddUserClick = () => {
     setIsAdding(true);
     setOpen(true);
   };
 
-  const {data, error} = useFetch(`/${shopId}/staffs`)
-  console.log(data)
-  useEffect(() => {
-  if (data) {
-    setUsers((prev) => [...prev, ...data]);
-  }
-}, [data]);
   const handleDoneClick = async () => {
     const selected = suggestions.find((s) => s.email === value);
-    if (!selected) return alert("don't get selected");
+    if (!selected) return alert("User not selected");
 
     try {
       setUsers((prev) => [
         ...prev,
-        { name: selected.name, email: selected.email, role },
+        { name: selected.name, email: selected.email, role, referenceId: selected.referenceId || selected.id },
       ]);
 
       const response = await fetch("/api/v1/permission", {
@@ -119,6 +122,34 @@ useEffect(() => {
   const filteredSuggestions = suggestions?.filter((s) =>
     `${s.name} ${s.email}`.toLowerCase().includes(value.toLowerCase())
   );
+
+  // DELETE user handler
+  const handleDelete = async (userRefId) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    setDeletingUserId(userRefId);
+
+    try {
+      const res = await fetch(`/api/v1/${shopId}/staffs/?userId=${userRefId}`, {
+        method: "DELETE",
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to delete user");
+      }
+
+      // Remove user from state
+      setUsers((prev) => prev.filter((user) => user.referenceId !== userRefId));
+
+      console.log("User deleted successfully:", result);
+    } catch (error) {
+      console.error("Error deleting user:", error.message);
+      alert(`Delete failed: ${error.message}`);
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
 
   return (
     <Card className="w-full max-w-4xl mx-auto mt-6 rounded-lg p-4 shadow-none">
@@ -155,16 +186,12 @@ useEffect(() => {
                 ) : filteredSuggestions?.length > 0 ? (
                   filteredSuggestions.map((s) => (
                     <div
-                      key={s.referenceId}
+                      key={s.referenceId || s.id}
                       onClick={() => {
                         setValue(s.email);
                         setOpen(false);
                       }}
-                      className={
-                        open
-                          ? "px-3 py-2 bg-primary-foreground cursor-pointer"
-                          : "hidden"
-                      }
+                      className={open ? "px-3 py-2 bg-primary-foreground cursor-pointer" : "hidden"}
                     >
                       {s.name} ({s.email})
                     </div>
@@ -186,13 +213,11 @@ useEffect(() => {
         </div>
       )}
       {loadingUsers && (
-  <div className="text-center py-4 text-muted-foreground">
-    Loading users...
-  </div>
-)}
+        <div className="text-center py-4 text-muted-foreground">Loading users...</div>
+      )}
       {users?.map((user, index) => (
         <div
-          key={index}
+          key={user.referenceId || index}
           className="bg-muted rounded-md px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between"
         >
           <div className="flex items-center gap-3">
@@ -209,7 +234,12 @@ useEffect(() => {
           </div>
           <Badge>Full access</Badge>
           <div className="flex items-center justify-evenly w-full sm:w-auto gap-3">
-            <Button variant="ghost" size="icon">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(user.referenceId)}
+              disabled={deletingUserId === user.referenceId}
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>

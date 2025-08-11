@@ -197,7 +197,6 @@ export async function DELETE(request, { params }) {
   const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
   if (!authenticated) return NextResponse.json( { success: false, error: 'Not authenticated' }, { status: 401, headers: securityHeaders });
     
-  if (!hasWriteCategoryPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 403,headers: securityHeaders });
             
 
   try {
@@ -218,6 +217,7 @@ export async function DELETE(request, { params }) {
                                .lean();
 
     if (!vendor) return NextResponse.json({ success: false, error: 'Shop not found' }, { status: 404, headers: securityHeaders });
+    if (!hasWriteCategoryPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 403,headers: securityHeaders });
     
     // --- Connect to Shop DB ---
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
@@ -231,14 +231,15 @@ export async function DELETE(request, { params }) {
       let categoryTitle;
       await session.withTransaction(async () => {
         const category = await Category.findOne({ _id: categoryId }).session(session);
+        console.log(category)
         if (!category) throw new Error('Category not found');
         categoryTitle = category.title;
 
         if(category.image) {
           const Image = imageModel(shop_db);
           const image = await Image.findOne({  fileName: category.image.imageName, 
-                                                 folder:'category'                  }).session(session);
-
+                                                 folder:'category'                  });
+            console.log("image",image)
           if(image) {
             const deleteResult = await deleteImage({ bucketId: image.bucketId, 
                                                      fileName: image.fileName, 

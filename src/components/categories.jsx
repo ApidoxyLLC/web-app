@@ -1,9 +1,7 @@
-// Rewritten Categories component with slug checking and API-based creation
-
 "use client";
 
 import { TreeView } from '@/components/tree-view';
-import { PlusCircle, PlusIcon, Trash2, FolderPlus } from 'lucide-react';
+import { PlusCircle, PlusIcon, Trash2, FolderPlus, LoaderIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +28,7 @@ import { useParams } from 'next/navigation';
 import PicturePreviewInput from './picture-preview-input';
 import useFetch from '@/hooks/useFetch';
 import { useDebounce } from 'use-debounce';
+import { toast } from 'sonner';
 
 export default function Categories() {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -42,7 +41,6 @@ export default function Categories() {
     description: "",
     image: "",
   });
-  console.log(newCategory)
   const [debounchedValue] = useDebounce(newCategory?.slug, 500)
   const params = useParams()
   const shopId = params.shop
@@ -51,9 +49,10 @@ export default function Categories() {
     data: response,
     loading,
     error,
+    refetch
   } = useFetch(`/${shopId}/categories`);
+  console.log(response)
   const collections = response || [];
-  console.log(collections)
   useEffect(()=>{
     if (!debounchedValue){
       setSlugCheck({ isAvailable: null, suggestions: [] });
@@ -85,22 +84,37 @@ export default function Categories() {
     });
     const data = await res.json();
     if (data.success) {
-      alert("Category created successfully. Please refresh to see it.");
+      refetch()
+      toast.success("Category created successfully. Please refresh to see it.");
       setNewCategory({ title: "", slug: "", description: "", image: undefined });
       setSlugCheck({ isAvailable: null, suggestions: [] });
       setIsOpen(false);
     } else {
-      alert(data.error || "Category creation failed");
+      toast.error(data.error || "Category creation failed");
     }
   };
 
-  const handleDelete = (id) => {
-    const deleteRecursive = (categoryId) => {
-      const children = collections.filter(item => item.parent === categoryId);
-      children.forEach(child => deleteRecursive(child.id));
-    };
-    deleteRecursive(id);
-  };
+  const handleDelete = async (id) => {
+  if (!confirm("Are you sure you want to delete this category?")) return;
+
+  try {
+    const res = await fetch(`/api/v1/${shopId}/categories/${id}`, {
+      method: "DELETE",
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      toast.success(`Category "${data.data?.title || ""}" deleted successfully.`);
+      refetch(); // Refresh category list
+    } else {
+      toast.error(data.error || "Failed to delete category.");
+    }
+  } catch (error) {
+    console.error("Delete failed", error);
+    toast.error("Something went wrong while deleting.");
+  }
+};
   
   const uploadImage = async (file) => {
     const formData = new FormData();
@@ -124,9 +138,12 @@ export default function Categories() {
   };
   
   const buildTree = (items, parentId = null, visited = new Set()) =>
+
     items
       .filter((item) => item.parent === parentId)
       .map((item) => {
+        console.log(item)
+        console.log(`http://localhost:3000/api/v1/image/${shopId}/${item.image.imageName}`)
         if (visited.has(item.id)) return null;
         visited.add(item.id);
         const children = buildTree(items, item.id, new Set(visited));
@@ -135,7 +152,7 @@ export default function Categories() {
           ...item,
           name: (
             <div className="flex items-center gap-2 group">
-              {item.image && <img src={item.image} alt={item.title} className="h-6 w-6 rounded" />}
+              {item.image && <img src={`http://localhost:3000/api/v1/image/${shopId}/${item.image.imageName}`} alt={item.title} className="h-6 w-6 rounded" />}
               <span>{item.title}</span>
               {children.length > 0 && (
                 <Badge className="text-sm h-6 bg-primary-foreground italic px-2 py-0">
@@ -170,6 +187,7 @@ export default function Categories() {
       .filter(Boolean);
 
   const itemsTree = buildTree(collections);
+  console.log(collections)
   return (
     <div className="space-y-4 p-6">
       <div className="flex justify-between items-center gap-2">
@@ -269,6 +287,7 @@ export default function Categories() {
                       onChange={(e) => setNewCategory(prev => ({ ...prev, slug: e.target.value }))}
                     />
                   </InputBaseControl>
+                  {loadingState && <LoaderIcon className="h-4 w-8 animate-spin" />}
                 </InputBase>
               </ControlGroupItem>
               {/* <Button size="sm" onClick={checkSlug} disabled={loadingState}>Check</Button> */}

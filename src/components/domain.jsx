@@ -52,6 +52,13 @@ export default function Domain() {
 
   const apiPath = "/api/v1/add-domain";
 
+  function SkeletonBox({ height = "h-7", width = "w-full" }) {
+  return (
+    <div
+      className={`bg-gray-200 animate-pulse rounded-md ${height} ${width}`}
+    ></div>
+  );
+}
   async function addCustomDomain() {
     const subdomainTrim = subdomain.trim().toLowerCase();
     const domain = selectedDomain;
@@ -104,6 +111,38 @@ export default function Domain() {
       setLoadingState(false);
     }
   }
+  async function handleDeleteDomain(domainName) {
+  if (!confirm(`Are you sure you want to delete the domain "${domainName}"?`)) return;
+
+  setLoadingState(true);
+
+  try {
+    const res = await fetch(`/api/v1/${shopId}/domains`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        domainToDelete: domainName,
+        domainId: "", 
+        shopId,
+      }),
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      toast.error(result?.error || "Failed to delete domain");
+      return;
+    }
+
+    toast.success("Domain deleted successfull");
+    refetch(); // ডোমেইন লিস্ট আবার ফ্রেশ করবে
+  } catch (error) {
+    console.error(error);
+    toast.error("An unexpected error occurred.");
+  } finally {
+    setLoadingState(false);
+  }
+}
 
   const defaultDomain = domainsList[0] ? [{ name: domainsList[0], isActive: true, isDeletable: false }] : [];
   const customDomains = domainsList?.slice(1).map(d => ({ name: d, isActive: true, isDeletable: true }));
@@ -153,12 +192,11 @@ export default function Domain() {
 
         {/* Default domains list */}
         <TabsContent value="default">
-          <div className="flex flex-col justify-between border rounded-md">
-            {loading ? (
-  <div className="flex justify-center items-center p-10 text-sm italic">
-    Loading domains...
-  </div>
-) :
+          <div className={`flex flex-col justify-between ${loading || "border"} rounded-md`}>
+            {loading ? (<div className="space-y-3">
+                <SkeletonBox />
+                <SkeletonBox />
+              </div> ):
 
             defaultDomain.length === 0 ? (
               <div className="flex justify-center items-center p-10 text-sm italic">
@@ -172,7 +210,7 @@ export default function Domain() {
                     <Badge variant="secondary">{item.isActive ? "Active" : "Not active"}</Badge>
                     <div className="flex-1" />
                     {item.isDeletable && (
-                      <Button size="icon" variant="secondary" className="h-7 w-7">
+                      <Button size="icon" onClick={() => handleDeleteDomain(item.name)} variant="secondary" className="h-7 w-7" >
                         <Trash2 className="!h-3.5 !w-3.5" />
                       </Button>
                     )}
@@ -203,9 +241,10 @@ export default function Domain() {
         <TabsContent value="custom">
           <div className="flex flex-col justify-between border rounded-md">
             {loading ? (
-  <div className="flex justify-center items-center p-10 text-sm italic">
-    Loading domains...
-  </div>
+  <div className="space-y-3">
+                <SkeletonBox />
+                <SkeletonBox />
+              </div> 
 ):
 
             customDomains.length === 0 ? (
@@ -235,7 +274,7 @@ export default function Domain() {
                     </Tooltip>
                     <div className="flex-1" />
                     {item.isDeletable && (
-                      <Button size="icon" variant="secondary" className="h-7 w-7">
+                      <Button size="icon" onClick={() => handleDeleteDomain(item.name)} variant="secondary" className="h-7 w-7">
                         <Trash2 className="!h-3.5 !w-3.5" />
                       </Button>
                     )}
