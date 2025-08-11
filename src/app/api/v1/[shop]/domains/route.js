@@ -3,6 +3,12 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
+import { domainModel } from '@/models/vendor/Domain';
+import mongoose from 'mongoose';
+import { DomainService } from '@/services/vercel/domainService';
+
+
+const domainService = new DomainService();
 
 export async function GET(request, { params }) {
     const vendor_db = await vendorDbConnect();
@@ -10,13 +16,13 @@ export async function GET(request, { params }) {
 
     try {
 
- const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') ||request.socket?.remoteAddress || '';
-  const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+        const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+        if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
 
-  // Authenticate user
-  const { authenticated, error, data } = await getAuthenticatedUser(request);
-  if (!authenticated)  return NextResponse.json({ error: error || 'Not authorized' }, { status: 401 });
+        // Authenticate user
+        const { authenticated, error, data } = await getAuthenticatedUser(request);
+        if (!authenticated) return NextResponse.json({ error: error || 'Not authorized' }, { status: 401 });
         const { shop } = await params;
 
         if (!shop) {
@@ -49,45 +55,41 @@ export async function GET(request, { params }) {
 }
 
 
-export async function DELETE(req) {
+export async function DELETE(request) {
     const vendor_db = await vendorDbConnect();
     const Domain = domainModel(vendor_db);
     const VendorModel = vendorModel(vendor_db);
 
     try {
-        const { searchParams } = new URL(req.url);
-        const domainId = searchParams.get('domainId');
-        const shopId = searchParams.get('shopId');
+        const { domainToDelete, domainId, shopId } = await request.json();
 
         if (!domainId || !shopId) {
             throw new Error('Both domainId and shopId query parameters are required');
         }
 
-        if (!mongoose.Types.ObjectId.isValid(domainId) || !mongoose.Types.ObjectId.isValid(shopId)) {
+        if (!mongoose.Types.ObjectId.isValid(domainId)) {
             throw new Error('Invalid ID format');
         }
 
         const domain = await Domain.findOne({
             _id: new mongoose.Types.ObjectId(domainId),
-            shop: new mongoose.Types.ObjectId(shopId)
+            shop: shopId
         });
 
         if (!domain) {
             throw new Error('Domain not found or does not belong to this shop');
         }
 
-        // Delete from Vercel
         const vercelResponse = await domainService.deleteVercelDomain(domain.domain);
 
-        // Delete from Cloudflare (if applicable)
         const cloudflareResponse = await domainService.deleteCloudflareRecord(domain.domain);
 
-        // Remove from MongoDB
+        const txtRecordsResponse = await domainService.deleteCloudflareTxtRecord(domain.domain);
+
         await Domain.deleteOne({ _id: domain._id });
 
-        // Update vendor's domains array
-        await VendorModel.findByIdAndUpdate(
-            shopId,
+        await VendorModel.findOneAndUpdate(
+            { referenceId: shopId },
             { $pull: { domains: domain.domain } },
             { new: true }
         );
@@ -96,7 +98,8 @@ export async function DELETE(req) {
             success: true,
             message: 'Domain successfully deleted',
             vercel: vercelResponse,
-            cloudflare: cloudflareResponse
+            cloudflare: cloudflareResponse,
+            txtRecords: txtRecordsResponse
         });
 
     } catch (error) {

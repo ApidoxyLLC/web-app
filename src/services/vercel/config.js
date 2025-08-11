@@ -2,7 +2,7 @@ export default {
     vercel: {
         token: process.env.VERCEL_TOKEN,
         projectId: process.env.VERCEL_PROJECT_ID,
-        // teamId: process.env.VERCEL_TEAM_ID, 
+        teamId: process.env.VERCEL_TEAM_ID, 
         cnameTarget: 'cname.vercel-dns.com' 
     },
     cloudflare: {
