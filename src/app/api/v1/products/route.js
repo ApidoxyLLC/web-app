@@ -256,7 +256,7 @@ export async function POST(request) {
 
   try {
     const { 
-      title, description, tags, images, isPhysical, weight, weightUnit, 
+      title, description, tags, gallery, isPhysical, weight, weightUnit, 
       category,
       price, compareAtPrice, costPerItem, profit,  margin, 
       sellWithOutStock, sku, barcode, 
@@ -282,7 +282,7 @@ export async function POST(request) {
                                     title,
                                     description,
                                     tags,
-                                    gallery: images,
+                                    gallery,
                                     productFormat: isPhysical ? 'physical' : 'digital',
                                     weight,
                                     weightUnit,

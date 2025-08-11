@@ -5,15 +5,22 @@ const variantSchema = z.object({
   options: z.array(z.string().min(1)).min(1, "At least one option is required"),
 });
 
+const imageObjectSchema = z.object({
+  id: z.number().default(0).optional(),
+  fileName: z.string().min(1, { message: 'fileName is required when id is not provided' }).optional(),
+  alt: z.string().optional(),
+  position: z.number().optional(),
+}).refine(  data => typeof data.id === 'number' || (data.fileName && data.fileName.trim() !== ''), { message: 'Either id or fileName must be provided' } );
+
 const productDTOSchema = z.object({
   shop: z.string(),
 
   title: z.string().min(1, { message: 'Title is required' }),
   description: z.string().min(1, { message: 'Description is required' }),
 
-  images: z.array(z.string().url()).optional().default([]), // ✅ allow empty array or omitted
+  gallery: z.array(imageObjectSchema).optional().default([]), 
 
-  category: z.string().optional().or(z.literal('')), // ✅ optional and empty string allowed
+  category: z.string().optional().or(z.literal('')),
 
   isPhysical: z.boolean(),
 
@@ -33,8 +40,7 @@ const productDTOSchema = z.object({
   sku: z.string().optional(),
   barcode: z.string().optional(),
   isFreeShiping: z.boolean().optional(),
-  variants: z
-    .array(
+  variants: z .array(
       z.object({
         name: z.string(),
         options: z.array(z.string().min(1)).min(1),

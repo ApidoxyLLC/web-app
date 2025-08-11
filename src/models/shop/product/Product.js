@@ -61,7 +61,7 @@ const detailSchema = new mongoose.Schema({
 
 const imageSchema = new mongoose.Schema({
                  id: { type: Number, default: 0 },
-               name: { type: String, required: true },
+           fileName: { type: String, required: true },
                 alt: String,
            position: Number
 }, { _id: false });

@@ -29,10 +29,13 @@ const config = {
 
   // time durations limitations
   accessTokenExpireMinutes: Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15'),
+  shopCacheExpireMinutes: Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15'),
   refreshTokenExpireMinutes: Number(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || '1440'),
   userLockMinutes: Number(process.env.USER_LOCK_MINUTES || '15'),
   emailVerificationExpireMinutes: Number(process.env.EMAIL_VERIFICATION_EXPIRE_MINUTES || '15'),
   phoneVerificationExpireMinutes: Number(process.env.PHONE_VERIFICATION_EXPIRE_MINUTES || '3'),
+  vendorDataCacheExpireMinutes: Number(process.env.VENDOR_DATA_CACHE_EXPIRE_MINUTES || '15'),
+  vendorIdCacheExpireMinutes: Number(process.env.VENDOR_ID_CACHE_EXPIRE_MINUTES || '30'),
 
   // end user default durations limitations
   accessTokenDefaultExpireMinutes: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || '30'),
