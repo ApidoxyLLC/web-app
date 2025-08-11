@@ -8,13 +8,18 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import useFetch from "@/hooks/useFetch";
+import { LoaderIcon } from "lucide-react";
+
 export default function BusinessInfoForm() {
-  
-  const {shop} = useParams()
-  const socialLinks = [
+  const { shop } = useParams();
+  const { data, loading } = useFetch(`/${shop}`); // only for fetching
+  const socialLinks = data?.socialLinks || [];
+
+  const socialLinksJson = [
     { name: "facebook", label: "Facebook", placeholder: "https://facebook.com/your-page" },
     { name: "telegram", label: "Telegram", placeholder: "https://t.me/your-channel" },
     { name: "linkedin", label: "LinkedIn", placeholder: "https://www.linkedin.com/in/your-name" },
@@ -22,71 +27,68 @@ export default function BusinessInfoForm() {
     { name: "youtube", label: "YouTube", placeholder: "https://www.youtube.com/your-channel" },
     { name: "discord", label: "Discord", placeholder: "https://discord.gg/your-server" },
     { name: "twitter", label: "Twitter", placeholder: "https://twitter.com/your-handle" },
-    {
-      name: "instagram", 
-      label: "Instagram",
-      placeholder: "https://www.instagram.com/your-handle",
-    },
+    { name: "instagram", label: "Instagram", placeholder: "https://www.instagram.com/your-handle" },
     { name: "tiktok", label: "TikTok", placeholder: "https://www.tiktok.com/@your-profile" },
   ];
-  const [formData, setFormData] = useState({
-    facebook:"",
-    telegram:"",
-    twitter:"",
-    linkedin:"",
-    whatsapp:"",
-    youtube:"",
-    discord:"",
-    instagram:"",
-    tiktok:"",
-  })
 
-  
-  const handleChange =(name,value)=>{
-    setFormData((prev)=>({
-      ...prev,
-      [name]:value
-    }))
-  }
+  const [formData, setFormData] = useState(
+    socialLinksJson.reduce((acc, link) => ({ ...acc, [link.name]: "" }), {})
+  );
 
-  const handleSubmit = async ()=>{
-    try{
-       const cleanedSocialLinks = Object.fromEntries(
-      Object.entries(formData).filter(
-        ([_, value]) => value && value.startsWith("http")
-      )
-    );
+  const [updating, setUpdating] = useState(false); // only for button
 
-    const finalData = {
-      shop,
-      ...cleanedSocialLinks,
-    };
-      const res = await fetch(`/api/v1/settings/social-links`,{
-        method:"POST",
-        headers:{
-          "Content-type":"application/json"
-        },
-        body: JSON.stringify( finalData )
-      })
-      
-      const data = await res.json();
-      if (res.ok) {
-        toast.success("Shop updated successfully!");
-      } else {
-        console.error(data,res);
-        toast.error(data.error || "Update failed");
-      }
-
-    }catch(err){
-      console.log(err)
+  // Load API data into formData
+  useEffect(() => {
+    if (socialLinks.length > 0) {
+      const updatedData = {};
+      socialLinksJson.forEach((link) => {
+        updatedData[link.name] =
+          socialLinks.find((item) => item.platform === link.name)?.link || "";
+      });
+      setFormData(updatedData);
     }
+  }, [socialLinks]);
+
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async () => {
+  setUpdating(true);
+  try {
+    const payload = { shop, ...formData }; // spread formData so it becomes flat
+
+    const res = await fetch(`/api/v1/settings/social-links`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const response = await res.json();
+    if (res.ok) {
+      toast.success("Shop updated successfully!");
+    } else {
+      toast.error(response.error || "Update failed");
+    }
+  } catch (err) {
+    toast.error("Something went wrong");
+  } finally {
+    setUpdating(false);
   }
+};
+
 
   return (
     <CardContent className="p-6 pt-5">
-      <h2 className="text-md font-semibold pb-4">Business Information</h2>
-      <div className="grid md:grid-cols-2 grid-cols-1 gap-6">
-        {socialLinks.map((link, index) => (
+      <h2 className="text-md font-semibold pb-4">Social Links</h2>
+      {loading ? <div className="flex h-64 items-center justify-center">
+        <LoaderIcon className="h-8 w-8 animate-spin" />
+      </div> : <div>
+              <div className="grid md:grid-cols-2 grid-cols-1 gap-6">
+        {socialLinksJson.map((link, index) => (
           <ControlGroup key={index}>
             <ControlGroupItem>
               <InputBase>
@@ -96,9 +98,11 @@ export default function BusinessInfoForm() {
             <ControlGroupItem className="w-full">
               <InputBase>
                 <InputBaseControl>
-                  <InputBaseInput placeholder={link.placeholder}
-                    value={formData[link.name]}
-                    onChange={(e) => handleChange(link.name, e.target.value)}/>
+                  <InputBaseInput
+                    placeholder={link.placeholder}
+                    value={formData[link.name] || ""}
+                    onChange={(e) => handleChange(link.name, e.target.value)}
+                  />
                 </InputBaseControl>
               </InputBase>
             </ControlGroupItem>
@@ -106,8 +110,14 @@ export default function BusinessInfoForm() {
         ))}
       </div>
       <div className="flex justify-end pt-6">
-        <Button onClick={handleSubmit}>Update Shop Info</Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={updating} // disable only during update
+        >
+          {updating ? "Updating..." : "Update Shop Info"}
+        </Button>
       </div>
+</div>}
     </CardContent>
   );
 }

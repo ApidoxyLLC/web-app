@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FiCopy } from "react-icons/fi";
 import { FaRegImages } from "react-icons/fa";
-import { BsQrCode } from "react-icons/bs";
 import {
   Select,
   SelectContent,
@@ -15,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LoaderIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";
 import {
@@ -26,10 +24,12 @@ import {
 } from "@/components/ui/input-base";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import useFetch from "@/hooks/useFetch";
 
 export default function StoreSettings() {
   const {shop} = useParams()
-  
+  const {data, loading} = useFetch(`/${shop}`)
+  const {configuration} = data
   const [formData, setFormData] = useState({
     shop,
     businessName: "",
@@ -39,8 +39,17 @@ export default function StoreSettings() {
     country: "",
     address: "",
   });
-
-
+  
+  useEffect(()=>{
+    setFormData({
+      businessName: configuration?.businessName,
+      email: configuration?.contact?.email,
+      phone: configuration?.contact?.phone,
+      industry: configuration?.industry,
+      country: configuration?.country,
+      address: configuration?.location,
+    })
+  },[configuration])
   const handleChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -71,7 +80,13 @@ export default function StoreSettings() {
       alert("Something went wrong");
     }
   };
-
+  if(loading){
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <LoaderIcon className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 bg-muted/100 ">
       <div className="lg:col-span-2 h-fit flex flex-col gap-6">
@@ -93,7 +108,7 @@ export default function StoreSettings() {
                     <InputBaseControl>
                       <InputBaseInput
                         placeholder="Enter your business name"
-                        value={formData.name}
+                        value={formData?.businessName}
                         onChange={(e) => handleChange("businessName", e.target.value)}
                       />
                     </InputBaseControl>

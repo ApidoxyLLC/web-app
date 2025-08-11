@@ -94,9 +94,7 @@ export default function CreatShop() {
                             <SelectValue placeholder="Select Country" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="bd">Bangladesh</SelectItem>
-                            <SelectItem value="in">India</SelectItem>
-                            <SelectItem value="us">USA</SelectItem>
+                            <SelectItem value="Bangladesh">Bangladesh</SelectItem>
                           </SelectContent>
                         </Select>
                       </InputBaseControl>
