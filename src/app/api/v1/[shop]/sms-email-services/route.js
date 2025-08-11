@@ -169,12 +169,7 @@ export async function DELETE(request, {params}) {
     }
 
     try {
-        // const { shop: referenceId } = await params;
         const { providerName, providerType, referenceId } = await request.json();
-    //   const referenceId = params.shop;
-        // const { shop: referenceId } =await params;
-        // const { providerName, shop: referenceId  } = await request.json(); 
-        // console.log("data kjoi",providerName, referenceId)
         if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },
