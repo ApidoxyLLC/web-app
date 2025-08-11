@@ -2,17 +2,16 @@ import { NextResponse } from "next/server";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
-import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
-// import { userModel } from "@/models/auth/user";
 
 export async function GET(request, { params }) {
-    // Rate limiting
-    const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    const ip =
+        request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
         request.socket?.remoteAddress || '';
+
     const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getSmsEmail' });
     if (!allowed) {
         return NextResponse.json(
@@ -23,7 +22,6 @@ export async function GET(request, { params }) {
 
     try {
         const { shop: referenceId } = await params;
-
         if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },
@@ -31,71 +29,25 @@ export async function GET(request, { params }) {
             );
         }
 
-
- /**
-                           * fake Authentication for test purpose only
-                           * *******************************************
-                           * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-                           * *******************************************
-                           * *              ***
-                           * *              ***
-                           * *            *******
-                           * *             *****
-                           * *              ***
-                           * *               *
-                           * */
-
-        // const authDb = await authDbConnect()
-        // const User = userModel(authDb);
-        // const user = await User.findOne({ referenceId: "cmda0m1db0000so9whatqavpx" })
-        //     .select('referenceId _id name email phone role isEmailVerified')
-        // console.log(user)
-        // const data = {
-        //     sessionId: "cmdags8700000649w6qyzu8xx",
-        //     userReferenceId: user.referenceId,
-        //     userId: user?._id,
-        //     name: user.name,
-        //     email: user.email,
-        //     phone: user.phone,
-        //     role: user.role,
-        //     isVerified: user.isEmailVerified || user.isPhoneVerified,
+        // const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        // if (!authenticated) {
+        //     return NextResponse.json(
+        //         { error: authError || "Not authorized" },
+        //         { status: 401 }
+        //     );
         // }
 
-        /**
-         * fake Authentication for test purpose only 
-         * *******************************************
-         * *********FAKE AUTHENTICATION END********* *
-         * *******************************************
-        **/
-
-
-        // Authentication
-        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        if (!authenticated) {
-            return NextResponse.json(
-                { error: authError || "Not authorized" },
-                { status: 401 }
-            );
-        }
-
-        const [auth_db, vendor_db] = await Promise.all([
-            authDbConnect(),
-            vendorDbConnect()
-        ]);
-
-        const [Shop, Vendor] = [
-            shopModel(auth_db),
-            vendorModel(vendor_db)
-        ];
+        const vendor_db = await vendorDbConnect();
+        const Vendor = vendorModel(vendor_db);
 
         const permissionFilter = {
             referenceId,
             $or: [
-                { ownerId: data.userId },
+                // { ownerId: data.userId },
                 {
                     stuffs: {
                         $elemMatch: {
-                            userId: new mongoose.Types.ObjectId(data.userId),
+                            // userId: new mongoose.Types.ObjectId(data.userId),
                             status: "active",
                             permission: { $in: ["r:sms-provider", "r:email-provider", "r:shop"] }
                         }
@@ -104,19 +56,16 @@ export async function GET(request, { params }) {
             ]
         };
 
-
-        const [vendorData, shopData] = await Promise.all([
-            Vendor.findOne(permissionFilter).select("smsProvider emailProvider").lean(),
-            Shop.findOne(permissionFilter).select("smsProvider emailProvider").lean()
-        ]);
-
+        const vendorData = await Vendor.findOne(permissionFilter)
+            .select("marketing.smsProviders marketing.emailProviders")
+            .lean();
 
         const providers = {
-            smsProvider: vendorData?.smsProvider || shopData?.smsProvider || null,
-            emailProvider: vendorData?.emailProvider || shopData?.emailProvider || null
+            smsProviders: vendorData?.marketing?.smsProviders || null,
+            emailProviders: vendorData?.marketing?.emailProviders || null
         };
 
-        if (!providers.smsProvider && !providers.emailProvider) {
+        if (!providers.smsProviders && !providers.emailProviders) {
             return NextResponse.json(
                 {
                     success: true,
@@ -127,16 +76,10 @@ export async function GET(request, { params }) {
             );
         }
 
-        return NextResponse.json(
-            {
-                success: true,
-                data: providers
-            },
-            { status: 200 }
-        );
+        return NextResponse.json({ success: true, data: providers }, { status: 200 });
 
     } catch (error) {
-        console.error("GET SMS/Email Services Error:", error);
+        console.log("GET SMS/Email Services Error:", error);
         return NextResponse.json(
             {
                 error: error.message || "Failed to retrieve provider data",
@@ -147,21 +90,10 @@ export async function GET(request, { params }) {
     }
 }
 
-export async function DELETE(request) {
-
-    const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-        request.headers['x-real-ip'] ||
-        request.socket?.remoteAddress || '';
-    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'deleteProvider' });
-    if (!allowed) {
-        return NextResponse.json(
-            { error: 'Too many requests. Please try again later.' },
-            { status: 429, headers: { 'Retry-After': retryAfter.toString() } }
-        );
-    }
-
+// ================= DELETE =================
+export async function DELETE(request, { params }) {
     try {
-        const { providerName, providerType, referenceId } = await request.json();
+        const { shop: referenceId } = await params;
         if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },
@@ -169,21 +101,6 @@ export async function DELETE(request) {
             );
         }
 
-        if (!providerName || typeof providerName !== 'string') {
-            return NextResponse.json(
-                { error: "Valid provider name is required (e.g., 'bulk_sms_bd')" },
-                { status: 400 }
-            );
-        }
-
-        if (!providerType || !['sms', 'email'].includes(providerType)) {
-            return NextResponse.json(
-                { error: "Valid provider type is required ('sms' or 'email')" },
-                { status: 400 }
-            );
-        }
-
-        // Authentication
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
         if (!authenticated) {
             return NextResponse.json(
@@ -192,26 +109,8 @@ export async function DELETE(request) {
             );
         }
 
-        if (!mongoose.Types.ObjectId.isValid(data.userId)) {
-            return NextResponse.json(
-                { error: "Invalid user ID format" },
-                { status: 400 }
-            );
-        }
-
-        const [auth_db, vendor_db] = await Promise.all([
-            authDbConnect(),
-            vendorDbConnect()
-        ]);
-
-        const [Shop, Vendor] = [
-            shopModel(auth_db),
-            vendorModel(vendor_db)
-        ];
-
-        const requiredPermissions = providerType === 'sms'
-            ? ["w:sms-provider", "w:shop"]
-            : ["w:email-provider", "w:shop"];
+        const vendor_db = await vendorDbConnect();
+        const Vendor = vendorModel(vendor_db);
 
         const permissionFilter = {
             referenceId,
@@ -222,54 +121,38 @@ export async function DELETE(request) {
                         $elemMatch: {
                             userId: new mongoose.Types.ObjectId(data.userId),
                             status: "active",
-                            permission: { $in: requiredPermissions }
+                            permission: { $in: ["d:sms-provider", "d:email-provider", "d:shop"] }
                         }
                     }
                 }
-            ],
-            [`${providerType}Provider.${providerName}`]: { $exists: true }
+            ]
         };
 
-        const updateOperation = {
-            $unset: {
-                [`${providerType}Provider.${providerName}`]: ""
-            },
+        // Remove both smsProviders and emailProviders
+        const updateResult = await Vendor.updateOne(permissionFilter, {
             $set: {
-                updatedAt: new Date()
+                "marketing.smsProviders": [],
+                "marketing.emailProviders": []
             }
-        };
+        });
 
-        const [vendorUpdate, shopUpdate] = await Promise.all([
-            Vendor.updateOne(permissionFilter, updateOperation),
-            Shop.updateOne(permissionFilter, updateOperation)
-        ]);
-
-        if (vendorUpdate.matchedCount === 0 && shopUpdate.matchedCount === 0) {
+        if (updateResult.matchedCount === 0) {
             return NextResponse.json(
-                {
-                    success: false,
-                    message: `${providerType.toUpperCase()} provider not found or no permission to delete`
-                },
+                { error: "No permission or shop not found" },
                 { status: 404 }
-               );
+            );
         }
 
         return NextResponse.json(
-            {
-                success: true,
-                message: `${providerType.toUpperCase()} provider removed successfully`,
-                removedProvider: providerName,
-                providerType: providerType,
-                referenceId: referenceId
-            },
+            { success: true, message: "SMS/Email providers deleted successfully" },
             { status: 200 }
         );
 
     } catch (error) {
-        console.error(`DELETE  Provider Error:`, error);
+        console.error("DELETE SMS/Email Services Error:", error);
         return NextResponse.json(
             {
-                error: error.message || `Failed to delete provider`,
+                error: error.message || "Failed to delete provider data",
                 stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
             },
             { status: 500 }

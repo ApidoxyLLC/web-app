@@ -78,15 +78,9 @@ export async function GET(request, { params }) {
 
 export async function DELETE(request, { params }) {
     // Rate Limiting
-    const ip = request.ip || request.headers.get('x-real-ip');
-    const rateLimit = await applyRateLimit(ip);
-    if (!rateLimit.allowed) {
-        return NextResponse.json(
-            { error: 'Too many requests' },
-            { status: 429, headers: { 'Retry-After': rateLimit.retryAfter } }
-        );
-    }
-
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+    if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
     const { shopId } =await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
