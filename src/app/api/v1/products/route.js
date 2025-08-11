@@ -15,6 +15,7 @@ import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import securityHeaders from "../utils/securityHeaders";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import config from "../../../../../config";
+import { imageModel } from "@/models/vendor/Image";
 
 export const dynamic = 'force-dynamic'; // Ensure dynamic fetching
 
@@ -233,6 +234,8 @@ export async function POST(request) {
   // const   auth_db = await authDbConnect();
   const vendor_db = await vendorDbConnect();
   const    Vendor = vendorModel(vendor_db)
+  const Image = imageModel(vendor_db);
+  
   // const      Shop = shopModel(auth_db);
 
   const vendor = await Vendor.findOne({ referenceId: shopId })
@@ -263,6 +266,9 @@ export async function POST(request) {
       isFreeShiping, variants
 
     } = parsed.data;
+
+
+
 
 
       // const slugExist = await Product.exists({ slug: title.toString().toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/--+/g, '-')  });

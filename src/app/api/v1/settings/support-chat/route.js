@@ -30,28 +30,43 @@ export async function PATCH(request) {
     // Connect to DB and get model
     const     db = await vendorDbConnect();
     const Vendor = vendorModel(db);
-    const vendor = await Vendor.findOne({ referenceId: shop });
+    const vendor = await Vendor.findOne({ referenceId: shop })
+                               .select("_id ownerId staffs referenceId chatSupport ")
+                               .lean();
     if (!vendor) return NextResponse.json({ message: 'Vendor not found' }, { status: 404 });
 
-    if (!hasUpdatePermission(vendor, data.userId)) 
-            return NextResponse.json( { success: false, error: 'Not authorized to read customer data' }, { status: 403, headers: securityHeaders });
+    if (!hasUpdatePermission(vendor, data.userId)) return NextResponse.json( { success: false, error: 'Not authorized to read customer data' }, { status: 403, headers: securityHeaders });
 
     const existingIndex = vendor.chatSupport?.findIndex(cs => cs.provider === provider) ?? -1;
 
-    if (existingIndex !== -1) {
-        // Update existing entry
-        vendor.chatSupport[existingIndex].link = link;
-        vendor.chatSupport[existingIndex].active = true;
-    } else {
-        // Add new entry
-        vendor.chatSupport = vendor.chatSupport || []; 
-        vendor.chatSupport.push({ provider, link, active: true });
-    }
+      let updatedVendor;
+      if (existingIndex !== -1) {
+        // Update existing chatSupport provider entry
+        updatedVendor = await Vendor.findOneAndUpdate( { _id: vendor._id, "chatSupport.provider": provider },
+                                                        {
+                                                          $set: {
+                                                            "chatSupport.$.link": link,
+                                                            "chatSupport.$.active": true
+                                                          }
+                                                        },
+                                                        { new: true }  // Return the updated document
+                                                      );
+      } else {
+        // Add new chatSupport provider entry
+        updatedVendor = await Vendor.findOneAndUpdate( { _id: vendor._id },
+                                                      {
+                                                        $push: {
+                                                          chatSupport: { provider, link, active: true }
+                                                        }
+                                                      },
+                                                      { new: true }
+                                                      );
+      }
 
-    const updatedVendor  = await vendor.save();
-    const updatedItem = vendor.chatSupport.find(cs => cs.provider === provider);
-    return NextResponse.json({ message: 'Updated Successfully', chatSupport: updatedItem }, { status: 200, headers: securityHeaders });
-    // return NextResponse.json( { message: 'Chat support updated successfully',  chatSupport: updatedVendor.chatSupport  }, { status: 200, headers: securityHeaders() } );
+      // Find the updated chatSupport item to return
+      const updatedItem = updatedVendor.chatSupport.find(cs => cs.provider === provider);
+
+      return NextResponse.json( { message: 'Updated Successfully', chatSupport: updatedItem }, { status: 200, headers: securityHeaders } );
   } catch (error) {
     console.error('Error updating chat support:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
