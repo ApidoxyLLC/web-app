@@ -242,7 +242,7 @@ export async function downloadImage({bucket, folder, file}) {
     await authorizeB2();
     return await b2.downloadFileByName({
                       bucketName: bucket,
-                      fileName: `${file}`,
+                      fileName: `${folder}/${file}`,
                       responseType: 'stream',
                     });
   } catch (error) {
