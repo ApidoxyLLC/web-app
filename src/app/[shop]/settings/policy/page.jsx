@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
-import { UndoToolbar,  } from "@/components/toolbars/undo";
+import { UndoToolbar } from "@/components/toolbars/undo";
 import { RedoToolbar } from "@/components/toolbars/redo";
 import { Separator } from "@/components/ui/separator";
 import { BoldToolbar } from "@/components/toolbars/bold";
@@ -22,12 +21,17 @@ import { HorizontalRuleToolbar } from "@/components/toolbars/horizontal-rule";
 import { BlockquoteToolbar } from "@/components/toolbars/blockquote";
 import { HardBreakToolbar } from "@/components/toolbars/hard-break";
 import { ToolbarProvider } from "@/components/toolbars/toolbar-provider";
+import { LoaderIcon } from "lucide-react";
+import useFetch from "@/hooks/useFetch";
 
 export default function ShopUpdatePage() {
-  const  params  = useParams();
-  const slug = params.shop
-  const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const slug = params.shop;
+  const [loadingState, setLoadingState] = useState(false);
   const [error, setError] = useState("");
+  
+  const { data, loading } = useFetch(`/${slug}`);
+  const policy = data?.policy;
 
   const editor = useEditor({
     extensions: [
@@ -47,41 +51,41 @@ export default function ShopUpdatePage() {
         },
       }),
     ],
-    content: "<h2 class='tiptap-heading'>Hello world 🌍</h2>",
+    content: "",
     immediatelyRender: false,
-
   });
+
+  // Load policy into editor after fetch
+  useEffect(() => {
+    if (editor && policy) {
+      editor.commands.setContent(`<h2 class='tiptap-heading'>${policy}</h2>`);
+    }
+  }, [editor, policy]);
 
   const handleSubmit = async () => {
     if (!editor) return;
-    setLoading(true);
+    setLoadingState(true);
     setError("");
 
     try {
       const policies = editor.getHTML();
-      const parser = new DOMParser();
-    const doc = parser.parseFromString(policies, 'text/html');
-    const plainText = doc.body.textContent || doc.body.innerText;
       const res = await fetch(`/api/v1/settings/policy`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          policies:plainText, 
-          shop:slug
+          policies, // keep HTML
+          shop: slug,
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || "Something went wrong");
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Something went wrong");
 
       alert("Shop updated successfully!");
     } catch (err) {
       setError(err.message || "Error updating shop");
     } finally {
-      setLoading(false);
+      setLoadingState(false);
     }
   };
 
@@ -90,7 +94,7 @@ export default function ShopUpdatePage() {
   return (
     <div className="w-full mx-auto p-6">
       <Card className="pt-0 pb-6">
-        <CardContent className="sticky top-0 -muted/100 z-10 border-b flex items-center justify-between py-2">
+        <CardContent className="sticky top-0 z-10 border-b flex items-center justify-between py-2">
           <ToolbarProvider editor={editor}>
             <div className="flex items-center gap-2">
               <UndoToolbar />
@@ -110,13 +114,19 @@ export default function ShopUpdatePage() {
           </ToolbarProvider>
         </CardContent>
 
-        <CardContent className=" min-h-[300px] cursor-text bg-background -mt-2">
-          <EditorContent editor={editor} />
+        <CardContent className="min-h-[300px] cursor-text bg-background -mt-2">
+          {loading ? (
+            <div className="flex h-64 items-center justify-center">
+              <LoaderIcon className="h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <EditorContent editor={editor} />
+          )}
         </CardContent>
 
         <CardContent className="mt-4 flex justify-end">
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Updating..." : "Update Shop"}
+          <Button onClick={handleSubmit} disabled={loadingState}>
+            {loadingState ? "Updating..." : "Update Shop"}
           </Button>
         </CardContent>
 

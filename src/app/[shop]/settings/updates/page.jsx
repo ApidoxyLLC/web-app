@@ -1,37 +1,64 @@
 "use client";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import useFetch from "@/hooks/useFetch";
 import { useParams } from "next/navigation";
-import { useState } from "react";
-// OTP component imported but not used (temporarily)
-// import {
-//   InputOTP,
-//   InputOTPGroup,
-//   InputOTPSlot,
-// } from "@/components/ui/input-otp";
+import { LoaderIcon } from "lucide-react";
 
 export default function Dashboard() {
+  const { shop } = useParams();
+
   const [notifyMethod, setNotifyMethod] = useState("email");
   const [input, setInput] = useState({
-    email: "user@example.com",
-    phone: "+880123456789",
-    whatsapp: "+880123456789",
+    email: "",
+    phone: "",
+    whatsapp: "",
   });
   const [edit, setEdit] = useState(false);
   const [btn, setBtn] = useState(false);
-  const [clickOtp, setClickOtp] = useState(false);
-  const [otp, setOtp] = useState(0);
-  const [count, setCount] = useState("1");
+  const [loadingState, setloadingState] = useState(false);
+  // const [count, setCount] = useState("1");
+  const [orderCount, setOrderCount] = useState("1");
+  const [hourCount, setHourCount] = useState("1");
+  
   const [triggerBasis, setTriggerBasis] = useState("order");
-  const {shop} = useParams()
-  const [loading, setLoading] = useState(false);
+
+  const { data, loading } = useFetch(`/${shop}`);
+  const { realTimeUpdates } = data || {};
+
+  useEffect(() => {
+    if (realTimeUpdates?.notification) {
+      const notif = realTimeUpdates.notification;
+
+      setNotifyMethod(notif.preferredChannel || "email");
+
+      setInput({
+        email: notif.email || "",
+        phone: notif.phone || "", 
+        whatsapp: notif.whatsapp || "",
+      });
+
+      if (notif.orderNotifications?.enabled) {
+        setTriggerBasis("order");
+        setOrderCount(String(notif.orderNotifications.frequency || "1"));
+      } else if (notif.hourlyNotification?.enabled) {
+        setTriggerBasis("hourly");
+        setHourCount(String(notif.hourlyNotification.intervalHours || "1"));
+      } else {
+        setTriggerBasis("order");
+        setHourCount("1");
+        setOrderCount("1")
+      }
+    }
+  }, [realTimeUpdates]);
+
   const saveBtn = async () => {
-    setLoading(true);
-    // OTP verification temporarily disabled
-    // if (otp === 1234) {
+    setloadingState(true);
+
     try {
       const res = await fetch("/api/v1/settings/notification", {
         method: "POST",
@@ -39,29 +66,22 @@ export default function Dashboard() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          shop, 
+          shop,
           triggerBasis,
-          count,
+          count :  triggerBasis === "order" ? orderCount : hourCount ,
           notifyVia: [notifyMethod],
           email: notifyMethod === "email" ? input.email : null,
           phone: notifyMethod === "sms" ? input.phone : null,
           whatsapp: notifyMethod === "whatsapp" ? input.whatsapp : null,
         }),
       });
-      
-      console.log("shop",shop)
-      console.log("basis",triggerBasis)
-      console.log("count",count)
-      console.log("notifyVia",[notifyMethod])
-      console.log("email",notifyMethod === "email" ? input.email : null)
-      console.log("phone",notifyMethod === "sms" ? input.phone : null)
-      console.log("whatsapp",notifyMethod === "whatsapp" ? input.whatsapp : null)
+
       const result = await res.json();
+
       if (res.ok) {
         alert("Notification settings updated successfully");
         setEdit(false);
         setBtn(false);
-        setClickOtp(false);
       } else {
         alert(result?.error || "Something went wrong");
       }
@@ -69,12 +89,16 @@ export default function Dashboard() {
       console.error("API Error:", error);
       alert("Failed to update notification settings");
     } finally {
-    setLoading(false); // Stop loading
-  }
-    // } else {
-    //   alert("OTP is invalid");
-    // }
+      setloadingState(false);
+    }
   };
+  if(loading){
+    return(
+      <div className="flex h-64 items-center justify-center">
+        <LoaderIcon className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="bg-muted/100 h-full p-6 grid grid-cols-3 gap-6">
@@ -83,7 +107,7 @@ export default function Dashboard() {
           <CardContent>
             <p className="text-md font-semibold pb-2">Notify Me For</p>
             <RadioGroup
-              defaultValue="order"
+              value={triggerBasis}
               onValueChange={(val) => setTriggerBasis(val)}
             >
               <div className="flex items-center space-x-2">
@@ -91,8 +115,8 @@ export default function Dashboard() {
                 <Label htmlFor="r1">Every</Label>
                 <select
                   className="border rounded-lg"
-                  value={count}
-                  onChange={(e) => setCount(e.target.value)}
+                  value={orderCount}
+                  onChange={(e) => setOrderCount(e.target.value)}
                 >
                   {[...Array(9)].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -107,8 +131,8 @@ export default function Dashboard() {
                 <Label htmlFor="r2">Every</Label>
                 <select
                   className="border rounded-lg"
-                  value={count}
-                  onChange={(e) => setCount(e.target.value)}
+                  value={hourCount}
+                  onChange={(e) => setHourCount(e.target.value)}
                 >
                   {[...Array(9)].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -125,7 +149,7 @@ export default function Dashboard() {
         <Card>
           <CardContent>
             <p className="text-md font-semibold pb-2">Notify With Me</p>
-            <RadioGroup defaultValue="email" onValueChange={setNotifyMethod}>
+            <RadioGroup value={notifyMethod} onValueChange={setNotifyMethod}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="email" id="n1" />
                 <Label htmlFor="n1">Via Email</Label>
@@ -195,41 +219,13 @@ export default function Dashboard() {
             )}
 
             {btn ? (
-  <Button
-    onClick={() => {
-      saveBtn();
-    }}
-    disabled={loading}
-  >
-    {loading ? "Updating..." : "Update"}
-  </Button>
-) : (
-  <Button onClick={() => setEdit(true)}>
-    Edit
-  </Button>
-)}
-
+              <Button onClick={saveBtn} disabled={loadingState}>
+                {loadingState ? "Updating..." : "Update"}
+              </Button>
+            ) : (
+              <Button onClick={() => setEdit(true)}>Edit</Button>
+            )}
           </CardContent>
-
-          {/* OTP Section - Temporarily disabled */}
-          {/* {clickOtp && (
-            <CardContent className="flex gap-3">
-              <InputOTP
-                maxLength={4}
-                onChange={(value) => {
-                  setOtp(Number(value));
-                }}
-              >
-                <InputOTPGroup className="flex gap-[7px]">
-                  <InputOTPSlot index={0} className="rounded-md border-l" />
-                  <InputOTPSlot index={1} className="rounded-md border-l" />
-                  <InputOTPSlot index={2} className="rounded-md border-l" />
-                  <InputOTPSlot index={3} className="rounded-md border-l" />
-                </InputOTPGroup>
-              </InputOTP>
-              <Button onClick={saveBtn}>Save</Button>
-            </CardContent>
-          )} */}
         </Card>
       </div>
     </div>

@@ -8,56 +8,132 @@ import {
   InputBaseControl,
   InputBaseInput,
 } from "@/components/ui/input-base";
+import useFetch from "@/hooks/useFetch";
+import { LoaderIcon } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+
+const chatSupportDTOSchema = z.object({
+  shop: z.string(),
+  provider: z.enum(["facebook", "whatsapp"]),
+  link: z.string().url(),
+});
 
 export default function Dashboard() {
-  const {shop} =useParams()
+  const { shop } = useParams();
   const [selected, setSelected] = useState("facebook");
   const [formData, setFormData] = useState({
-    facebookLink : "",
-    whatsappLink : ""
-  })
- 
- const handleSubmit = async () => {
-  const mainData = {
-    shop,
-    provider: selected,
-    link: selected === "facebook" ? formData.facebookLink : formData.whatsappLink,
+    facebook: "",
+    whatsapp: "",
+  });
+  const [loadingState, setloadingState] = useState(false)
+  const { data, loading } = useFetch(`/${shop}`);
+
+  // Populate formData from fetched supportChat array
+  useEffect(() => {
+    if (data?.supportChat && Array.isArray(data.supportChat)) {
+      const links = {
+        facebook: "",
+        whatsapp: "",
+      };
+
+      data.supportChat.forEach((item) => {
+        if (item.provider === "facebook") {
+          links.facebook = item.link || "";
+        }
+        if (item.provider === "whatsapp") {
+          // Extract phone number from full URL if possible
+          // e.g., from https://wa.me/8801XXXX => 8801XXXX
+          try {
+            const url = new URL(item.link);
+            if (url.hostname === "wa.me") {
+              links.whatsapp = url.pathname.replace("/", "");
+            } else {
+              links.whatsapp = item.link; // fallback full URL
+            }
+          } catch {
+            links.whatsapp = item.link; // fallback full URL
+          }
+        }
+      });
+
+      setFormData(links);
+    }
+  }, [data]);
+
+  const handleSubmit = async () => {
+    setloadingState(true)
+    let link = "";
+    if (selected === "facebook") {
+      link = formData.facebook.trim();
+    } else if (selected === "whatsapp") {
+      // Build full WhatsApp URL from phone number
+      const phoneNumber = formData.whatsapp.trim();
+      if (!phoneNumber) {
+        alert("Please enter a valid WhatsApp number");
+        return;
+      }
+      link = `https://wa.me/${phoneNumber}`;
+    }
+
+    const mainData = {
+      shop,
+      provider: selected,
+      link,
+    };
+
+    // Validate with zod schema before sending
+    try {
+      chatSupportDTOSchema.parse(mainData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        alert(
+          "Validation error: " +
+            error.errors.map((e) => e.message).join(", ")
+        );
+      } else {
+        alert("Invalid input");
+      }
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/settings/support-chat`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(mainData),
+      });
+
+      const resData = await res.json();
+
+      if (res.ok) {
+        alert("Shop updated successfully!");
+        // Optionally reload data or clear form here
+      } else {
+        console.error(resData);
+        alert(resData.error || "Update failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    } finally{
+      setloadingState(false)
+    }
   };
 
-  try {
-    const res = await fetch(`/api/v1/settings/support-chat`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(mainData),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      alert("Shop updated successfully!");
-      setFormData({
-        facebookLink: "",
-        whatsappLink: ""
-      });
-    } else {
-      console.error(data);
-      alert(data.error || "Update failed");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Something went wrong");
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <LoaderIcon className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
-};
 
   return (
-    <div
-      className="bg-muted/100 p-6 h-full
-    "
-    >
+    <div className="bg-muted/100 p-6 h-full">
       <Card>
         <CardContent className="space-y-6">
           <p className="text-md pt-4 font-semibold">Chat Support</p>
@@ -82,14 +158,14 @@ export default function Dashboard() {
               Whatsapp
             </Button>
           </div>
+
           <div>
             {selected === "facebook" && (
               <ControlGroup className="h-10">
-
                 <ControlGroupItem className="shadow-none">
                   <InputBase>
                     <InputBaseAdornment className="text-xs w-[100px]">
-                      Facebook Page ID
+                      Facebook Page URL
                     </InputBaseAdornment>
                   </InputBase>
                 </ControlGroupItem>
@@ -100,11 +176,13 @@ export default function Dashboard() {
                         type="url"
                         placeholder="https://facebook.com/your-page"
                         required
-                        onChange={(e)=>{
-                          setFormData((prev) =>({
-                            ...prev,facebookLink: e.target.value
+                        value={formData.facebook}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            facebook: e.target.value,
                           }))
-                        }}
+                        }
                       />
                     </InputBaseControl>
                   </InputBase>
@@ -124,13 +202,20 @@ export default function Dashboard() {
                   <InputBase>
                     <InputBaseControl>
                       <InputBaseInput
-                        placeholder={`https://wa.me/8801XXXXXXXXX`}
-                        type="number"
+                        type="text"
+                        placeholder="8801XXXXXXXXX"
                         required
-                         onChange={(e)=>{
-                          setFormData((prev) =>({
-                            ...prev,whatsappLink: e.target.value
-                          }))
+                        pattern="[0-9]+"
+                        value={formData.whatsapp}
+                        onChange={(e) => {
+                          // Optional: allow only digits
+                          const val = e.target.value;
+                          if (/^\d*$/.test(val)) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              whatsapp: val,
+                            }));
+                          }
                         }}
                       />
                     </InputBaseControl>
@@ -139,9 +224,10 @@ export default function Dashboard() {
               </ControlGroup>
             )}
           </div>
+
           <div className="flex justify-end">
-            <Button onClick={handleSubmit}>
-              Update Chat Support Info. <span className="text-xl"></span>
+            <Button onClick={handleSubmit} disabled={loadingState} >
+              {loadingState ? "Updating..." : "Update"}
             </Button>
           </div>
         </CardContent>

@@ -22,8 +22,7 @@ export async function GET(request, { params }) {
     }
 
     try {
-        const { shop: referenceId } = params;
-        console.log("Shop Reference ID:", referenceId);
+        const { shop: referenceId } = await params;
 
         if (!referenceId) {
             return NextResponse.json(
@@ -105,15 +104,12 @@ export async function GET(request, { params }) {
             ]
         };
 
-        console.log("Permission Filter:", permissionFilter);
 
         const [vendorData, shopData] = await Promise.all([
             Vendor.findOne(permissionFilter).select("smsProvider emailProvider").lean(),
             Shop.findOne(permissionFilter).select("smsProvider emailProvider").lean()
         ]);
 
-        console.log("Vendor Data:", vendorData);
-        console.log("Shop Data:", shopData);
 
         const providers = {
             smsProvider: vendorData?.smsProvider || shopData?.smsProvider || null,
@@ -151,11 +147,7 @@ export async function GET(request, { params }) {
     }
 }
 
-
- 
-
-
-export async function DELETE(request, {params}) {
+export async function DELETE(request) {
 
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         request.headers['x-real-ip'] ||
@@ -169,12 +161,7 @@ export async function DELETE(request, {params}) {
     }
 
     try {
-        // const { shop: referenceId } = await params;
         const { providerName, providerType, referenceId } = await request.json();
-    //   const referenceId = params.shop;
-        // const { shop: referenceId } =await params;
-        // const { providerName, shop: referenceId  } = await request.json(); 
-        // console.log("data kjoi",providerName, referenceId)
         if (!referenceId) {
             return NextResponse.json(
                 { error: "Shop reference is required" },
