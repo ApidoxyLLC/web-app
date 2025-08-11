@@ -62,8 +62,7 @@ export async function POST(request) {
         //     return NextResponse.json({ error: "imageId is required when providing an image" }, { status: 400 });
         const ImageModel = imageModel(vendor_db);
         const imageData = await ImageModel.findOne({ fileName: parsed.data.image });
-        if (!imageData) 
-            return NextResponse.json({ error: "Image not found" }, { status: 404 });
+        if (!imageData) return NextResponse.json({ error: "Image not found" }, { status: 404 });
 
         try {
             const ShopImage = imageModel(shop_db);
@@ -109,7 +108,7 @@ export async function POST(request) {
                                             slug: parsed.data.slug,
     ...(parsed.data.description && { description: parsed.data.description}),
     ...(image                   && {       image: {       _id: image._id, 
-                                                    imageName: image.imageName}}),
+                                                    imageName: image.fileName}}),
     ...(parent                  && {      parent: parent._id, 
                                        ancestors: [...(parent.ancestors || []), parent._id],
                                            level: (parent.level || 0) + 1}),
