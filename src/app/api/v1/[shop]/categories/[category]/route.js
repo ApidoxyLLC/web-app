@@ -16,7 +16,7 @@ import hasWriteCategoryPermission from './hasWriteCategoryPermission';
 
 export async function GET(request, { params }) {
   // Rate limiting
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request?.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'getCategory' });
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
 
@@ -236,34 +236,21 @@ export async function DELETE(request, { params }) {
         categoryTitle = category.title;
 
         if(category.image) {
-          const Image = imageModel(shop_db);
-          const image = await Image.findOne({  fileName: category.image.imageName, 
-                                                 folder:'category'                  });
-            console.log("image",image)
-          if(image) {
-            const deleteResult = await deleteImage({ bucketId: image.bucketId, 
-                                                     fileName: image.fileName, 
-                                                       fileId: image.fileId        });
-
-            if (!deleteResult.success || deleteResult.data?.fileId !== image.fileId) throw new Error('Failed to delete image from storage');
-            await Image.deleteOne({ _id: image._id }).session(session);
-          }
+            const Image = imageModel(shop_db);
+            await Image.updateOne( { fileName: category.image.imageName, folder: 'category' },
+                                   { $set: { 'deleteInfo.isDeleted'         : true,
+                                             'deleteInfo.deletedAt'         : new Date(),
+                                             'deleteInfo.deletedBy'         : data.userId,
+                                             'deleteInfo.isDeleteFromBucket': false }
+                                   }, { session }
+                                  );
         }
-        const { deletedCount } = await Category.deleteOne({ _id: categoryId }).session(session);
+        const { deletedCount } = await Category.deleteOne({ _id: category._id }).session(session);
         if (deletedCount === 0) throw new Error('Category not found');
       });
 
-      const response = NextResponse.json(
-        { 
-          success: true, 
-          message: 'Category deleted successfully',
-          data: { id: categoryId, title: categoryTitle } 
-        },
-        { status: 200 }
-      );
-      Object.entries(securityHeaders).forEach(([key, value]) => {
-        response.headers.set(key, value);
-      });
+      const response = NextResponse.json( { success: true, message: 'Category deleted successfully', data: { id: categoryId, title: categoryTitle }  }, { status: 200 } );
+      Object.entries(securityHeaders).forEach(([key, value]) => { response.headers.set(key, value) });
       return response;
 
     } catch (error) {

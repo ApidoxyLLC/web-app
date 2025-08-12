@@ -154,7 +154,6 @@ export async function GET(req, { params }) {
     }
 }
 
-
 export async function DELETE(request, { params }) {
     // --- Rate Limiting ---
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||  request.headers.get('x-real-ip') ||  request.socket?.remoteAddress || '';
@@ -198,59 +197,27 @@ export async function DELETE(request, { params }) {
         if (!product) throw new Error('Product not found');
         productTitle = product.title;
 
-        // Delete all product images
-        const imagesToDelete = [];
-
-        // Add main gallery images
-        if (product.gallery && product.gallery.length > 0) imagesToDelete.push(...product.gallery.map(img => img.name));
-
-        // Add variant images if they exist
-        if (product.variants && product.variants.length > 0) product.variants.forEach(variant => (variant.images && variant.images.length > 0) && imagesToDelete.push(...variant.images));
-        
+        const imagesToDelete = [ ...(product.gallery?.map(img => img.name).filter(Boolean) || []),
+                                ...(product.variants?.flatMap(v => v.images || []).filter(Boolean) || []) ];
+        const uniqueImages = [...new Set(imagesToDelete)];
 
         // Delete all images from storage and database
         if (imagesToDelete.length > 0) {
-            const images = await Image.find({ fileName: { $in: imagesToDelete },
-                                                folder: 'products'              }).session(session);
-
-            if (images.length === 0) return;
-
-            // Step 1: delete from storage in parallel
-            const deleteResults = await Promise.all(
-                    images.map(image => deleteImage({ bucketId: image.bucketId,
-                                                      fileName: image.fileName,
-                                                        fileId: image.fileId }).then(res => ({ res, image }))
-                )
-            );
-
-            // Step 2: validate results
-            const failed = deleteResults.find(({ res, image }) =>
-                !res.success || res.data?.fileId !== image.fileId
-            );
-            if (failed) throw new Error(`Failed to delete image ${failed.image.fileName} from storage`);
-                // Step 3: delete DB docs in parallel
-            await Image.deleteMany({ _id: { $in: images.map(img => img._id) }}).session(session);
+              await Image.updateMany( { fileName: { $in: imagesToDelete }, folder: 'products' },
+                                      { $set: { 'deleteInfo.isDeleted': true,
+                                                'deleteInfo.deletedAt': new Date(),
+                                                'deleteInfo.deletedBy': data.userId,
+                                                'deleteInfo.isDeleteFromBucket': false  }
+                                      }, { session }
+                                    );
             }
-
-        // Delete digital assets if product is digital
-        // if (product.productFormat === 'digital' && product.digitalAssets) {
-        //   // Add logic here to delete digital assets from storage
-        //   // This would depend on your digital asset storage system
-        // }
 
         // Finally delete the product
         const { deletedCount } = await Product.deleteOne({ _id: productId }).session(session);
         if (deletedCount === 0) throw new Error('Product not found');
       });
 
-      const response = NextResponse.json(
-        { 
-          success: true, 
-          message: 'Product deleted successfully',
-          data: { id: productId, title: productTitle } 
-        },
-        { status: 200 }
-      );
+      const response = NextResponse.json({ success: true, message: 'Product deleted successfully', data: { id: productId, title: productTitle }  }, { status: 200 } );
       
       Object.entries(securityHeaders).forEach(([key, value]) => {
         response.headers.set(key, value);
