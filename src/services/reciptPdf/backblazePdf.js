@@ -56,31 +56,39 @@ export async function uploadSubscriptionReceipt({ pdfBytes, paymentId, invoiceId
     }
 }
 
-export async function downloadReceipt({ bucket, folder, file }) {
+
+
+export async function downloadReceipt({ bucketName, fileName }) {
     try {
         const b2Client = await authorizeB2();
+
+        // Ensure bucketName and fileName are properly encoded if needed
         const response = await b2Client.downloadFileByName({
-            bucketName: bucket,
-            fileName: `${folder}/${file}`,
-            responseType: 'arraybuffer', 
-            onDownloadProgress: (progressEvent) => {
-                console.log(`Download progress: ${Math.round(
-                    (progressEvent.loaded * 100) / progressEvent.total
-                )}%`);
-            }
+            bucketName: bucketName,
+            fileName: fileName,
+            responseType: 'arraybuffer'
         });
+
+        // Verify the response is actually a PDF
+        if (!response.data || response.headers['content-type'] !== 'application/pdf') {
+            throw new Error('Invalid PDF response from Backblaze');
+        }
 
         return {
             data: Buffer.from(response.data),
             headers: {
-                'content-type': 'application/pdf',
+                'content-type': response.headers['content-type'],
                 'content-length': response.headers['content-length'],
                 'last-modified': response.headers['last-modified']
             }
         };
 
     } catch (error) {
-        console.error('Backblaze PDF download error:', error.response?.data || error.message);
+        console.error('Backblaze download error:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+        });
         throw new Error(error.response?.data?.message || 'Failed to fetch PDF');
     }
 }

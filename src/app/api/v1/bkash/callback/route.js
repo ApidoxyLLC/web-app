@@ -41,7 +41,7 @@ export async function GET(request) {
 
                 const pdfBytes = await generateReceiptPDF(invoice);
                 const pdfAttachment = {
-                    filename: `receipt_${invoice._id}.pdf`,
+                    filename: `${invoice._id}.pdf`,
                     content: Buffer.from(pdfBytes),
                     contentType: 'application/pdf'
                 };
@@ -60,14 +60,13 @@ export async function GET(request) {
 
                 console.log("**************uploadResult")
                 console.log(uploadResult)
-                const viewUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/receipts/${invoice._id}.pdf`;
-                
+                const downloadUrl = `${process.env.BASE_URL}/api/v1/receipt/${process.env.B2_PDF_BUCKET_NAME}/${uploadResult.fileName}`;
               
 
                 // Update invoice with notification status
                 const updateData = {
                     status: 'completed',
-                    receiptUrl: viewUrl,
+                    receiptUrl: downloadUrl,
                     receiptFileId: uploadResult.fileId,
                     receiptFileName: uploadResult.fileName,
                     bucketId: uploadResult.bucketId,
