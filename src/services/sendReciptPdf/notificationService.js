@@ -4,7 +4,7 @@ import sendSMS from './smsService';
 import { userModel } from '@/models/auth/User';
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 
-export async function sendPaymentNotification({ userId, invoice, pdfUrl }) {
+export async function sendPaymentNotification({ userId, invoice, pdfAttachment }) {
 
     console.log("sent notification")
 
@@ -38,15 +38,15 @@ console.log(user)
         try {
             const emailResult = await sendReciptToEmail({
                 receiverEmail: user.email,
-                senderEmail: process.env.EMAIL_FROM,
                 emailType: 'RECEIPT',
+                senderEmail: process.env.EMAIL_FROM,
                 templateData: {
-                    ...messageDetails,
-                    downloadLink: pdfUrl
-                }
+                    amount: invoice.amount
+                },
+                attachments: [pdfAttachment]
             })
 
-
+            console.log("emailResult****")
             console.log(emailResult)
             return {
                 success: true,

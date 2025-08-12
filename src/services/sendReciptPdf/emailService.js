@@ -6,7 +6,7 @@ export default async function sendReciptToEmail({
     senderEmail,
     token,
     attachments = [],
-    templateData, // Add this new parameter
+    templateData,
     customHtml
 }) {
     try {
@@ -19,26 +19,22 @@ export default async function sendReciptToEmail({
             }
         });
 
-        // Handle different email types
         let subject, html;
         if (emailType === 'RECEIPT') {
             subject = `Payment Receipt #${templateData?.transactionId || ''}`;
-            // Use either customHtml or our default template with PDF URL
             html = customHtml || `
-        <div style="font-family: Arial, sans-serif;">
-          <h2>Payment Confirmation</h2>
-          <p>Amount: ${templateData?.amount || 'N/A'}</p>
-          <p>Transaction ID: ${templateData?.transactionId || 'N/A'}</p>
-          <a href="${templateData?.downloadLink || '#'}">Download Receipt</a>
-        </div>
-      `;
+                <div style="font-family: Arial, sans-serif;">
+                    <h2>Payment Confirmation</h2>
+                    <p>Amount: ${templateData?.amount || 'N/A'}</p>
+                    <p>Transaction ID: ${templateData?.transactionId || 'N/A'}</p>
+                    ${attachments.length ? '<p>Your receipt is attached.</p>' : ''}
+                </div>
+            `;
         } else {
-            // Keep existing verify/reset logic unchanged
             const path = emailType === 'VERIFY' ? 'verifyemail' : 'resetpassword';
             const link = `${process.env.BASE_URL}/${path}?token=${token}`;
             subject = emailType === 'VERIFY' ? "Verify your email" : "Reset your password";
-            html = `<p>Click <a href="${link}">here</a> to ${emailType === "VERIFY" ? "verify" : "reset"
-                }</p>`;
+            html = `<p>Click <a href="${link}">here</a> to ${emailType === "VERIFY" ? "verify" : "reset"}</p>`;
         }
 
         const mailOptions = {
@@ -46,12 +42,14 @@ export default async function sendReciptToEmail({
             to: receiverEmail,
             subject,
             html,
-            attachments // Keep attachments optional for other email types
+            attachments
         };
 
-        return await transporter.sendMail(mailOptions);
+        // Return the email sending result
+        const result = await transporter.sendMail(mailOptions);
+        return result; // Now returns the email sending info
     } catch (error) {
-        console.error('Email sending error:', error);
-        throw error;
+        console.log('Email sending error:', error);
+        throw error; // Re-throw to handle in the calling function
     }
 }

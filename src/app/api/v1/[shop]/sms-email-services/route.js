@@ -5,7 +5,7 @@ import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
-import { userModel } from "@/models/auth/user";
+// import { userModel } from "@/models/auth/user";
 
 export async function GET(request, { params }) {
     // Rate limiting
@@ -30,53 +30,15 @@ export async function GET(request, { params }) {
             return NextResponse.json({ error: "Shop ID is required" }, { status: 400 });
         }
 
-        // Authentication
-        // const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        // if (!authenticated) {
-        //     return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
-        // }
 
-        // if (!mongoose.Types.ObjectId.isValid(data.userId)) {
-        //     return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
-        // }
-
-        /**
-                                          * fake Authentication for test purpose only
-                                          * *******************************************
-                                          * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-                                          * *******************************************
-                                          * *              ***
-                                          * *              ***
-                                          * *            *******
-                                          * *             *****
-                                          * *              ***
-                                          * *               *
-                                          * */
-
-        const authDb = await authDbConnect()
-        const User = userModel(authDb);
-        const user = await User.findOne({ referenceId: "cmdwxn2sg0000o09w6morw1mv" })
-            .select('referenceId _id name email phone role isEmailVerified')
-        console.log(user)
-        const data = {
-            // sessionId: "cmdags8700000649w6qyzu8xx",
-            userReferenceId: user.referenceId,
-            userId: user?._id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-            isVerified: user.isEmailVerified || user.isPhoneVerified,
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
         }
 
-        /**
-         * fake Authentication for test purpose only 
-         * *******************************************
-         * *********FAKE AUTHENTICATION END********* *
-         * *******************************************
-        **/
-
-
+        if (!mongoose.Types.ObjectId.isValid(data.userId)) {
+            return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+        }
 
         const vendor_db = await vendorDbConnect();
         const Vendor = vendorModel(vendor_db);
@@ -98,7 +60,6 @@ export async function GET(request, { params }) {
             ],
         };
 
-        // Projection to get only the marketing object
         const projection = {
             marketing: 1
         };
@@ -136,14 +97,25 @@ export async function GET(request, { params }) {
 
 
 export async function DELETE(request, { params }) {
-    // ... (keep rate limiting code the same)
+    // Rate limiting
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        request.headers.get('x-real-ip') ||
+        request.socket?.remoteAddress || '';
+
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+    if (!allowed) {
+        return NextResponse.json(
+            { error: 'Too many requests. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': retryAfter.toString() } }
+        );
+    }
+
 
     try {
-        const { shop: referenceId } =await params; // Fixed destructuring
+        const { shop: referenceId } = await params;
         const body = await request.json();
         const { providerType, providerName } = body;
 
-        // Validation
         if (!referenceId) {
             return NextResponse.json({ error: "Shop ID is required" }, { status: 400 });
         }
@@ -155,26 +127,15 @@ export async function DELETE(request, { params }) {
         if (!providerName) {
             return NextResponse.json({ error: "providerName is required" }, { status: 400 });
         }
-
-        // Authentication
-        const authDb = await authDbConnect();
-        const User = userModel(authDb);
-        const user = await User.findOne({ referenceId: "cmdwxn2sg0000o09w6morw1mv" })
-            .select('referenceId _id name email phone role isEmailVerified');
-
-        if (!user) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
         }
 
-        const data = {
-            userReferenceId: user.referenceId,
-            userId: user._id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-            isVerified: user.isEmailVerified,
-        };
+        if (!mongoose.Types.ObjectId.isValid(data.userId)) {
+            return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+        }
+
 
         const vendor_db = await vendorDbConnect();
         const Vendor = vendorModel(vendor_db);

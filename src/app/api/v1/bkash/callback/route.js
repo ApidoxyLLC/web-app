@@ -40,6 +40,12 @@ export async function GET(request) {
                 }
 
                 const pdfBytes = await generateReceiptPDF(invoice);
+                const pdfAttachment = {
+                    filename: `receipt_${invoice._id}.pdf`,
+                    content: Buffer.from(pdfBytes),
+                    contentType: 'application/pdf'
+                };
+                
                 // Upload to Backblaze
                 const uploadResult = await uploadSubscriptionReceipt({
                     pdfBytes,
@@ -52,9 +58,9 @@ export async function GET(request) {
                     throw new Error('Failed to upload receipt');
                 }
 
-
-                // Construct permanent view URL
-                const viewUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/receipts/${invoice._id}`;
+                console.log("**************uploadResult")
+                console.log(uploadResult)
+                const viewUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/receipts/${invoice._id}.pdf`;
                 
               
 
@@ -63,6 +69,9 @@ export async function GET(request) {
                     status: 'completed',
                     receiptUrl: viewUrl,
                     receiptFileId: uploadResult.fileId,
+                    receiptFileName: uploadResult.fileName,
+                    bucketId: uploadResult.bucketId,
+                    bucketName: process.env.B2_PDF_BUCKET_NAME,
                     completedAt: new Date(),
                     paymentStatus: 'processed'
                 };
@@ -75,7 +84,7 @@ export async function GET(request) {
                 // Send notification
                 const notificationResult = await sendPaymentNotification({
                     userId: invoice.userId,
-                    pdfUrl: viewUrl,
+                    pdfAttachment,
                     invoice: {
                         _id: invoice._id,
                         paymentId: invoice.paymentId,

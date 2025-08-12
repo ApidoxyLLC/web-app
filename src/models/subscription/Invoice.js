@@ -62,6 +62,9 @@ const invoiceSchema = new mongoose.Schema({
   paymentGatewayResponse: { type: mongoose.Schema.Types.Mixed },
   receiptFileId: { type: String },
   receiptUrl: { type: String },
+  receiptFileName: { type: String },
+  bucketId: { type: String },
+  bucketName: { type: String },
   createdAt: { type: Date, default: Date.now },
   paidAt: { type: Date }
 }, {

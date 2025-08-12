@@ -22,11 +22,10 @@ async function authorizeB2() {
     }
 }
 
-// UPLOAD (modified to return fileId)
 export async function uploadSubscriptionReceipt({ pdfBytes, paymentId, invoiceId }) {
     try {
         const b2Client = await authorizeB2();
-        const fileName = `receipts/${paymentId}/${invoiceId}.pdf`;
+        const fileName = `${invoiceId}.pdf`
 
         const { data: uploadData } = await b2Client.getUploadUrl({
             bucketId: process.env.B2_PDF_BUCKET_ID
@@ -39,10 +38,16 @@ export async function uploadSubscriptionReceipt({ pdfBytes, paymentId, invoiceId
             data: pdfBytes,
             mime: 'application/pdf'
         });
+        console.log("uploadResponse******");
+        console.log(uploadResponse)
+        console.log(uploadData)
+
 
         return {
             success: true,
-            fileId: uploadResponse.data.fileId // Return only the file ID
+            fileId: uploadResponse.data.fileId,
+            fileName: uploadResponse.data.fileName,
+            bucketId: uploadResponse.data.bucketId
         };
 
     } catch (error) {
@@ -51,31 +56,31 @@ export async function uploadSubscriptionReceipt({ pdfBytes, paymentId, invoiceId
     }
 }
 
-// export async function downloadReceipt({ bucket, folder, file }) {
-//     try {
-//         const b2Client = await authorizeB2();
-//         const response = await b2Client.downloadFileByName({
-//             bucketName: bucket,
-//             fileName: `${folder}/${file}`,
-//             responseType: 'arraybuffer', 
-//             onDownloadProgress: (progressEvent) => {
-//                 console.log(`Download progress: ${Math.round(
-//                     (progressEvent.loaded * 100) / progressEvent.total
-//                 )}%`);
-//             }
-//         });
+export async function downloadReceipt({ bucket, folder, file }) {
+    try {
+        const b2Client = await authorizeB2();
+        const response = await b2Client.downloadFileByName({
+            bucketName: bucket,
+            fileName: `${folder}/${file}`,
+            responseType: 'arraybuffer', 
+            onDownloadProgress: (progressEvent) => {
+                console.log(`Download progress: ${Math.round(
+                    (progressEvent.loaded * 100) / progressEvent.total
+                )}%`);
+            }
+        });
 
-//         return {
-//             data: Buffer.from(response.data),
-//             headers: {
-//                 'content-type': 'application/pdf',
-//                 'content-length': response.headers['content-length'],
-//                 'last-modified': response.headers['last-modified']
-//             }
-//         };
+        return {
+            data: Buffer.from(response.data),
+            headers: {
+                'content-type': 'application/pdf',
+                'content-length': response.headers['content-length'],
+                'last-modified': response.headers['last-modified']
+            }
+        };
 
-//     } catch (error) {
-//         console.error('Backblaze PDF download error:', error.response?.data || error.message);
-//         throw new Error(error.response?.data?.message || 'Failed to fetch PDF');
-//     }
-// }
+    } catch (error) {
+        console.error('Backblaze PDF download error:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.message || 'Failed to fetch PDF');
+    }
+}
