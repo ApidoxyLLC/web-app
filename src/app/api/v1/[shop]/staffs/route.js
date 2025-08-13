@@ -54,7 +54,6 @@ export async function GET(request, { params }) {
 
         if (!vendor) return NextResponse.json({ error: "Vendor not found or you don't have permission" },{ status: 404 });
 
-        // Get all active staff user IDs
         const activeStaffUserIds = vendor.staffs.filter(staff => staff.status === 'active')
                                                 .map(staff => staff.userId);
 
@@ -77,41 +76,26 @@ export async function GET(request, { params }) {
 
 
 export async function DELETE(request, { params }) {
-    // Rate Limiting
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        request.headers.get('x-real-ip') ||
+        request.socket?.remoteAddress || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-    if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
-    
-    const _PARAMS =await params;
-
-    console.log(_PARAMS)
-    const { shop } =await params;
-    const { searchParams } = new URL(request.url);
-    console.log(searchParams)
-    return NextResponse.json(  { error: 'TEST RESPONSE ' }, { status: 200,  } );
-    const userId = searchParams.get('userId');
-    console.log("joy bangla",userId, shop)
-    if (!shop || !userId) {
+    if (!allowed) {
         return NextResponse.json(
-            { error: 'Missing required parameters' },
+            { error: 'Too many requests. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': retryAfter.toString() } }
+        );
+    }
+
+    const { shop } = await params;
+    const { email } = await request.json();
+
+    if (!shop || !email) {
+        return NextResponse.json(
+            { error: 'Missing required parameters (shop and email)' },
             { status: 400, headers: securityHeaders }
         );
     }
-  // const authDb = await authDbConnect()
-        // const User = userModel(authDb);
-        // const user = await User.findOne({ referenceId: "cmdwxn2sg0000o09w6morw1mv" })
-        //     .select('referenceId _id name email phone role isEmailVerified')
-        // console.log(user)
-        // const data = {
-        //     // sessionId: "cmdags8700000649w6qyzu8xx",
-        //     userReferenceId: user.referenceId,
-        //     userId: user?._id,
-        //     name: user.name,
-        //     email: user.email,
-        //     phone: user.phone,
-        //     role: user.role,
-        //     isVerified: user.isEmailVerified || user.isPhoneVerified,
-        // }
 
     const { authenticated, user: requester } = await getAuthenticatedUser(request);
     if (!authenticated) {
@@ -146,16 +130,17 @@ export async function DELETE(request, { params }) {
         }
 
         const staffUser = await User.findOne({
-            referenceId: userId,
+            email: { $regex: new RegExp(`^${email}$`, 'i') },
             isDeleted: false
         }).select('_id referenceId email');
 
         if (!staffUser) {
             return NextResponse.json(
-                { error: 'Staff user not found' },
+                { error: 'Staff user not found with this email' },
                 { status: 404, headers: securityHeaders }
             );
         }
+
 
         const removalResult = await removeStaffFromVendor({
             vendorId: vendor._id,
@@ -174,16 +159,21 @@ export async function DELETE(request, { params }) {
             {
                 success: true,
                 data: {
-                    removedUserId: userId,
-                    removedEmail: staffUser.email
+                    removedEmail: staffUser.email,
+                    removedUserId: staffUser.referenceId,
+                    message: 'Staff member successfully removed'
                 }
             },
             { status: 200, headers: securityHeaders }
         );
 
     } catch (error) {
+        console.error('Error removing staff:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            {
+                error: 'Internal server error',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            },
             { status: 500, headers: securityHeaders }
         );
     }
