@@ -132,16 +132,16 @@ export async function DELETE(request, { params }) {
             staff.email.toLowerCase() === email.toLowerCase()
         );
 
+        console.log("stufff",staffMember)
         if (!staffMember) {
             return NextResponse.json(
                 { error: 'Staff member not found in this vendor' },
                 { status: 404, headers: securityHeaders }
             );
         }
-
         const removalResult = await removeStaffFromVendor({
             vendorId: vendor._id,
-            email: staffUser.email
+            email: staffMember.email
         });
 
         console.log(removalResult)
@@ -156,8 +156,6 @@ export async function DELETE(request, { params }) {
             {
                 success: true,
                 data: {
-                    removedEmail: staffUser.email,
-                    removedUserId: staffUser.referenceId,
                     message: 'Staff member successfully removed'
                 }
             },

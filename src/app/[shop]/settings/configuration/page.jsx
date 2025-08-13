@@ -30,7 +30,9 @@ export default function StoreSettings() {
   const {shop} = useParams()
   const {data, loading} = useFetch(`/${shop}`)
   const {configuration} = data
-  const [language, setLanguage] = useState("")
+
+  const [language, setLanguage] = useState("");
+  const [loadingState, setLoadingState] = useState(false);  
   const [formData, setFormData] = useState({
     shop,
     businessName: "",
@@ -79,6 +81,37 @@ export default function StoreSettings() {
     } catch (err) {
       console.error(err);
       alert("Something went wrong");
+    }
+  };
+  const updateLanguage = async () => {
+    if (!language) {
+      alert("Please select a language");
+      return;
+    }
+    setLoadingState(true);
+    try {
+      const res = await fetch("/api/v1/settings/language", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          shop: shop,
+          language: language,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+      } else {
+        alert(data.error || "Failed to update language");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    } finally {
+      setLoadingState(false);
     }
   };
   if(loading){
@@ -229,44 +262,46 @@ export default function StoreSettings() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button onClick={handleUpdate}>Update Shop Info</Button>
+              <Button onClick={handleUpdate}>Update </Button>
             </div>
           </CardContent>
         </Card>
          <Card>
           <CardContent className="space-y-4">
-            <div>
-              <h2 className="text-md font-semibold pt-5">Language Settings</h2>
-              <div className="flex flex-col gap-3 mt-2 md:flex-row md:items-center md:justify-between">
-                <label className="block  text-sm text-gray-400 font-medium ">
-                  Default Language
-                </label>
-                <Select>
-                  <SelectPrimitive.Trigger
-                    className={cn(
-                      "flex h-10 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm  ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
-                      "w-44"
-                    )}
-                  >
-                    <SelectValue placeholder="Select Language" />
-                    <SelectPrimitive.Icon asChild>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </SelectPrimitive.Icon>
-                  </SelectPrimitive.Trigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Language</SelectLabel>
-                      <SelectItem value="bn_BD">Bengali(Bangladehs)</SelectItem>
-                      <SelectItem value="en_US">English(US)</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex justify-end pt-2">
-              <Button>Update Store Settings</Button>
-            </div>
-          </CardContent>
+      <div>
+        <h2 className="text-md font-semibold pt-5">Language Settings</h2>
+        <div className="flex flex-col gap-3 mt-2 md:flex-row md:items-center md:justify-between">
+          <label className="block text-sm text-gray-400 font-medium">
+            Default Language
+          </label>
+          <Select onValueChange={(value) => setLanguage(value)}>
+            <SelectPrimitive.Trigger
+              className={cn(
+                "flex h-10 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+                "w-44"
+              )}
+            >
+              <SelectValue placeholder="Select Language" />
+              <SelectPrimitive.Icon asChild>
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </SelectPrimitive.Icon>
+            </SelectPrimitive.Trigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Language</SelectLabel>
+                <SelectItem value="bn_BD">Bengali (Bangladesh)</SelectItem>
+                <SelectItem value="en_US">English (US)</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex justify-end pt-2">
+        <Button onClick={updateLanguage} disabled={loading}>
+          {loadingState ? "Updating..." : "Update "}
+        </Button>
+      </div>
+    </CardContent>
         </Card>
       </div>
 
@@ -280,7 +315,7 @@ export default function StoreSettings() {
               <FaRegImages className="text-4xl" />
             </div>
             <div className="pt-1">
-              <Button className="w-full">Upload Logo</Button>
+              <Button className="w-full">Upload</Button>
             </div>
           </CardContent>
         </Card>

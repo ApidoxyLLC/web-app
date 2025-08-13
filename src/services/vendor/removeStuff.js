@@ -34,8 +34,6 @@ export async function removeStaffFromVendor({ vendorId, email }) {
     return {
       success: true,
       message: 'Staff removed successfully',
-      removedUserId: userId,
-      removedEmail: email
     };
 
   } catch (error) {
