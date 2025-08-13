@@ -61,18 +61,14 @@ export async function DELETE(request) {
     const VendorModel = vendorModel(vendor_db);
 
     try {
-        const { domainToDelete, domainId, shopId } = await request.json();
+        const { domainToDelete, shopId } = await request.json();
 
-        if (!domainId || !shopId) {
-            throw new Error('Both domainId and shopId query parameters are required');
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(domainId)) {
-            throw new Error('Invalid ID format');
+        if (!shopId) {
+            throw new Error(' shopId query parameters are required');
         }
 
         const domain = await Domain.findOne({
-            _id: new mongoose.Types.ObjectId(domainId),
+            domain: domainToDelete,
             shop: shopId
         });
 
