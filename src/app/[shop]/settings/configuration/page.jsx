@@ -30,6 +30,7 @@ export default function StoreSettings() {
   const {shop} = useParams()
   const {data, loading} = useFetch(`/${shop}`)
   const {configuration} = data
+  const [language, setLanguage] = useState("")
   const [formData, setFormData] = useState({
     shop,
     businessName: "",

@@ -122,32 +122,35 @@ export default function Dashboard() {
   const filteredSuggestions = suggestions?.filter((s) =>
     `${s.name} ${s.email}`.toLowerCase().includes(value.toLowerCase())
   );
-  const handleDelete = async (userRefId) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-    setDeletingUserId(userRefId);
+  const handleDelete = async (email) => {
+  if (!confirm("Are you sure you want to delete this user?")) return;
 
-    try {
-      const res = await fetch(`/api/v1/${shopId}/staffs/?userId=${userRefId}`, {
-        method: "DELETE",
-      });
+  setDeletingUserId(email);
 
-      const result = await res.json();
+  try {
+    const res = await fetch(`/api/v1/${shopId}/staffs`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }), 
+    });
 
-      if (!res.ok) {
-        throw new Error(result.error || "Failed to delete user");
-      }
+    const result = await res.json();
 
-      // Remove user from state
-      setUsers((prev) => prev.filter((user) => user.referenceId !== userRefId));
-
-      console.log("User deleted successfully:", result);
-    } catch (error) {
-      console.error("Error deleting user:", error.message);
-      alert(`Delete failed: ${error.message}`);
-    } finally {
-      setDeletingUserId(null);
+    if (!res.ok) {
+      throw new Error(result.error || "Failed to delete user");
     }
-  };
+    setUsers((prev) => prev.filter((user) => user.email !== email));
+
+    console.log("✅ User deleted successfully:", result);
+  } catch (error) {
+    console.error("❌ Error deleting user:", error.message);
+    alert(`Delete failed: ${error.message}`);
+  } finally {
+    setDeletingUserId(null);
+  }
+};
 
   return (
     <Card className="w-full max-w-4xl mx-auto mt-6 rounded-lg p-4 shadow-none">
@@ -213,6 +216,7 @@ export default function Dashboard() {
       {loadingUsers && (
         <div className="text-center py-4 text-muted-foreground">Loading users...</div>
       )}
+      {console.log(users)}
       {users?.map((user, index) => (
         <div
           key={user.referenceId || index}
@@ -235,8 +239,8 @@ export default function Dashboard() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleDelete(user.referenceId)}
-              disabled={deletingUserId === user.referenceId}
+              onClick={() => handleDelete(user.email)}
+              disabled={deletingUserId === user.email}
             >
               <Trash2 className="w-4 h-4" />
             </Button>

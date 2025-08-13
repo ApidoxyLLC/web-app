@@ -97,7 +97,7 @@ export async function DELETE(request, { params }) {
         );
     }
 
-    const { authenticated, user: requester } = await getAuthenticatedUser(request);
+    const { authenticated, data: requester } = await getAuthenticatedUser(request);
     if (!authenticated) {
         return NextResponse.json(
             { error: 'Unauthorized' },
@@ -131,7 +131,6 @@ export async function DELETE(request, { params }) {
 
         const staffUser = await User.findOne({
             email: { $regex: new RegExp(`^${email}$`, 'i') },
-            isDeleted: false
         }).select('_id referenceId email');
 
         if (!staffUser) {
@@ -147,7 +146,7 @@ export async function DELETE(request, { params }) {
             userId: staffUser._id,
             email: staffUser.email
         });
-
+        console.log(removalResult)
         if (!removalResult.success) {
             return NextResponse.json(
                 { error: removalResult.message },
