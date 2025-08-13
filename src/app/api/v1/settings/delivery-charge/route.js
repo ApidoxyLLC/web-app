@@ -17,7 +17,7 @@ export async function POST(request) {
     try { body = await request.json();
          const parsed = deliveryChargeDTOSchema.safeParse(body);
         if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 422 });
-    
+
         // Authentication
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
         if (!authenticated) return NextResponse.json( { error: authError || "Not authorized" }, { status: 401 } );   
@@ -28,7 +28,7 @@ export async function POST(request) {
         const    Vendor = vendorModel(vendor_db);
         const    vendor = await Vendor.findOne({ referenceId: vendorReferenceId }).select('_id deliveryCharges ownerId');
         if (!vendor)  return NextResponse.json( { success: false, error: "Request can't proceed " }, { status: 404 });
-        
+
         if (!hasAddDeliveryChargePermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
         
         // -------------------------------
@@ -43,7 +43,7 @@ export async function POST(request) {
                                                                                 return !existingCharge.partner && !partner;                                             });
 
         if (duplicateCharge) return NextResponse.json({ success: false, error: "Delivery charge already exists for this region and partner", existingCharge: duplicateCharge}, { status: 409 });
-        
+
         // -------------------------------
         // Create New Delivery Charge
         // -------------------------------
