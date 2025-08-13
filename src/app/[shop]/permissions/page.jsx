@@ -58,17 +58,7 @@ export default function Dashboard() {
     return () => clearTimeout(delayDebounce);
   }, [value]);
 
-  useEffect(() => {
-    if (session?.user?.name && session?.user?.email) {
-      setUsers([
-        {
-          name: session.user.name,
-          email: session.user.email,
-          referenceId: "current-user", // you can assign a special ID or real one if you have it
-        },
-      ]);
-    }
-  }, [session]);
+
 
   const { data } = useFetch(`/${shopId}/staffs`);
   useEffect(() => {
@@ -229,7 +219,6 @@ export default function Dashboard() {
             <div>
               <p className="text-base font-semibold">
                 {user.name}
-                {index === 0 && <span className="font-medium"> (You)</span>}
               </p>
               <p className="text-sm">{user.email}</p>
             </div>
