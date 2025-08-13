@@ -107,8 +107,7 @@ export async function DELETE(request, { params }) {
 
     const vendorDb = await vendorDbConnect();
     const Vendor = vendorModel(vendorDb);
-    const authDb = await authDbConnect();
-    const User = userModel(authDb);
+    
 
     try {
         const vendor = await Vendor.findOne({ referenceId: shop })
@@ -129,23 +128,22 @@ export async function DELETE(request, { params }) {
             );
         }
 
-        const staffUser = await User.findOne({
-            email: { $regex: new RegExp(`^${email}$`, 'i') },
-        }).select('_id referenceId email');
+        const staffMember = vendor.staffs.find(staff =>
+            staff.email.toLowerCase() === email.toLowerCase()
+        );
 
-        if (!staffUser) {
+        if (!staffMember) {
             return NextResponse.json(
-                { error: 'Staff user not found with this email' },
+                { error: 'Staff member not found in this vendor' },
                 { status: 404, headers: securityHeaders }
             );
         }
 
-
         const removalResult = await removeStaffFromVendor({
             vendorId: vendor._id,
-            userId: staffUser._id,
             email: staffUser.email
         });
+
         console.log(removalResult)
         if (!removalResult.success) {
             return NextResponse.json(

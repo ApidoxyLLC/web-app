@@ -2,9 +2,9 @@ import mongoose from 'mongoose';
 import { vendorModel } from '@/models/vendor/Vendor';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 
-export async function removeStaffFromVendor({ vendorId, userId, email }) {
+export async function removeStaffFromVendor({ vendorId, email }) {
   try {
-    if (!mongoose.Types.ObjectId.isValid(vendorId) || !mongoose.Types.ObjectId.isValid(userId)) {
+    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
       return {
         success: false,
         message: 'Invalid vendorId or userId',
@@ -15,14 +15,13 @@ export async function removeStaffFromVendor({ vendorId, userId, email }) {
     const db = await vendorDbConnect();
     const Vendor = vendorModel(db);
 
-    const pullCondition = email
-      ? { userId: userId, email: email } 
-      : { userId: userId }; 
+
 
     const result = await Vendor.updateOne(
       { _id: vendorId },
-      { $pull: { staffs: pullCondition } }
-    );
+      { $pull: { staffs: { email: { $regex: new RegExp(`^${email}$`, 'i') } } }}
+    )
+
 
     if (result.modifiedCount === 0) {
       return {
