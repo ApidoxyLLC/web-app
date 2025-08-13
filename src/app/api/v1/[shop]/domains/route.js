@@ -99,7 +99,7 @@ export async function DELETE(request) {
         });
 
     } catch (error) {
-        console.error('Domain deletion error:', error);
+        console.log('Domain deletion error:', error);
         return NextResponse.json(
             {
                 error: error.message,
