@@ -215,8 +215,8 @@ const marketingSchema = new mongoose.Schema({
   sitemapUrl: { type: String },
   googleTagManager: { type: googleTagManagerSchema },
   facebookPixel: { type: facebookPixelSchema },
-  smsProviders: { type: smsProviderSchema },
-  emailProviders: { type: emailProviderSchema }
+  // smsProviders: { type: smsProviderSchema },
+  // emailProviders: { type: emailProviderSchema }
 }, { timestamps: false, _id: false });
 
 const staffSchema = new mongoose.Schema(
@@ -388,7 +388,7 @@ const vendorSchema = new mongoose.Schema({
   android: { type: androidAppSchema, default: null },
   ios: { type: iosAppSchema, default: null },
   metadata: { type: metadataSchema }
-}, { timestamps: true, collection: 'vendors' });
+  }, { timestamps: true, collection: 'vendors' });
 
 
 
