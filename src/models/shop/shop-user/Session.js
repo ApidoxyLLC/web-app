@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { encrypt } from '../../utils/encryption';
 
 const shopSessionSchema = new mongoose.Schema({
     fingerprint: { type: String, select: false, required: true },

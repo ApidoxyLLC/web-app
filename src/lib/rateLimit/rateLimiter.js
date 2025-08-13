@@ -79,6 +79,13 @@ createCategory: new RateLimiterRedis({
       blockDuration: 60 * 10 // Block for 2 minutes if exceeded
     }),
 
+  userLogin: new RateLimiterRedis({
+    storeClient: redis,
+    keyPrefix: 'rl:Userlogin',
+    points: 10000,
+    duration: 60,
+    blockDuration: 60 * 5,
+  }),
 };
 
 

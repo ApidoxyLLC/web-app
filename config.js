@@ -27,6 +27,16 @@ const config = {
   refreshTokenSecretEncryptionKey: process.env.REFRESH_TOKEN_SECRET_ENCRYPTION_KEY,
   nextAuthSecretEncryptionKey: process.env.NEXTAUTH_SECRET_SECRET_ENCRYPTION_KEY,
 
+  // endUserAccessTokenEncryptionKey: process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY,
+  // endUserRefreshTokenEncryptionKey: process.env.END_USER_REFRESH_TOKEN_ENCRYPTION_KEY,
+
+  // endUserAccessTokenIdEncryptionKey: process.env.END_USER_ACCESS_TOKEN_ID_ENCRYPTION_KEY,
+  // endUserRefreshTokenIdEncryptionKey: process.env.END_USER_REFRESH_TOKEN_ID_ENCRYPTION_KEY,
+
+  accessTokenIdHashKey: process.env.END_USER_ACCESS_TOKEN_ID_HASH_KEY,
+  refreshTokenIdHashKey: process.env.END_USER_REFRESH_TOKEN_ID_HASH_KEY,
+  endUserIpAddressEncryptionKey: process.env.END_USER_IP_ADDRESS_ENCRYPTION_KEY,
+
   // time durations limitations
   accessTokenExpireMinutes: Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15'),
   shopCacheExpireMinutes: Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15'),

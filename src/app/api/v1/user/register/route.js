@@ -6,14 +6,10 @@ import crypto from 'crypto';
 import registerDTOSchema from "./registerDTOSchema";
 import sendEmail from "@/services/mail/sendEmail";
 import sendSMS from "@/services/mail/sendSMS";
-import { rateLimiterRegisterUser } from './limiter';
 import { getVendor } from "@/services/vendor/getVendor";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
 export async function POST(request) {
-  console.log(request)
-
-  return NextResponse.json( { error: "Test Respnse" }, { status: 200 })
-
   let body;
   try { body = await request.json(); } 
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
@@ -22,15 +18,11 @@ export async function POST(request) {
   const vendorId = request.headers.get('x-vendor-identifier');
   const     host = request.headers.get('host'); 
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-              request.headers.get('x-real-ip') || null;
-  const fingerprint = request.headers.get('x-fingerprint') || null;
-  const identity = ip || fingerprint;
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+  // const fingerprint = request.headers.get('x-fingerprint') || null;
 
-  if (!identity) return NextResponse.json({ error: "Missing identity" }, { status: 400 });
-
-  try { await rateLimiterRegisterUser.consume(identity) } 
-  catch (rateLimitError) { return NextResponse.json( { error: "Too many requests. Try again later." }, { status: 429 } ) }
+  const { allowed, retryAfter } = await applyRateLimit({ key: `${host}${ip}`, scope: 'userLogin'  });
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
 
   if (!parsed.success)    return NextResponse.json({ error: "Invalid input" }, { status: 422 });
   if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
@@ -47,14 +39,13 @@ export async function POST(request) {
   }
 
   try {
-
     const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
-
     if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
+
     const      shop_db = await dbConnect({ dbKey: dbName, dbUri })
-    const    UserModel = userModel(shop_db)
-    const existingUser = await UserModel.findOne({ $or: [ ...(email ? [{ email }] : []), ...(phone ? [{ phone }] : []) ]});
+    const         User = userModel(shop_db)
+    const existingUser = await User.findOne({ $or: [ ...(email ? [{ email }] : []), ...(phone ? [{ phone }] : []) ]});
     if (existingUser) return NextResponse.json({ error: "User already exists" }, { status: 409 });
     
     const               SALT_ROUNDS =  parseInt( process.env.END_USER_BCRYPT_SALT_ROUNDS || "10", 10);
@@ -81,12 +72,12 @@ export async function POST(request) {
                     ...(phone && { phone: phone?.trim() })
                   };
 
-        const newEndUser = new UserModel(payload);
+        const newEndUser = new User(payload);
         const savedUser =  await newEndUser.save();
     
     if(savedUser){
       if(email && password) {
-        const senderEmail = shop.email || process.env.DEFAULT_SENDER_EMAIL;
+        const senderEmail = vendor.email || process.env.DEFAULT_SENDER_EMAIL;
         /** 
          ** ****************************************************** **
          ** Recommend to transfer this Verificaiton Email and      **

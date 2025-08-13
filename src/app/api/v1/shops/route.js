@@ -171,20 +171,14 @@ export async function POST(request) {
         bucketId: bucket.bucketId
       },
       secrets: {
-        accessTokenSecret: await encrypt({
-          data: crypto.randomBytes(32).toString('base64'),
-          options: { secret: config.accessTokenSecretEncryptionKey }
-        }),
+        accessTokenSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
+                                           options: { secret: config.accessTokenSecretEncryptionKey }     }),
 
-        refreshTokenSecret: await encrypt({
-          data: crypto.randomBytes(64).toString('hex'),
-          options: { secret: config.refreshTokenSecretEncryptionKey }
-        }),
+        refreshTokenSecret: await encrypt({    data: crypto.randomBytes(64).toString('hex'),
+                                            options: { secret: config.refreshTokenSecretEncryptionKey }   }),
 
-        nextAuthSecret: await encrypt({
-          data: crypto.randomBytes(32).toString('base64'),
-          options: { secret: config.nextAuthSecretEncryptionKey }
-        }),
+        nextAuthSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
+                                        options: { secret: config.nextAuthSecretEncryptionKey }           }),
       },
       primaryDomain,
       domains: [primaryDomain],

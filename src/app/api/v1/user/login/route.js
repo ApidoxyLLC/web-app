@@ -9,73 +9,86 @@ import loginDTOSchema from "./loginDTOSchema";
 import { sessionModel } from "@/models/shop/shop-user/Session";
 import { loginHistoryModel } from "@/models/shop/shop-user/LoginHistory";
 import { getVendor } from "@/services/vendor/getVendor";
-import rateLimit from "./rateLimit";
+// import rateLimit from "./rateLimit";
 import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
 import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import config from "../../../../../../config";
+import crypto from 'crypto';
+import securityHeaders from "../../utils/securityHeaders";
 
-function applyHeaders(response, headers) {
-  Object.entries(headers).forEach(([key, value]) => {
-    response.headers.set(key, value);
-  });
-}
+
+
+// function applyHeaders(response, headers) {
+//   Object.entries(headers).forEach(([key, value]) => {
+//     response.headers.set(key, value);
+//   });
+// }
 
 
 export async function POST(request) {
-  // Input validation
   let body;
-  try { body = await request.json();} 
+  try { body = await request.json(); } 
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
-  const    vendorId = request.headers.get('x-vendor-identifier');
-  const        host = request.headers.get('host');
-  const          ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
-  const   userAgent = request.headers.get('user-agent') || '';
-  const fingerprint = request.headers.get('x-fingerprint') || null;
 
+  const vendorId = request.headers.get('x-vendor-identifier');
+  const     host = request.headers.get('host');
+
+  // Rate limiter 
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
+  const { allowed, retryAfter } = await applyRateLimit({  key: `${host}:${ip}` });
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
+
+  // Input validation
+  const   userAgent = request.headers.get('user-agent') || '';
+  // const fingerprint = request.headers.get('x-fingerprint') || null;
 
   if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
   const parsed = loginDTOSchema.safeParse(body);
-  if (!parsed.success)    return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 422 });
-
-  const { allowed, headers} = rateLimit({ip, fingerprint});
-  if (!allowed) return NextResponse.json( { error: "Too many requests" }, { status: 429, headers: headers } );
+  console.log(parsed.error)
+  if (!parsed.success) return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 422 });
 
   try {
+    // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host:"687602403__6840edac6817ee3.appcommerz.com", fields: ['createdAt', 'primaryDomain']    });
     // Connect to auth database
-
     const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
     if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     
 
 
+
+
     // Decrypt token secrets
-    const AT_SECRET_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY;
-    const RT_SECRET_KEY = process.env.END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY;    
-    if (!AT_SECRET_KEY || !RT_SECRET_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 });
+    // const AT_SECRET_KEY = process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY;
+    // const RT_SECRET_KEY = process.env.END_USER_REFRESH_TOKEN_ENCRYPTION_KEY;    
+    // if (!AT_SECRET_KEY || !RT_SECRET_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 });
     const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.accessTokenSecret,
-                                                    options: { secret: AT_SECRET_KEY } });    
+                                                    options: { secret: config.accessTokenSecretEncryptionKey } });    
     const REFRESH_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret,
-                                                    options: { secret: RT_SECRET_KEY } });
+                                                    options: { secret: config.refreshTokenSecretEncryptionKey } });
 
     // Connect to vendor DB
     const    shop_db = await dbConnect({ dbKey: dbName, dbUri })
     const  UserModel = userModel(shop_db);
+    
+
 
     // Validate input
 
     const identifier      = parsed.data.identifier?.trim();
     const password        = parsed.data.password;
     const identifierName  = parsed.data.identifierName;
+    const fingerprint     = parsed.data.fingerprint;
+    const userAgent       = parsed.data.userAgent;
     const timezone        = parsed.data.timezone?.trim();
 
     // Get user document (non-lean for updates)
     const user = await UserModel.findOne({ [identifierName]: identifier.trim() })
-                                .select("+security.password +security.failedAttempts +security.isBlocked " +
-                                        "+isEmailVerified +isPhoneVerified " +
-                                        "+lock.lockUntil " +
-                                        "+activeSessions " +
-                                        "+name +avatar +email +phone +role +theme +language +timezone +currency " +
-                                        "+twoFactor.enabled" );
+                                .select("security lock");
     if (!user) return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
+
+
+
 
     // Account lock check
     if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
@@ -83,11 +96,13 @@ export async function POST(request) {
       return NextResponse.json({ error: `Account locked. Try again in ${retryAfter} seconds` }, { status: 423, headers: { 'Retry-After': retryAfter.toString() } } );
     }
 
+
     // Password validation
-    if (!user.security?.password) 
-      return NextResponse.json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
+    if (!user.security?.password) return NextResponse.json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
     const validPassword = await bcrypt.compare(password, user.security.password);
     
+
+
     if (!validPassword) {
       const MAX_ATTEMPTS = parseInt(process.env.END_USER_MAX_LOGIN_ATTEMPT || "5", 10);
       user.security.failedAttempts = (user.security.failedAttempts || 0) + 1;
@@ -110,6 +125,11 @@ export async function POST(request) {
         }
       );
     }
+
+
+    
+    
+
 
     // Handle 2FA if enabled
     // Temporary turn of Two Factor authentication 
@@ -165,17 +185,16 @@ export async function POST(request) {
     const sessionId = new mongoose.Types.ObjectId();
     const newAccessTokenId = crypto.randomBytes(16).toString('hex');
     const newRefreshTokenId = crypto.randomBytes(16).toString('hex');
-    const MAX_SESSIONS = shop.maxSessionAllowed || Number(process.env.END_USER_DEFAULT_MAX_SESSIONS) || 5;
+    const MAX_SESSIONS = vendor.maxSessionAllowed || Number(process.env.END_USER_DEFAULT_MAX_SESSIONS) || 5;
 
     // Token configuration
-    const AT_EXPIRY = Number(shop.timeLimitations?.ACCESS_TOKEN_EXPIRE_MINUTES) || 15;
-    const RT_EXPIRY = Number(shop.timeLimitations?.REFRESH_TOKEN_EXPIRE_MINUTES) || 1440;
+    const AT_EXPIRY = Number(vendor.expirations?.accessTokenExpireMinutes) || 15;
+    const RT_EXPIRY = Number(vendor.expirations?.refreshTokenExpireMinutes) || 1440;
     
-    const AT_ENCRYPT_KEY = process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY;
-    const RT_ENCRYPT_KEY = process.env.END_USER_REFRESH_TOKEN_ENCRYPTION_KEY;
-    const IP_ENCRYPT_KEY = process.env.END_USER_IP_ADDRESS_ENCRYPTION_KEY;
+
     
-    if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
+    
+    // if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
     const payload = {    session: sessionId.toString(),
                      fingerprint,
@@ -186,18 +205,44 @@ export async function POST(request) {
                       isVerified: user.isEmailVerified || user.isPhoneVerified };
 
     const accessToken = jwt.sign( { ...payload, tokenId: newAccessTokenId },
-                                  ACCESS_TOKEN_SECRET,
+                                    ACCESS_TOKEN_SECRET,
                                   { expiresIn: minutesToExpiresIn(AT_EXPIRY) } );
     
 
-    const refreshToken = jwt.sign(
-      { ...payload, tokenId: newRefreshTokenId },
-      REFRESH_TOKEN_SECRET,
-      { expiresIn: minutesToExpiresIn(RT_EXPIRY) }
-    );
+    const refreshToken = jwt.sign( { ...payload, 
+                                        tokenId: newRefreshTokenId },
+                                    REFRESH_TOKEN_SECRET,
+                                  { expiresIn: minutesToExpiresIn(RT_EXPIRY) }
+                                );
 
+                   
+
+
+    // const    accessTokenIdCipherText = await encrypt({ data: newAccessTokenId,
+    //                                             options: { secret: config.endUserAccessTokenIdEncryptionKey }     });
+
+    // const    refreshTokenIdCipherText = await encrypt({ data: newRefreshTokenId,
+    //                                             options: { secret: config.endUserRefreshTokenIdEncryptionKey }     });
     const    ipAddressCipherText = await encrypt({ data: ip,
-                                                options: { secret: IP_ENCRYPT_KEY }     });                    
+                                                options: { secret: config.endUserIpAddressEncryptionKey }     });                                                 
+    const hashedAccessTokenId = crypto.createHmac('sha256', config.accessTokenIdHashKey).update(newAccessTokenId).digest('hex');
+    const hashedRefreshTokenId = crypto.createHmac('sha256', config.refreshTokenIdHashKey).update(newRefreshTokenId).digest('hex');
+
+
+
+    // Verify token Id Example 
+    // function verifyToken(originalToken, storedHash, secretKey) { const newHash = hashToken(originalToken, secretKey);
+                                                                
+    //                                                             // Compare hashes in constant time
+    //                                                             return crypto.timingSafeEqual(
+    //                                                               Buffer.from(newHash, 'utf8'),
+    //                                                               Buffer.from(storedHash, 'utf8')
+    //                                                             );
+    //                                                           }
+
+
+
+
     const  accessTokenExpiry = minutesToExpiryTimestamp(AT_EXPIRY)
     const refreshTokenExpiry = minutesToExpiryTimestamp(RT_EXPIRY)
     // Start transaction for login
@@ -211,8 +256,8 @@ export async function POST(request) {
         await new SessionModel({               _id: sessionId,
                                             userId: user._id,
                                           provider: `local-${identifierName}`, // Fixed template literal
-                                     accessTokenId: newAccessTokenId,
-                                    refreshTokenId: newRefreshTokenId,
+                                     accessTokenId: hashedAccessTokenId,
+                                    refreshTokenId: hashedRefreshTokenId,
                                       //  accessToken: accessTokenCipherText,
                                  accessTokenExpiry: accessTokenExpiry,
                                       // refreshToken: refreshTokenCipherText,
@@ -224,7 +269,7 @@ export async function POST(request) {
 
         // 2. Update user sessions (prune if exceeding limit)
         user.activeSessions = user.activeSessions || [];
-        user.activeSessions.push({ sessionId });
+        user.activeSessions.push(sessionId);
 
         if (user.activeSessions.length > MAX_SESSIONS) {
           const excessSessions = user.activeSessions.length - MAX_SESSIONS;
@@ -257,7 +302,7 @@ export async function POST(request) {
                                          refreshToken,
                                   accessTokenExpireAt: new Date(accessTokenExpiry).toISOString(),
                                  refreshTokenExpireAt: new Date(refreshTokenExpiry).toISOString(),
-                                                 user: {   _id: user._id,
+                                                 user: {    id: user._id,
                                                           name: user.name,
                                                          email: user.email,
                                                          phone: user.phone,
@@ -286,15 +331,11 @@ export async function POST(request) {
       domain: host,
       maxAge: Math.floor((refreshTokenExpiry - Date.now()) / 1000),
     });                                        
-    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('Referrer-Policy', 'same-origin');
-    response.headers.set('X-XSS-Protection', '1; mode=block');
-    response.headers.set('X-DNS-Prefetch-Control', 'off');
-    Object.entries(headers).forEach(([key, value]) => { response.headers.set(key, value); });      
+
+    Object.entries(securityHeaders).forEach(([key, value]) => { response.headers.set(key, value); });      
     return response;
   } catch (error) {
+    console.log(error)
     console.error(`Login Error: ${error.message}`);
     return NextResponse.json( { error: "Authentication failed" }, { status: 500 } );
   }

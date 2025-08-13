@@ -10,9 +10,9 @@ function resolveIdentifierType(identifier) {
 }
 
 export const loginSchema = z.object({
- fingerprint: z.string().length(32, 'Invalid fingerprint ID length')
-                .regex(/^[a-f0-9]{32}$/, 'Invalid fingerprint ID format'),
-    timezone: z.string().optional,
+fingerprint: z.string().length(32, 'Invalid fingerprint ID length')
+              .regex(/^[A-Fa-f0-9]{32}$/, 'Invalid fingerprint ID format'),
+    timezone: z.string().optional(),
   identifier: z.string(),
     password: z.string()
                .min(6, "Password must be at least 6 characters")
