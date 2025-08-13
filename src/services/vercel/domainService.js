@@ -1,5 +1,4 @@
 import config from './config';
-import axios from 'axios';
 
 export class DomainService {
     async addVercelSubdomain(fullDomain) {
@@ -131,12 +130,12 @@ export class DomainService {
 
 
     async deleteVercelDomain(domain) {
-        
-        console.log(domain)
+        console.log(domain);
         try {
-            const response = await axios.delete(
+            const response = await fetch(
                 `https://api.vercel.com/v9/projects/${config.vercel.projectId}/domains/${domain}?teamId=${config.vercel.teamId}`,
                 {
+                    method: 'DELETE',
                     headers: {
                         Authorization: `Bearer ${config.vercel.token}`,
                         'Content-Type': 'application/json',
@@ -144,16 +143,20 @@ export class DomainService {
                 }
             );
 
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Failed to delete Vercel domain');
+            }
+
+            const data = await response.json();
+
             return {
                 success: true,
-                data: response.data,
+                data: data,
             };
         } catch (error) {
-            console.log('Vercel domain deletion error:', error.response?.data || error.message,domain);
-            throw new Error(
-                error.response?.data?.error?.message || 'Failed to delete Vercel domain',
-                { cause: error }
-            );
+            console.log('Vercel domain deletion error:', error.message, domain);
+            throw new Error(error.message || 'Failed to delete Vercel domain', { cause: error });
         }
     }
 
@@ -161,8 +164,9 @@ export class DomainService {
     async deleteCloudflareRecord(domain) {
         try {
             const cfConfig = config.cloudflare;
+
             // Step 1: Get all DNS records for the domain
-            const recordsResponse = await axios.get(
+            const recordsResponse = await fetch(
                 `https://api.cloudflare.com/client/v4/zones/${cfConfig.zoneId}/dns_records?name=${domain}`,
                 {
                     headers: {
@@ -173,19 +177,31 @@ export class DomainService {
                 }
             );
 
-            const records = recordsResponse.data.result;
+            if (!recordsResponse.ok) {
+                const errorData = await recordsResponse.json();
+                throw new Error(errorData.errors?.[0]?.message || 'Failed to fetch DNS records');
+            }
+
+            const records = (await recordsResponse.json()).result;
 
             // Step 2: Delete all records
             const deletePromises = records.map(record =>
-                axios.delete(
+                fetch(
                     `https://api.cloudflare.com/client/v4/zones/${cfConfig.zoneId}/dns_records/${record.id}`,
                     {
+                        method: 'DELETE',
                         headers: {
                             'X-Auth-Email': cfConfig.email,
                             'X-Auth-Key': cfConfig.apiKey,
                         },
                     }
-                )
+                ).then(async (response) => {
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.errors?.[0]?.message || 'Failed to delete record');
+                    }
+                    return response;
+                })
             );
 
             await Promise.all(deletePromises);
@@ -195,9 +211,9 @@ export class DomainService {
                 deletedRecords: records.length,
             };
         } catch (error) {
-            console.error('Cloudflare record deletion error:', error.response?.data || error.message);
+            console.error('Cloudflare record deletion error:', error.message);
             throw new Error(
-                error.response?.data?.errors?.[0]?.message || 'Failed to delete Cloudflare records',
+                error.message || 'Failed to delete Cloudflare records',
                 { cause: error }
             );
         }
@@ -206,8 +222,9 @@ export class DomainService {
     async deleteCloudflareTxtRecord(domain) {
         try {
             const cfConfig = config.cloudflare;
+
             // Get all TXT records for the domain
-            const recordsResponse = await axios.get(
+            const recordsResponse = await fetch(
                 `https://api.cloudflare.com/client/v4/zones/${cfConfig.zoneId}/dns_records?type=TXT&name=${domain}`,
                 {
                     headers: {
@@ -218,19 +235,31 @@ export class DomainService {
                 }
             );
 
-            const txtRecords = recordsResponse.data.result;
+            if (!recordsResponse.ok) {
+                const errorData = await recordsResponse.json();
+                throw new Error(errorData.errors?.[0]?.message || 'Failed to fetch TXT records');
+            }
+
+            const txtRecords = (await recordsResponse.json()).result;
 
             // Delete all TXT records
             const deletePromises = txtRecords.map(record =>
-                axios.delete(
+                fetch(
                     `https://api.cloudflare.com/client/v4/zones/${cfConfig.zoneId}/dns_records/${record.id}`,
                     {
+                        method: 'DELETE',
                         headers: {
                             'X-Auth-Email': cfConfig.email,
                             'X-Auth-Key': cfConfig.apiKey,
                         },
                     }
-                )
+                ).then(async (response) => {
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.errors?.[0]?.message || 'Failed to delete TXT record');
+                    }
+                    return response;
+                })
             );
 
             await Promise.all(deletePromises);
@@ -240,9 +269,9 @@ export class DomainService {
                 deletedTxtRecords: txtRecords.length,
             };
         } catch (error) {
-            console.error('Cloudflare TXT record deletion error:', error.response?.data || error.message);
+            console.error('Cloudflare TXT record deletion error:', error.message);
             throw new Error(
-                error.response?.data?.errors?.[0]?.message || 'Failed to delete Cloudflare TXT records',
+                error.message || 'Failed to delete Cloudflare TXT records',
                 { cause: error }
             );
         }
