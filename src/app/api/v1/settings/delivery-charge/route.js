@@ -22,7 +22,7 @@ export async function POST(request) {
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
         if (!authenticated) return NextResponse.json( { error: authError || "Not authorized" }, { status: 401 } );   
 
-        const { vendor: vendorReferenceId , chargeBasedOn, regionName, charge, partner } = parsed.data
+        const { shop: vendorReferenceId , chargeBasedOn, regionName, charge, partner } = parsed.data
 
         const vendor_db = await vendorDbConnect();
         const    Vendor = vendorModel(vendor_db);
