@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import authDbConnect from "@/lib/mongodb/authDbConnect";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { shopModel } from "@/models/auth/Shop";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
+import authDbConnect from "@/lib/mongodb/authDbConnect";
 // import { userModel } from "@/models/auth/user";
 
 export async function GET(request) {

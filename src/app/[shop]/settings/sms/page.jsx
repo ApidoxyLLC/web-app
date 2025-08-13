@@ -89,7 +89,7 @@ export default function Dashboard() {
     const res = await fetch(`/api/v1/${shop}/sms-email-services`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ providerName: name, providerType:"sms", referenceId: shop }),
+      body: JSON.stringify({ provider: name}),
     });
     if (!res.ok) throw new Error("Failed to delete");
     toast.success("Deleted SMS Service");
