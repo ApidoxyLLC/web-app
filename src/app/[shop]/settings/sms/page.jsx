@@ -17,6 +17,7 @@ import bulk from "../../../../../public/images/bulk.png"
 import alpha from "../../../../../public/images/alpha.png"
 import adn from "../../../../../public/images/adn.png"
 import useFetch from "@/hooks/useFetch";
+import { toast } from "sonner";
 const smsProviders = [
   {
     name: "Balk SMS BD",
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const {shop} = useParams()
   console.log(shop)
   const {data, loading, refetch} = useFetch(`/${shop}/sms-email-services`)
+  console.log(data)
   const handleAdd = async () => {
     const provider = smsProviders.find((p) => p.name === selected);
     if (!provider) return;
@@ -73,17 +75,16 @@ export default function Dashboard() {
       });
 
       if (!response.ok) throw new Error("Failed to save SMS provider");
-
+      toast.success("Configured SMS Service");
       await response.json();
       setFormData({});
-      refetch(); // ✅ Add করার পরে DB থেকে নতুন ডাটা রিফেচ
+      refetch(); 
     } catch (error) {
       console.error("Error saving provider:", error);
     }
   };
 
  const handleDelete = async (name) => {
-  console.log(name)
   try {
     const res = await fetch(`/api/v1/${shop}/sms-email-services`, {
       method: "DELETE",
@@ -91,6 +92,7 @@ export default function Dashboard() {
       body: JSON.stringify({ providerName: name, providerType:"sms", referenceId: shop }),
     });
     if (!res.ok) throw new Error("Failed to delete");
+    toast.success("Deleted SMS Service");
     refetch();
   } catch (error) {
     console.error("Error deleting provider:", error);
@@ -99,7 +101,7 @@ export default function Dashboard() {
 
   const currentProvider = smsProviders.find((p) => p.name === selected);
 
-  const savedFromDB = data?.smsProvider?.[currentProvider?.id];
+  const savedFromDB = data?.smsProviders?.[currentProvider?.id];
   const isAdded = !!savedFromDB;
 
 

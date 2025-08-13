@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [suggestions, setSuggestions] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [deletingUserId, setDeletingUserId] = useState(null); // To track deleting user
+  const [deletingUserId, setDeletingUserId] = useState(null); 
 
   const shop = useParams();
   const shopId = shop.shop;
@@ -122,8 +122,6 @@ export default function Dashboard() {
   const filteredSuggestions = suggestions?.filter((s) =>
     `${s.name} ${s.email}`.toLowerCase().includes(value.toLowerCase())
   );
-
-  // DELETE user handler
   const handleDelete = async (userRefId) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
     setDeletingUserId(userRefId);

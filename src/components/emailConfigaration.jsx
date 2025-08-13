@@ -46,7 +46,7 @@ export default function EmailConfigDashboard() {
       if (response.ok) {
         toast.success("Configured Email Service");
         setFormData({});
-        refetch(); // get fresh data from DB
+        refetch(); 
       } else {
         toast.error(result?.error || "Failed to update");
       }
@@ -77,7 +77,7 @@ export default function EmailConfigDashboard() {
     }
   };
 
-  const emailConfig = data?.emailProvider?.smtp || null;
+  const emailConfig = data?.emailProviders?.smtp || null;
 
   return (
     <div className="bg-muted/100">

@@ -81,11 +81,17 @@ export async function DELETE(request, { params }) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
     if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
-    const { shopId } =await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    
+    const _PARAMS =await params;
 
-    if (!shopId || !userId) {
+    console.log(_PARAMS)
+    const { shop } =await params;
+    const { searchParams } = new URL(request.url);
+    console.log(searchParams)
+    return NextResponse.json(  { error: 'TEST RESPONSE ' }, { status: 200,  } );
+    const userId = searchParams.get('userId');
+    console.log("joy bangla",userId, shop)
+    if (!shop || !userId) {
         return NextResponse.json(
             { error: 'Missing required parameters' },
             { status: 400, headers: securityHeaders }
@@ -121,7 +127,7 @@ export async function DELETE(request, { params }) {
     const User = userModel(authDb);
 
     try {
-        const vendor = await Vendor.findOne({ referenceId: shopId })
+        const vendor = await Vendor.findOne({ referenceId: shop })
             .select('+ownerId +staffs')
             .lean();
 

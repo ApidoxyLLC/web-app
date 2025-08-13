@@ -51,7 +51,6 @@ export default function Categories() {
     error,
     refetch
   } = useFetch(`/${shopId}/categories`);
-  console.log(response)
   const collections = response || [];
   useEffect(()=>{
     if (!debounchedValue){
@@ -187,7 +186,6 @@ export default function Categories() {
       .filter(Boolean);
 
   const itemsTree = buildTree(collections);
-  console.log(collections)
   return (
     <div className="space-y-4 p-6">
       <div className="flex justify-between items-center gap-2">
@@ -208,14 +206,10 @@ export default function Categories() {
           className="h-[100px] mt-3 animate-pulse rounded-xl bg-muted/50 dark:bg-muted"
         />
       ))}
-    </div> : <div className="border rounded-lg ">
+    </div> : itemsTree.length === 0 ? <div className='pt-3 font-base'>No categori added. Please creat a categori</div> : <div className="border rounded-lg ">
         <TreeView
           data={itemsTree}
           defaultLeafIcon={<PlusCircle />}
-          // onDocumentDrag={(source, target) => {
-          //   const newParent = target?.id || null;
-          //   // setCollections(prev => prev.map(item => item.id === source.id ? { ...item, parent: newParent } : item));
-          // }}
         />
       </div>
       }
