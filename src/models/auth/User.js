@@ -34,7 +34,8 @@ const SecuritySchema = new mongoose.Schema({
   failedAttempts: { type: Number, default: 0 },
   lastLogin: { type: Date, default: null },
   forgotPasswordToken: { type: String, default: undefined },
-  forgotPasswordTokenExpiry: { type: Number, default: undefined }
+  forgotPasswordTokenExpiry: { type: Number, default: undefined },
+  passwordChangedAt: { type: Date, default: undefined },
 }, { _id: false });
 
 const StatusSchema = new mongoose.Schema({
