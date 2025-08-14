@@ -8,8 +8,8 @@ import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import { z } from 'zod';
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(6, "Current password required"),
-  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+  currentPassword: z.string().min(2, "Current password required"),
+  newPassword: z.string().min(2, "New password must be at least 8 characters"),
   confirmPassword: z.string()
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "Passwords do not match",

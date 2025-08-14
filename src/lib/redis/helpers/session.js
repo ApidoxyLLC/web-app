@@ -1,22 +1,12 @@
-import crypto from 'crypto';
 import getRedisClient from '../getRedisClient';
 import config from '../../../../config';
-import { timingSafeEqual } from 'crypto';
+import safeCompare from '../utils/safeCompare';
+import safeCompare from '../utils/safeCompare';
 
 const sessionRedis = getRedisClient('session');
 const SESSION_PREFIX = 'session:';
 const USER_SESSIONS_PREFIX = 'user:sessions:';
 const TTL = config.accessTokenExpireMinutes *  60;
-
-
-function hashTokenId(tokenId) { return crypto.createHash('sha256').update(tokenId).digest('hex');}
-
-function safeCompare(a, b) {
-  const aBuf = Buffer.from(a);
-  const bBuf = Buffer.from(b);
-  if (aBuf.length !== bBuf.length) return false;
-  return timingSafeEqual(aBuf, bBuf);
-}
 
 export async function setSession({ sessionId, tokenId, payload ={}}) {
     const { sub, role, userId } = payload
