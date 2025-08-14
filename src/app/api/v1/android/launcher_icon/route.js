@@ -15,6 +15,7 @@ function createBlankCanvasBuffer() {
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
+        console.log(searchParams)
         const imageUrl = searchParams.get('url');
 
         console.log('Fetching image from URL:', imageUrl);

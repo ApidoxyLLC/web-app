@@ -22,6 +22,7 @@ async function loadImageFromUrl(url) {
             }
         });
         const buffer = Buffer.from(response.data);
+        console.log(buffer)
         return await loadImage(buffer);
     } catch (err) {
         throw err;
@@ -32,8 +33,8 @@ export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
         const imageUrl = searchParams.get('url');
-
-        if (!imageUrl || !imageUrl.startsWith('http')) {
+        console.log(imageUrl)
+        if (!imageUrl || !imageUrl.startsWith('https')) {
             const blankBuffer = createBlankCanvasBuffer();
             return new Response(blankBuffer, {
                 status: 200,

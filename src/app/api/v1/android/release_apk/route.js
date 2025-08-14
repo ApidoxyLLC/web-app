@@ -59,7 +59,7 @@ export async function POST(req) {
             // Generate and save launcher icon
             if (launcherIcon) {
                 try {
-                    const response = await axios.get(`${apiBaseUrl}/launcher_icon`, {
+                    const response = await axios.get(`${apiBaseUrl}/android/launcher_icon`, {
                         params: { url: launcherIcon },
                         responseType: 'arraybuffer'
                     });
@@ -79,7 +79,7 @@ export async function POST(req) {
             // Generate and save splash screen logo
             if (splashScreenLogo) {
                 try {
-                    const response = await axios.get(`${apiBaseUrl}/splash-screen-logo`, {
+                    const response = await axios.get(`${apiBaseUrl}/android/splash-screen-logo`, {
                         params: { url: splashScreenLogo },
                         responseType: 'arraybuffer'
                     });
@@ -99,7 +99,7 @@ export async function POST(req) {
             // Generate and save splash screen branding
             if (splashScreenBranding) {
                 try {
-                    const response = await axios.get(`${apiBaseUrl}/splash-screen-branding`, {
+                    const response = await axios.get(`${apiBaseUrl}/android/splash-screen-branding`, {
                         params: { url: splashScreenBranding },
                         responseType: 'arraybuffer'
                     });
