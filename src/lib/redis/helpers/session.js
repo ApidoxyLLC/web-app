@@ -1,7 +1,8 @@
 import getRedisClient from '../getRedisClient';
 import config from '../../../../config';
 import safeCompare from '../utils/safeCompare';
-import safeCompare from '../utils/safeCompare';
+import hashTokenId from '../utils/hashTokenId';
+
 
 const sessionRedis = getRedisClient('session');
 const SESSION_PREFIX = 'session:';
