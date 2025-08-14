@@ -24,7 +24,12 @@ export const subscriptionPlanDTOSchema = z.object({
     name: z.enum(["PLAN A", "PLAN B", "PLAN C"]),
     slug: z.string().min(1, "Slug is required"),
     price: z.number().default(0),
+    isRecommended:z.boolean().optional(),
+    isPopular:z.boolean().optional(),
+    description: z.string().min(1, "description is required"),
+    buttonText: z.string().min(1, "buttonText is required"),
     monthly: z.number().min(1, "Monthly duration is required"),
     yearly: z.number().min(1, "Yearly duration is required"),
-    services: servicesSchema
+    services: servicesSchema,
+    priority: z.number().min(0).default(1),
 });

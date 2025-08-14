@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import useFetch from "@/hooks/useFetch";
 import { cn } from "@/lib/utils";
 import { CircleCheck, CircleHelp } from "lucide-react";
 import { useState } from "react";
@@ -68,14 +69,14 @@ const plans = [
       { title: "3 Payment Gateway" },
       { title: "3 Delivery Partner" },
       { title: "3 SMS Gateway" },
-      { title: "Advanced User Access (Up to 10 Users)" },
+      { title: "Advanced User Access" },
       { title: "Unlimited Push Notifications" },
       { title: "Unlimited Product Listings" },
     ],
     buttonText: "Go Premium",
   },
 ];
-
+const {data, loading} = useFetch("/subscription-plans")
 
 
 

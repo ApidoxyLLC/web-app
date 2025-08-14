@@ -485,13 +485,18 @@ export function CustomersTable(
   //     })
   //   }
   // }
-if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <LoaderIcon className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
+ if (loading) {
+      return (
+        <div className="">
+      {[...Array(2)].map((_, idx) => (
+        <div
+          key={idx}
+          className="h-[100px] mt-3 animate-pulse rounded-xl bg-muted/50 dark:bg-muted mx-6"
+        />
+      ))}
+    </div>
+      )
+    }
 
   if (error) {
     return (
