@@ -9,6 +9,8 @@ import securityHeaders from "../../../utils/securityHeaders";
 import mongoose from "mongoose";
 import getAuthenticatedUser from "../../../auth/utils/getAuthenticatedUser";
 import hasProductWritePermission from "./hasProductWritePermission";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import { imageModel } from "@/models/vendor/Image";
 
 const apiResponse = (data, status = 200, headers = {}) => {
     const response = NextResponse.json(data, { status });

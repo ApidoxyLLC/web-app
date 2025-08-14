@@ -8,6 +8,7 @@ import hasAddDeliveryChargePermission from "./hasAddDeliveryChargePermission";
 import securityHeaders from "../../utils/securityHeaders";
 
 export async function POST(request) {
+    let body;
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || request.connection?.remoteAddress || '';
 
     // CHANGE: Used destructuring to improve readability
@@ -36,7 +37,7 @@ export async function POST(request) {
         // -------------------------------
         // Duplicate Check (Improved Logic)
         const normalizedRegion = regionName.toLowerCase();
-        const duplicateCharge = vendor.deliveryCharges.find(existingCharge => { const sameRegionType = existingCharge.chargeBasedOn === chargeBasedOn;
+        const duplicateCharge = vendor.deliveryCharges?.find(existingCharge => { const sameRegionType = existingCharge.chargeBasedOn === chargeBasedOn;
                                                                                 const sameRegionName = existingCharge.regionName.toLowerCase() === normalizedRegion;
                                                                                 if (!sameRegionType || !sameRegionName) return false;
                                                                                 if (existingCharge.partner && partner) return existingCharge.partner === partner;
