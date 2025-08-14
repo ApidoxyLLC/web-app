@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const androidSchema = new mongoose.Schema({
     themeName: {
@@ -47,8 +47,6 @@ const androidSchema = new mongoose.Schema({
         type: String,
         default: null
     }
-});
+}, { timestamps: true, collection: 'staffs' });
 
-const Android = mongoose.model('Android', androidSchema);
-
-module.exports = Android;
+export const androidModel = (db) => db.models.Android || db.model('Android', androidSchema);

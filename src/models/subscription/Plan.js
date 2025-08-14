@@ -53,7 +53,12 @@ const planSchema = new mongoose.Schema({
   monthly: { type: Number, required: true },
   yearly: { type: Number, required: true },
   services: { type: servicesSchema, required: true },
-  priority: { type: Number, required: true }
+  priority: { type: Number, required: true },
+  isRecommended: { type: Boolean, required: true },
+  isPopular: { type: Boolean, required: true },
+  description: { type: String,  required: true }, 
+  buttonText: { type: String,required: true },
+  
 }, { timestamps: true, collection: 'subscription_plans' });
 
 export const PlanModel = (db) => db.models.Plan || db.model('Plan', planSchema);

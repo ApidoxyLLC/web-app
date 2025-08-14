@@ -2,11 +2,16 @@
 import { exec } from 'child_process';
 import path from 'path';
 import { promises as fs } from 'fs';
-import androidDockerYaml from '../../../../functions/android_docker_yaml';
+// import androidDockerYaml from '../../../../../lib/docker-yaml';
+import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import axios from 'axios';
-import Android from '../../../../models/android';
+import {androidModel} from '@/models/android/Android';
 
 export async function POST(req) {
+    const vendor_db = await vendorDbConnect();
+    const Android = androidModel(vendor_db);
+
+
     try {
         const {
             themeName,
@@ -49,13 +54,12 @@ export async function POST(req) {
 
             await fs.mkdir(assetsDir, { recursive: true });
 
-            // Use our API endpoint to fetch and process images
-            const apiBaseUrl = 'https://sdk.apidoxy.com/api';
+            const apiBaseUrl = 'http://localhost:3000/api/v1';
 
             // Generate and save launcher icon
             if (launcherIcon) {
                 try {
-                    const response = await axios.get(`${apiBaseUrl}/android_launcher_icon`, {
+                    const response = await axios.get(`${apiBaseUrl}/launcher_icon`, {
                         params: { url: launcherIcon },
                         responseType: 'arraybuffer'
                     });
@@ -75,7 +79,7 @@ export async function POST(req) {
             // Generate and save splash screen logo
             if (splashScreenLogo) {
                 try {
-                    const response = await axios.get(`${apiBaseUrl}/android-splash-screen-logo`, {
+                    const response = await axios.get(`${apiBaseUrl}/splash-screen-logo`, {
                         params: { url: splashScreenLogo },
                         responseType: 'arraybuffer'
                     });
@@ -95,7 +99,7 @@ export async function POST(req) {
             // Generate and save splash screen branding
             if (splashScreenBranding) {
                 try {
-                    const response = await axios.get(`${apiBaseUrl}/android-splash-screen-branding`, {
+                    const response = await axios.get(`${apiBaseUrl}/splash-screen-branding`, {
                         params: { url: splashScreenBranding },
                         responseType: 'arraybuffer'
                     });
@@ -129,16 +133,32 @@ export async function POST(req) {
             }, { status: 500 });
         }
 
-        // Step 2: Generate YAML files with UUID
-        const yamlResult = await androidDockerYaml({
-            appName,
-            packageName,
-            versionCode,
-            color,
-            themeName,
-            builderId: androidBuild._id.toString()
+        // // Step 2: Generate YAML files with UUID
+        // const yamlResult = await androidDockerYaml({
+        //     appName,
+        //     packageName,
+        //     versionCode,
+        //     color,
+        //     themeName,
+        //     builderId: androidBuild._id.toString()
+        // });
+        const response = await fetch(`${process.env.BASE_URL}/api/v1/android/docker-yaml`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any auth headers if needed
+            },
+            body: JSON.stringify({
+                appName,
+                packageName,
+                versionCode,
+                color,
+                themeName,
+                builderId: androidBuild._id.toString()
+            })
         });
 
+        const yamlResult = await response.json();
         // YAML generation error
         if (!yamlResult.success) {
             androidBuild.buildStatus = -1;

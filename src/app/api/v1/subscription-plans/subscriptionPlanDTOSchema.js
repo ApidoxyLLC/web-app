@@ -32,4 +32,5 @@ export const subscriptionPlanDTOSchema = z.object({
     yearly: z.number().min(1, "Yearly duration is required"),
     services: servicesSchema,
     priority: z.number().min(0).default(1),
+    
 });
