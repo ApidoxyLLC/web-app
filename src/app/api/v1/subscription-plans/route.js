@@ -84,6 +84,50 @@ export async function POST(request) {
     }
 }
 
+
+
+
+
+export async function GET(request) {
+    console.log("Fetching all subscription plans");
+
+    const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+        request.headers['x-real-ip'] ||
+        request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createPlan' });
+    if (!allowed) {
+        return NextResponse.json(
+            { error: 'Too many requests. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': retryAfter.toString() } }
+        );
+    }
+
+    try {
+        const vendorDb = await vendorDbConnect();
+        const Plan = PlanModel(vendorDb);
+
+        const plans = await Plan.find({}).lean();
+
+        return NextResponse.json({
+            success: true,
+            data: plans,
+            message: "All subscription plans fetched successfully"
+        });
+
+    } catch (error) {
+        console.error("Error fetching plans:", error);
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to fetch subscription plans",
+                error: error.message,
+                stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+            },
+            { status: 500 }
+        );
+    }
+}
+
 // // Pagination constants
 // const DEFAULT_PAGE = 1;
 // const DEFAULT_LIMIT = 8;
