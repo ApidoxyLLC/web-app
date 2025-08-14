@@ -9,9 +9,6 @@ const USER_SESSIONS_PREFIX = 'user:sessions:';
 const TTL = config.accessTokenExpireMinutes *  60;
 
 
-
-
-
 function hashTokenId(tokenId) { return crypto.createHash('sha256').update(tokenId).digest('hex');}
 
 function safeCompare(a, b) {

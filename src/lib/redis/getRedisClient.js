@@ -40,11 +40,6 @@ function getRedisClient(purpose) {
 }
 export default getRedisClient;
 
-function clearRedisClients() {
-    Object.values(clients).forEach(client => client.disconnect());
-    for (const key in clients) delete clients[key];
-}
-
 async function clearRedisClients() {
   try {
     await Promise.all(
