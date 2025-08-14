@@ -29,7 +29,7 @@ const VerificationSchema = new mongoose.Schema({
 }, { _id: false });
 
 const SecuritySchema = new mongoose.Schema({
-  password: { type: String, select: false, default: null },
+  password: { type: String },
   // salt: { type: String, select: false, default: null },
   failedAttempts: { type: Number, default: 0 },
   lastLogin: { type: Date, default: null },
