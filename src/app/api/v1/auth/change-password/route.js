@@ -49,9 +49,6 @@ export async function PATCH(request) {
 
     return NextResponse.json({ message: "Password changed successfully" }, { status: 200 });
   } catch (err) {
-    await session.abortTransaction();
     return NextResponse.json({ error: err.message || "Failed to change password" }, { status: 400 });
-  } finally {
-    session.endSession();
-  }
+  } 
 }
