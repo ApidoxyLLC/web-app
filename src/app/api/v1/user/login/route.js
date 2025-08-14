@@ -8,8 +8,7 @@ import { encrypt, decrypt } from "@/lib/encryption/cryptoEncryption";
 import loginDTOSchema from "./loginDTOSchema";
 import { sessionModel } from "@/models/shop/shop-user/Session";
 import { loginHistoryModel } from "@/models/shop/shop-user/LoginHistory";
-import { getVendor } from "@/services/vendor/getVendor";
-// import rateLimit from "./rateLimit";
+import { getInfrastructure } from "@/services/vendor/getInfrastructure";
 import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
 import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
@@ -31,7 +30,7 @@ export async function POST(request) {
   try { body = await request.json(); } 
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
 
-  const vendorId = request.headers.get('x-vendor-identifier');
+  const referenceId = request.headers.get('x-vendor-identifier');
   const     host = request.headers.get('host');
 
   // Rate limiter 
@@ -40,31 +39,22 @@ export async function POST(request) {
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
 
   // Input validation
-  const   userAgent = request.headers.get('user-agent') || '';
+  
   // const fingerprint = request.headers.get('x-fingerprint') || null;
 
-  if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
+  if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
   const parsed = loginDTOSchema.safeParse(body);
   console.log(parsed.error)
   if (!parsed.success) return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 422 });
 
   try {
-    // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host:"687602403__6840edac6817ee3.appcommerz.com", fields: ['createdAt', 'primaryDomain']    });
     // Connect to auth database
-    const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
-    if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    const { data, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    if(!data) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     
-
-
-
-
-    // Decrypt token secrets
-    // const AT_SECRET_KEY = process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY;
-    // const RT_SECRET_KEY = process.env.END_USER_REFRESH_TOKEN_ENCRYPTION_KEY;    
-    // if (!AT_SECRET_KEY || !RT_SECRET_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 });
-    const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.accessTokenSecret,
+    const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: data.secrets.accessTokenSecret,
                                                     options: { secret: config.accessTokenSecretEncryptionKey } });    
-    const REFRESH_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret,
+    const REFRESH_TOKEN_SECRET = await decrypt({ cipherText: data.secrets.refreshTokenSecret,
                                                     options: { secret: config.refreshTokenSecretEncryptionKey } });
 
     // Connect to vendor DB
@@ -79,8 +69,8 @@ export async function POST(request) {
     const password        = parsed.data.password;
     const identifierName  = parsed.data.identifierName;
     const fingerprint     = parsed.data.fingerprint;
-    const userAgent       = parsed.data.userAgent;
     const timezone        = parsed.data.timezone?.trim();
+    const userAgent       = request.headers.get('user-agent') || '';
 
     // Get user document (non-lean for updates)
     const user = await UserModel.findOne({ [identifierName]: identifier.trim() })
@@ -96,12 +86,9 @@ export async function POST(request) {
       return NextResponse.json({ error: `Account locked. Try again in ${retryAfter} seconds` }, { status: 423, headers: { 'Retry-After': retryAfter.toString() } } );
     }
 
-
     // Password validation
     if (!user.security?.password) return NextResponse.json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
     const validPassword = await bcrypt.compare(password, user.security.password);
-    
-
 
     if (!validPassword) {
       const MAX_ATTEMPTS = parseInt(process.env.END_USER_MAX_LOGIN_ATTEMPT || "5", 10);
@@ -125,10 +112,6 @@ export async function POST(request) {
         }
       );
     }
-
-
-    
-    
 
 
     // Handle 2FA if enabled
@@ -185,11 +168,11 @@ export async function POST(request) {
     const sessionId = new mongoose.Types.ObjectId();
     const newAccessTokenId = crypto.randomBytes(16).toString('hex');
     const newRefreshTokenId = crypto.randomBytes(16).toString('hex');
-    const MAX_SESSIONS = vendor.maxSessionAllowed || Number(process.env.END_USER_DEFAULT_MAX_SESSIONS) || 5;
+    const MAX_SESSIONS = data.maxSessionAllowed || Number(process.env.END_USER_DEFAULT_MAX_SESSIONS) || 5;
 
     // Token configuration
-    const AT_EXPIRY = Number(vendor.expirations?.accessTokenExpireMinutes) || 15;
-    const RT_EXPIRY = Number(vendor.expirations?.refreshTokenExpireMinutes) || 1440;
+    const AT_EXPIRY = Number(data.expirations?.accessTokenExpireMinutes) || 15;
+    const RT_EXPIRY = Number(data.expirations?.refreshTokenExpireMinutes) || 1440;
     
 
     
@@ -249,22 +232,22 @@ export async function POST(request) {
     const dbSession = await shop_db.startSession();
     try {
         await dbSession.withTransaction(async () => {
-        const SessionModel = sessionModel(shop_db);
+        const Session = sessionModel(shop_db);
         const LoginHistoryModel = loginHistoryModel(shop_db);
 
         // 1. Create session
-        await new SessionModel({               _id: sessionId,
-                                            userId: user._id,
-                                          provider: `local-${identifierName}`, // Fixed template literal
-                                     accessTokenId: hashedAccessTokenId,
-                                    refreshTokenId: hashedRefreshTokenId,
+        await new Session({                _id: sessionId,
+                                        userId: user._id,
+                                      provider: `local-${identifierName}`, // Fixed template literal
+                                    //  accessTokenId: hashedAccessTokenId,
+                                refreshTokenId: hashedRefreshTokenId,
                                       //  accessToken: accessTokenCipherText,
-                                 accessTokenExpiry: accessTokenExpiry,
+                                //  accessTokenExpiry: accessTokenExpiry,
                                       // refreshToken: refreshTokenCipherText,
-                                refreshTokenExpiry: refreshTokenExpiry,                                     
-                                                ip: ipAddressCipherText,
-                                       fingerprint,
-                                         userAgent
+                            refreshTokenExpiry: refreshTokenExpiry,                                     
+                                            ip: ipAddressCipherText,
+                                   fingerprint,
+                                     userAgent
                                 }).save({ session: dbSession });
 
         // 2. Update user sessions (prune if exceeding limit)
@@ -275,7 +258,7 @@ export async function POST(request) {
           const excessSessions = user.activeSessions.length - MAX_SESSIONS;
           const sessionsToRemove = user.activeSessions.splice(0, excessSessions);
           const sessionIds = sessionsToRemove.map(s => s.sessionId);
-          await SessionModel.deleteMany( { _id: { $in: sessionIds } }, { session: dbSession } );
+          await Session.deleteMany( { _id: { $in: sessionIds } }, { session: dbSession } );
         }
 
         // 3. Reset security flags        

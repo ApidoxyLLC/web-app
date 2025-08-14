@@ -6,17 +6,17 @@ import crypto from 'crypto';
 import registerDTOSchema from "./registerDTOSchema";
 import sendEmail from "@/services/mail/sendEmail";
 import sendSMS from "@/services/mail/sendSMS";
-import { getVendor } from "@/services/vendor/getVendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import { getInfrastructure } from "@/services/vendor/getInfrastructure";
 
 export async function POST(request) {
   let body;
   try { body = await request.json(); } 
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
   
-  const   parsed = registerDTOSchema.safeParse(body);
-  const vendorId = request.headers.get('x-vendor-identifier');
-  const     host = request.headers.get('host'); 
+  const      parsed = registerDTOSchema.safeParse(body);
+  const referenceId = request.headers.get('x-vendor-identifier');
+  const        host = request.headers.get('host'); 
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
   // const fingerprint = request.headers.get('x-fingerprint') || null;
@@ -25,7 +25,7 @@ export async function POST(request) {
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
 
   if (!parsed.success)    return NextResponse.json({ error: "Invalid input" }, { status: 422 });
-  if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
+  if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
 
   const     name = parsed.data.name?.trim()                 || null;
   const    email = parsed.data.email?.trim().toLowerCase()  || null;
@@ -39,8 +39,8 @@ export async function POST(request) {
   }
 
   try {
-    const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
-    if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    const { data, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    if(!data) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
 
     const      shop_db = await dbConnect({ dbKey: dbName, dbUri })
@@ -61,11 +61,11 @@ export async function POST(request) {
                           security: { ...(password && { password: await bcrypt.hash(password, salt) } ) },
                       verification: { ...(email && {
                                                 emailVerificationToken: token,
-                                          emailVerificationTokenExpiry: new Date(Date.now() + (vendor.expirations.emailVerificationExpireMinutes * 60 * 1000) ).getTime(),                                    
+                                          emailVerificationTokenExpiry: new Date(Date.now() + (data.expirations.emailVerificationExpireMinutes * 60 * 1000) ).getTime(),                                    
                                         }),
                                       ...((phone && !email) && { 
                                                   phoneVerificationOTP: hashedOtp,
-                                            phoneVerificationOTPExpiry: new Date(Date.now() + (vendor.expirations.phoneVerificationExpireMinutes * 60 * 1000)).getTime()
+                                            phoneVerificationOTPExpiry: new Date(Date.now() + (data.expirations.phoneVerificationExpireMinutes * 60 * 1000)).getTime()
                                         })
                                     },
                     ...(email && { email: email.trim().toLowerCase() }),
@@ -77,7 +77,7 @@ export async function POST(request) {
     
     if(savedUser){
       if(email && password) {
-        const senderEmail = vendor.email || process.env.DEFAULT_SENDER_EMAIL;
+        const senderEmail = data.email || process.env.DEFAULT_SENDER_EMAIL;
         /** 
          ** ****************************************************** **
          ** Recommend to transfer this Verificaiton Email and      **
@@ -98,3 +98,6 @@ export async function POST(request) {
     return NextResponse.json( { error: "Internal server error" }, { status: 500 });
   }
 }
+
+
+    // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });

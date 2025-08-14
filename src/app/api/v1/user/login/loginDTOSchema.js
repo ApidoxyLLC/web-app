@@ -34,7 +34,6 @@ fingerprint: z.string().length(32, 'Invalid fingerprint ID length')
           password: data.password,
     identifierName: type,
        fingerprint: data.fingerprint,
-         userAgent: data.userAgent,
           timezone: data.timezone
   };
 })

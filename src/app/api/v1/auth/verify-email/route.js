@@ -33,7 +33,7 @@ export async function POST(request) {
                                                         { new: true, select: "email isEmailVerified" } );
     if (!user) 
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
-    return NextResponse.json({ valid: true, email: user.email });
+    return NextResponse.json({ success: true, message: "Email verified successfully", valid: true, email: user.email }, { status: 200 });
   } catch (error) {
     console.log(error)
     return NextResponse.json({ valid: false, error: 'Something Went wrong...' }, { status: 400 });

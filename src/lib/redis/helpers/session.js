@@ -59,7 +59,6 @@ export async function setSession({ sessionId, tokenId, payload ={}}) {
     return key;
 }
 
-
 export async function validateSession({ sessionId, tokenId }) {
     console.log('Validation attempt from Redis')
     if (!sessionId || !tokenId) return null;
