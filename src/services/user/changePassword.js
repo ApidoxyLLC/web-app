@@ -7,7 +7,7 @@ export default async function changePassword({ userId, currentPassword, newPassw
   
   const db = await authDbConnect()
   const User = userModel(db);
-  const user = await User.findById(userId).select('+security.password');
+  const user = await User.findById(userId).select('+security.password');  
 
   if (!user) throw new Error("User not found"); 
 
