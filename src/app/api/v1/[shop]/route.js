@@ -17,16 +17,19 @@ const ALL_SAFE_FIELDS = {
     phone: 1,
     policies: 1,
     socialLinks: 1,
-    notification: 1,  
-    chatSupport: 1
+    notification: 1,
+    chatSupport: 1,
+    deliveryCharges: 1
 };
 
 const SECTION_FIELDS = {
     configuration: ['businessName', 'location', 'country', 'industry', 'email', 'phone'],
     policy: ['policies'],
     socialLinks: ['socialLinks'],
-    realTimeUpdates: ['notification'],  
-    supportChat: ['chatSupport']
+    realTimeUpdates: ['notification'],
+    supportChat: ['chatSupport'],
+    delivery: ['deliveryCharges']
+
 };
 
 export async function GET(request, { params }) {
@@ -56,14 +59,14 @@ export async function GET(request, { params }) {
         }
 
 
-       // Authentication
-               const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-               if (!authenticated) {
-                   return NextResponse.json(
-                       { error: authError || "Not authorized" },
-                       { status: 401 }
-                   );
-               }
+        // Authentication
+        const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json(
+                { error: authError || "Not authorized" },
+                { status: 401 }
+            );
+        }
 
         if (!mongoose.Types.ObjectId.isValid(data.userId)) {
             return NextResponse.json(
@@ -91,7 +94,7 @@ export async function GET(request, { params }) {
             ]
         };
 
-        let projection = { _id: 0 }; 
+        let projection = { _id: 0 };
 
         if (sectionList.length > 0) {
             sectionList.forEach(section => {
@@ -163,6 +166,12 @@ export async function GET(request, { params }) {
                     case 'supportChat':
                         responseData.supportChat = vendorData.chatSupport || null;
                         break;
+                    case 'delivery':
+                        responseData.delivery = {
+                            charges: vendorData.deliveryCharges || []
+                        };
+                        break;
+
                 }
             });
         } else {
@@ -193,6 +202,9 @@ export async function GET(request, { params }) {
                 }
             };
             responseData.supportChat = vendorData.chatSupport || null;
+            responseData.delivery = {
+                charges: vendorData.deliveryCharges || []
+            };
         }
 
         return NextResponse.json(
