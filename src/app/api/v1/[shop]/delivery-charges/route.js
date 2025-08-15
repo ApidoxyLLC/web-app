@@ -102,7 +102,7 @@ export async function PATCH(request) {
     }
 }
 
-export async function DELETE(request) {
+export async function DELETE(request, {params}) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || request.connection?.remoteAddress || '';
     // Rate Limiting
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
@@ -143,7 +143,7 @@ export async function DELETE(request) {
         return NextResponse.json({success: true, message: "Delivery charge removed successfully", data: { deliveryCharges: updatedVendor.deliveryCharges } }, { status: 200, headers: securityHeaders });
 
     } catch (error) {
-        console.error("Error removing delivery charge:", error);
+        console.log("Error removing delivery charge:", error);
         return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500, headers: securityHeaders });
     }
 }

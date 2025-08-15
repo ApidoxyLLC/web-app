@@ -1,5 +1,5 @@
 "use client";
-import React, { useState,useEffect } from "react";
+import React, { useState,useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -174,7 +174,7 @@ export default function DeliverySettings() {
   const [savedCourierData, setSavedCourierData] = useState({}); 
   const { shop } = useParams();
 
-  const { data } = useFetch(`/${shop}/delivery-partner`);
+  const { data, refetch } = useFetch(`/${shop}/delivery-partner`);
 
   React.useEffect(() => {
     if (data) {
@@ -261,9 +261,7 @@ export default function DeliverySettings() {
       toast.error("An error occurred.");
     }
   };
-
-const handleSaveDeliveryCharge = async () => {
-  
+  const handleSaveDeliveryCharge = async () => {
   const payload = {
     shop: shop, 
     chargeBasedOn:
@@ -301,7 +299,7 @@ const handleSaveDeliveryCharge = async () => {
       const errorData = await res.json();
       throw new Error(errorData.message || "Failed to save");
     }
-
+      fetchDeliveryData();
     toast.success("Delivery charge saved successfully!");
 
     if (deliveryOptions === "zones") setZoneInput({ name: "", charge: "" });
@@ -313,7 +311,81 @@ const handleSaveDeliveryCharge = async () => {
   } catch (err) {
     toast.error(err.message);
   }
+  };
+  const fetchDeliveryData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/v1/${shop}`); 
+      if (!res.ok) throw new Error("Failed to fetch delivery charges");
+
+      const data = await res.json();
+      const charges = data?.data?.delivery?.charges || [];
+
+      setZonesList(
+        charges
+          .filter((item) => item.chargeBasedOn === "zone")
+          .map((item) => ({
+            name: item.regionName,
+            charge: item.charge,
+          }))
+      );
+
+      setDistrictsList(
+        charges
+          .filter((item) => item.chargeBasedOn === "district")
+          .map((item) => ({
+            name: item.regionName,
+            charge: item.charge,
+          }))
+      );
+
+      setUpazilasList(
+        charges
+          .filter((item) => item.chargeBasedOn === "upazilla")
+          .map((item) => ({
+            name: item.regionName,
+            charge: item.charge,
+          }))
+      );
+    } catch (err) {
+      console.error("Error fetching delivery charges:", err);
+    }
+  }, []);
+  useEffect(() => {
+    fetchDeliveryData();
+  }, [fetchDeliveryData]);
+  
+  const handleDeleteCharge = async (chargeId) => {
+  if (!window.confirm("Are you sure you want to delete this delivery charge?")) return;
+
+  try {
+    const res = await fetch(`/api/v1/${shop}/delivery-charges`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ charge: chargeId }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      if (deliveryOptions === "zones") {
+        setZonesList(prev => prev.filter(zone => zone._id !== chargeId));
+      } else if (deliveryOptions === "districts") {
+        setDistrictsList(prev => prev.filter(dist => dist._id !== chargeId));
+      } else if (deliveryOptions === "upazilla") {
+        setUpazilasList(prev => prev.filter(upz => upz._id !== chargeId));
+      }
+      alert("Delivery charge deleted successfully");
+    } else {
+      alert(data.error || "Failed to delete");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong");
+  }
 };
+
   return (
     <div className=" w-full mx-auto p-6 space-y-6 bg-muted/100">
       <Card >
@@ -465,7 +537,7 @@ const handleSaveDeliveryCharge = async () => {
               </div>
               <div className="">
                 {zonesList.map((zone, index) => (
-                  <div key={index} className="flex items-center gap-6 h-full">
+                  <div key={index} className={`flex ${index === 0 || "mt-6"} items-center gap-6 h-full`}>
                     <div className="w-full pl-3 py-2 border rounded-md">
                       {zone.name}
                     </div>
@@ -475,6 +547,8 @@ const handleSaveDeliveryCharge = async () => {
                     <Button
                       variant="destructive"
                       className="flex items-center gap-2 w-20 h-10"
+                        onClick={() => handleDeleteCharge(zone._id)}
+
 
                     >
                       Del
@@ -621,6 +695,8 @@ const handleSaveDeliveryCharge = async () => {
                       variant="destructive"
                       size="sm"
                       className=" flex items-center gap-2 px-4 w-20 h-10"
+                        onClick={() => handleDeleteCharge(district._id)}
+
 
                     >
                       Del
@@ -737,6 +813,8 @@ const handleSaveDeliveryCharge = async () => {
                       variant="destructive"
                       size="sm"
                       className="flex items-center gap-2 px-4 w-20 h-10"
+                        onClick={() => handleDeleteCharge(upazila._id)}
+
 
                     >
                       Del
