@@ -157,8 +157,9 @@ export async function POST(req) {
                 builderId: androidBuild._id.toString()
             })
         });
-
         const yamlResult = await response.json();
+        console.log(yamlResult)
+
         // YAML generation error
         if (!yamlResult.success) {
             androidBuild.buildStatus = -1;

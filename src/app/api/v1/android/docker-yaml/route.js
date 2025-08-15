@@ -1,15 +1,13 @@
 // app/api/v1/android/docker-yaml/route.js
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
-
-const execAsync = promisify(exec);
+import { dump } from 'js-yaml'; // Added for YAML conversion
 
 export async function POST(request) {
     try {
         const params = await request.json();
+        console.log(params)
         const {
             builderId,
             appName = 'My App Name',
@@ -174,7 +172,7 @@ export async function POST(request) {
             "workflows": {
                 "build": {
                     "jobs": [
-                        "build_apk"  // Changed this to just reference the job name
+                        "build_apk"
                     ]
                 }
             }
@@ -191,22 +189,12 @@ export async function POST(request) {
         const circleciFileId = uuidv4();
 
         // Define file paths
-        const circleciJsonPath = path.join(yamlDir, `${circleciFileId}.json`);
         const circleciYamlPath = path.join(yamlDir, `${circleciFileId}.yml`);
-        const splashJsonPath = path.join(yamlDir, `splash_${circleciFileId}.json`);
         const splashYamlPath = path.join(themeDir, 'native_splash.yaml');
 
-        // Write JSON files
-        fs.writeFileSync(circleciJsonPath, JSON.stringify(apk_yaml_json, null, 2));
-        fs.writeFileSync(splashJsonPath, JSON.stringify(splash_yaml_json, null, 2));
-
-        // Convert to YAML using json2yaml
-        await execAsync(`json2yaml ${circleciJsonPath} > ${circleciYamlPath}`);
-        await execAsync(`json2yaml ${splashJsonPath} > ${splashYamlPath}`);
-
-        // Clean up temporary JSON files
-        fs.unlinkSync(circleciJsonPath);
-        fs.unlinkSync(splashJsonPath);
+        // Convert JSON to YAML and write files directly
+        fs.writeFileSync(circleciYamlPath, dump(apk_yaml_json));
+        fs.writeFileSync(splashYamlPath, dump(splash_yaml_json));
 
         return new Response(JSON.stringify({
             success: true,
@@ -227,6 +215,7 @@ export async function POST(request) {
             }
         });
     } catch (error) {
+        console.error('Error in docker-yaml route:', error);
         return new Response(JSON.stringify({
             success: false,
             error: error.message
