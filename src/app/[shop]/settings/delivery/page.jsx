@@ -261,100 +261,59 @@ export default function DeliverySettings() {
       toast.error("An error occurred.");
     }
   };
-  const fetchDeliveryCharges = async () => {
-    try {
-      const res = await fetch(`/api/v1/${shop}/delivery-charge`);
-      if (!res.ok) throw new Error("Failed to load delivery charges");
-      const data = await res.json();
-      setZonesList(data.zones || []);
-      setDistrictsList(data.districts || []);
-      setUpazilasList(data.upazilas || []);
-    } catch (err) {
-      toast.error(err.message);
-    }
+
+const handleSaveDeliveryCharge = async () => {
+  
+  const payload = {
+    shop: shop, 
+    chargeBasedOn:
+      deliveryOptions === "zones"
+        ? "zone"
+        : deliveryOptions === "upazilla"
+        ? "upazilla"
+        : "district",
+    regionName:
+      deliveryOptions === "zones"
+        ? zoneInput.name
+        : deliveryOptions === "upazilla"
+        ? upazilaInput.name
+        : districtInput.name,
+    charge: Number(
+      deliveryOptions === "zones"
+        ? zoneInput.charge
+        : deliveryOptions === "upazilla"
+        ? upazilaInput.charge
+        : districtInput.charge
+    ),
+    partner: selectedCourier || undefined,
   };
 
-  useEffect(() => {
-    fetchDeliveryCharges();
-  }, []);
- const saveDeliveryCharges = async () => {
   try {
-    const updates = [];
+    const res = await fetch(`/api/v1/settings/delivery-charge`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-    // Zones
-    for (const z of zonesList) {
-      updates.push({
-        shop: shop,
-        chargeBasedOn: "zone",
-        regionName: z.name,
-        charge: Number(z.charge),
-        ...(z.partner ? { partner: z.partner } : {}), // untouched partner
-      });
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to save");
     }
 
-    // Districts
-    for (const d of districtsList) {
-      updates.push({
-        shop: shop,
-        chargeBasedOn: "district",
-        regionName: d.name,
-        charge: Number(d.charge),
-        ...(d.partner ? { partner: d.partner } : {}),
-      });
-    }
+    toast.success("Delivery charge saved successfully!");
 
-    // Upazilas
-    for (const u of upazilasList) {
-      updates.push({
-        shop: shop,
-        chargeBasedOn: "upazilla",
-        regionName: u.name,
-        charge: Number(u.charge),
-        ...(u.partner ? { partner: u.partner } : {}),
-      });
-    }
+    if (deliveryOptions === "zones") setZoneInput({ name: "", charge: "" });
+    if (deliveryOptions === "districts")
+      setDistrictInput({ name: "", charge: "" });
+    if (deliveryOptions === "upazilla")
+      setUpazilaInput({ name: "", charge: "" });
 
-    // Loop & send requests
-    for (const payload of updates) {
-      const res = await fetch(`/api/v1/settings/delivery-charges`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData?.error || "One or more updates failed");
-      }
-    }
-
-    toast.success("Delivery charges updated successfully");
-    fetchDeliveryCharges();
   } catch (err) {
     toast.error(err.message);
   }
 };
-
-
-
-  const deleteDeliveryCharge = async (type, index) => {
-    try {
-      const res = await fetch(`/api/v1/${shop}/delivery-charge`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ type, index }), 
-      });
-
-      if (!res.ok) throw new Error("Failed to delete delivery charge");
-      toast.success("Deleted successfully");
-      fetchDeliveryCharges();
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
   return (
     <div className=" w-full mx-auto p-6 space-y-6 bg-muted/100">
       <Card >
@@ -497,9 +456,9 @@ export default function DeliverySettings() {
               </ControlGroupItem>
             </ControlGroup>
                 <Button
-                  onClick={saveDeliveryCharges}
                   variant="outline"
                   className="h-10"
+                  onClick={handleSaveDeliveryCharge}
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
@@ -516,7 +475,6 @@ export default function DeliverySettings() {
                     <Button
                       variant="destructive"
                       className="flex items-center gap-2 w-20 h-10"
-                      onClick={() => deleteDeliveryCharge("zone", i)}
 
                     >
                       Del
@@ -642,9 +600,10 @@ export default function DeliverySettings() {
               </ControlGroupItem>
             </ControlGroup>
                 <Button
-                   onClick={saveDeliveryCharges}
                   variant="outline"
                   className='h-10'
+                  onClick={handleSaveDeliveryCharge}
+
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
@@ -662,7 +621,6 @@ export default function DeliverySettings() {
                       variant="destructive"
                       size="sm"
                       className=" flex items-center gap-2 px-4 w-20 h-10"
-                      onClick={() => deleteDeliveryCharge("district", i)}
 
                     >
                       Del
@@ -758,9 +716,10 @@ export default function DeliverySettings() {
               </ControlGroupItem>
             </ControlGroup>
                 <Button
-                   onClick={saveDeliveryCharges}
                   variant="outline"
                   className="h-10"
+                  onClick={handleSaveDeliveryCharge}
+
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
@@ -778,7 +737,6 @@ export default function DeliverySettings() {
                       variant="destructive"
                       size="sm"
                       className="flex items-center gap-2 px-4 w-20 h-10"
-                      onClick={() => deleteDeliveryCharge("upazila", i)}
 
                     >
                       Del

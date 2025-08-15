@@ -54,8 +54,8 @@ const planSchema = new mongoose.Schema({
   yearly: { type: Number, required: true },
   services: { type: servicesSchema, required: true },
   priority: { type: Number, required: true },
-  isRecommended: { type: Boolean, required: true },
-  isPopular: { type: Boolean, required: true },
+  isRecommended: { type: Boolean,  },
+  isPopular: { type: Boolean,  },
   description: { type: String,  required: true }, 
   buttonText: { type: String,required: true },
   

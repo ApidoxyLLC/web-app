@@ -1,3 +1,4 @@
+"use client"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,27 +13,10 @@ import {
   Zap,
   Smartphone, Globe, Link, Users
 } from "lucide-react";
+import useFetch from "@/hooks/useFetch";
+import { useParams } from "next/navigation";
+import { useState } from "react";
 
-const invoices = [
-  {
-    id: "INV-001",
-    date: "Mar 1, 2024",
-    amount: "$29.00",
-    status: "Paid",
-  },
-  {
-    id: "INV-002",
-    date: "Feb 1, 2024",
-    amount: "$29.00",
-    status: "Paid",
-  },
-  {
-    id: "INV-003",
-    date: "Jan 1, 2024",
-    amount: "$29.00",
-    status: "Paid",
-  },
-];
 const limitations = [
   {
     name: "Basic",
@@ -79,6 +63,9 @@ const limitations = [
 ];
 
 export default function UserBilling() {
+  const {shop} = useParams()
+  const {data: invoices, loading} = useFetch(`/${shop}/invoices?status=completed`)
+  
   return (
     <div className="container mx-auto px-4 py-6 md:px-6 2xl:max-w-[1400px]">
       <div className="mx-auto max-w-4xl">
@@ -96,6 +83,7 @@ export default function UserBilling() {
           </Button>
         </div>
 
+        
         {/* Current Plan */}
         <Card className="mb-8 p-0">
           <CardContent className="p-6">
@@ -167,7 +155,6 @@ export default function UserBilling() {
           </CardContent>
         </Card>
 
-        {/* Billing History */}
         <Card className="p-0">
           <CardContent className="p-6">
             <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row">
@@ -178,9 +165,26 @@ export default function UserBilling() {
               </Button>
             </div>
 
-            <div className="space-y-4">
-              {invoices.map((invoice) => (
-                <div
+           {loading ?  <div className="">
+      {[...Array(2)].map((_, idx) => (
+        <div
+          key={idx}
+          className="h-[25px] mt-3 animate-pulse rounded-xl bg-muted/50 dark:bg-muted"
+        />
+      ))}
+    </div>:  <div className="space-y-4">
+              {invoices.map((invoice, index) => {
+              const createdDate = new Date(invoice.createdAt);
+
+              const datePart = createdDate.toISOString().split("T")[0];
+
+              const timePart = createdDate.toLocaleTimeString("en-GB", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                });
+                return (
+                   <div
                   key={invoice.id}
                   className="flex flex-col items-start justify-between gap-3 border-b py-3 last:border-0 sm:flex-row sm:items-center"
                 >
@@ -189,22 +193,26 @@ export default function UserBilling() {
                       <FileText className="text-muted-foreground size-4" />
                     </div>
                     <div>
-                      <p className="font-medium">{invoice.id}</p>
+                      <p className="font-medium">INV {index + 1}</p>
                       <p className="text-muted-foreground text-sm">
-                        {invoice.date}
+                        {datePart} {timePart}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Badge variant="outline">{invoice.status}</Badge>
-                    <span className="font-medium">{invoice.amount}</span>
-                    <Button variant="ghost" size="sm">
-                      <Download className="size-4" />
-                    </Button>
-                  </div>
+  <Badge variant="outline">{invoice.status}</Badge>
+  <span className="font-medium">{invoice.amount} BDT</span>
+  <a href={invoice.receiptUrl} download target="_blank" rel="noopener noreferrer">
+    <Button variant="ghost" size="sm">
+      <Download className="size-4" />
+    </Button>
+  </a>
+</div>
+
                 </div>
-              ))}
-            </div>
+                )
+              })}
+            </div>}
           </CardContent>
         </Card>
       </div>
