@@ -134,10 +134,12 @@ export async function GET(request, { params }) {
                             location: vendorData.location,
                             country: vendorData.country,
                             industry: vendorData.industry,
+                            logo: vendorData.logo,
                             contact: {
                                 email: vendorData.email,
                                 phone: vendorData.phone
                             }
+                            
                         };
                         break;
                     case 'policy':
