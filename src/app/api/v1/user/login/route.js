@@ -238,7 +238,7 @@ export async function POST(request) {
     
     // if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
-    const payload = {         sub: sessionId.toString(),
+    const payload = {         
                       fingerprint,
                              name: user.name,
                             email: user.email,
@@ -256,7 +256,7 @@ export async function POST(request) {
                              cart: user.cart,
                       };
 
-    const accessToken = jwt.sign( { 
+    const accessToken = jwt.sign( {        sub: sessionId.toString(),
                                     ...payload, 
                                        tokenId: newAccessTokenId },
                                     ACCESS_TOKEN_SECRET,
@@ -264,6 +264,7 @@ export async function POST(request) {
     
     const refreshToken = jwt.sign( { 
                                     //  ...payload, 
+                                            sub: sessionId.toString(),
                                         tokenId: newRefreshTokenId },
                                     REFRESH_TOKEN_SECRET,
                                   { expiresIn: minutesToExpiresIn(RT_EXPIRY) }

@@ -6,7 +6,8 @@ import { userModel } from "@/models/shop/shop-user/ShopUser";
 import { sessionModel } from "@/models/shop/shop-user/Session";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import { cookies } from "next/headers";
-import { getVendor } from "@/services/vendor/getVendor";
+import { getInfrastructure } from "@/services/vendor/getInfrastructure";
+import config from "../../../../../../config";
 
 export async function POST(request) {
   // Get vendor identification
@@ -25,21 +26,15 @@ export async function POST(request) {
     return clearTokensAndRespond({ success: true, message: "Already logged out" }, 200);
 
   try {
-    const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
-    if (!vendor) 
-      return clearTokensAndRespond({ error: "Authentication failed" }, 400);
-    
+    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
+
     // Decrypt token secrets
-    const AT_SECRET_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY;
-    const RT_SECRET_KEY = process.env.END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY;
-    if (!AT_SECRET_KEY || !RT_SECRET_KEY) 
-      return NextResponse.json({ error: "Server configuration error" },{ status: 500 });
-    
     const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.accessTokenSecret,
-                                                    options: { secret: AT_SECRET_KEY } });
+                                                    options: { secret: config.accessTokenSecretEncryptionKey } });
 
     const REFRESH_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret,
-                                                    options: { secret: RT_SECRET_KEY } });
+                                                    options: { secret: config.refreshTokenSecretEncryptionKey } });
     const vendor_db = await dbConnect({ dbKey: dbName, dbUri });
     const Session = sessionModel(vendor_db);
     const User = userModel(vendor_db);
@@ -48,8 +43,8 @@ export async function POST(request) {
         const  accessTokenPayload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET, { ignoreExpiration: true });
         const refreshTokenPayload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, { ignoreExpiration: true });
 
-        if((accessTokenPayload.session == refreshTokenPayload.session) && accessTokenPayload.tokenId && refreshTokenPayload.tokenId){
-            const      sessionId = accessTokenPayload.session
+        if((accessTokenPayload.sub == refreshTokenPayload.sub) && accessTokenPayload.tokenId && refreshTokenPayload.tokenId){
+            const      sessionId = accessTokenPayload.sub
             const  accessTokenId = accessTokenPayload.tokenId
             const refreshTokenId = refreshTokenPayload.tokenId
             const      dbSession = await vendor_db.startSession();

@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server';
 import { userModel } from '@/models/shop/shop-user/ShopUser';
 import sendPasswordResetEmail from './sendPasswordResetEmail';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
-// import { getVendor } from '@/services/vendor/getVendor';
 import { getInfrastructure } from '@/services/vendor/getInfrastructure';
 
 const schema = z.object({ email: z.string().email("Invalid email format")   });

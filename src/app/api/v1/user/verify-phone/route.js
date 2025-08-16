@@ -3,13 +3,12 @@ import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/mongodb/db';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import verifyPhoneDTOSchema from './verifyPhoneDTOSchema';
-// import { getVendor } from '@/services/vendor/getVendor';
 import { userModel } from '@/models/shop/shop-user/ShopUser';
 import { getInfrastructure } from '@/services/vendor/getInfrastructure';
 
 export async function POST(request) {
   // Rate limiter setup
-    const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.headers.get('x-client-ip') || request.ip || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
     if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
 
@@ -23,20 +22,18 @@ export async function POST(request) {
   const parsed = verifyPhoneDTOSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid request data", details: parsed.error.format() },{ status: 422 });
   const { phone, otp } = parsed.data;
-  console.log(parsed.data)
-  
+
   const referenceId = request.headers.get('x-vendor-identifier');
   const host = request.headers.get('host');
 
-  return NextResponse.json({ error: "Test Reponse" }, { status: 200 })
+
   if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
   try {
-    // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
-    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host: "" })
+    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
     if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
 
-    console.log(referenceId)
-  console.log(host)
+
+
     const shop_db  = await dbConnect({ dbKey: dbName, dbUri });
     const UserModel = userModel(shop_db);
     
@@ -50,18 +47,14 @@ export async function POST(request) {
                                                             },
                                                             { $unset: { "verification.phoneVerificationOTP"      : "",
                                                                         "verification.phoneVerificationOTPExpiry": "" },
-                                                              $set  : { isPhoneVerified: true  } 
-                                                            }
+                                                              $set  : { isPhoneVerified: true  }  },
+                                                            { new: true }
                                                           );
-
     if (!updatedUser) return NextResponse.json( { error: "Invalid OTP, expired OTP, or phone not found" }, { status: 404 } );
     return NextResponse.json( { success: true, message: "Phone number verified successfully" }, { status: 200 } );
 
   } catch (error) {
     console.error("Phone verification error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json( { error: "Internal server error" }, { status: 500 } );
   }
 }

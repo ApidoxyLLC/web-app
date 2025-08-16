@@ -51,13 +51,14 @@ export async function PATCH(request) {
         const ShopImage = imageModel(shop_db);
         await new ShopImage({ ...imageData.toObject() }).save();
 
-        const update = {};
-        if (imageData._id !== undefined)       update['logo._id']       = imageData._id;
-        if (imageData.imageName !== undefined) update['logo.imageName'] = imageData.fileName.trim().toLowerCase();
+        const logo = {       _id: imageData._id,
+                       imageName: imageData.fileName.trim().toLowerCase()
+                      };
+        // if (imageData._id !== undefined)       update['logo._id']       = ;
+        // if (imageData.imageName !== undefined) update['logo.imageName'] = imageData.fileName.trim().toLowerCase();
         
         const updatedVendor = await Vendor.findByIdAndUpdate(          vendor._id,
-                                                                {            $set: update },
-
+                                                                {            $set: { logo } },
                                                                 {             new: true, 
                                                                     runValidators: true   }       );
 

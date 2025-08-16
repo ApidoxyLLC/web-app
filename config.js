@@ -51,9 +51,10 @@ const config = {
   accessTokenDefaultExpireMinutes: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || '30'),
   refreshTokenDefaultExpireMinutes: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || '10080'),
   emailVerificationDefaultExpireMinutes: Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRE_MINUTES || '10'),
-  phoneVerificationDefaultExpireMinutes: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRE_MINUTES || '3'),
-
-  // 
+  phoneVerificationDefaultExpireMinutes: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRE_MINUTES || '4'),
+  phoneOtpDigits: Number(process.env.PHONE_OTP_DIGITS || '6'),
+  
+  //
   defaultVendorDbProvider: process.env.VENDOR_DEFAULT_DB_PROVIDER,
   vendorDbDefaultUri: process.env.VENDOR_DB_DEFAULT_URI,
   vendorDbUriEncryptionKey: process.env.VENDOR_DB_URI_ENCRYPTION_KEY,
