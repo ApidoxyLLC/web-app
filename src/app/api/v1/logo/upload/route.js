@@ -6,7 +6,6 @@ import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
 import securityHeaders from '../../utils/securityHeaders';
 import { uploadShopImage } from '@/services/image/blackblaze';
 import hasUpdateLogoPermission from '../hasUpdateLogoPermission';
-import uploadLogoDTOSchema from './uploadLogoDTOSchema';
 
 export async function POST(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';

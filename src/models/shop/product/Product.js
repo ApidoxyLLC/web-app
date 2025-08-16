@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { inventorySchema } from './Inventory';
-import cuid from '@bugsnag/cuid';
 
 const discountSchema = new mongoose.Schema({
    type: { type: String, enum: ['fixed', 'percentage'], default: undefined },

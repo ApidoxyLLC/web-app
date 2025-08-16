@@ -5,13 +5,15 @@ import { userModel } from '@/models/shop/shop-user/ShopUser';
 import crypto from 'crypto'; 
 import sendEmail from '@/services/mail/sendEmail';
 import minutesToExpiryTimestamp from '@/app/utils/shop-user/minutesToExpiryTimestamp';
-import { getVendor } from '@/services/vendor/getVendor';
+// import { getVendor } from '@/services/vendor/getVendor';
+import { getInfrastructure } from '@/services/vendor/getInfrastructure';
+import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 
 
 const schema = z.object({ email: z.string().email() });
 
 export async function POST(request) {
-    const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
     if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
   
@@ -20,20 +22,20 @@ export async function POST(request) {
     catch (error) { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }) }
 
     const parsed = schema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: "Invalid  email address..." }, { status: 422 });
+    if (!(parsed.success === true)) return NextResponse.json({ error: "Invalid  email address..." }, { status: 422 });
     const { email } = parsed?.data
     // Rate limiter 
 
     const fingerprint = request.headers.get('x-fingerprint') || null;
-    const vendorId = request.headers.get('x-vendor-identifier');
+    const referenceId = request.headers.get('x-vendor-identifier');
     const host = request.headers.get('host');
-    if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
+    if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
     
     try {
 
 
-
-      const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
+      const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+      // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
       if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
       const shop_db  = await dbConnect({ dbKey: dbName, dbUri });
       const  UserModel = userModel(shop_db);
@@ -53,11 +55,11 @@ export async function POST(request) {
       if (!user) return NextResponse.json( { success: true, message: "If your email exists and isn't verified, you'll receive a verification email" }, { status: 200 });
       const rawToken = crypto.randomBytes(48).toString('hex');                    
       const    token = crypto.createHash('sha256').update(rawToken).digest('hex');                    
-      const   expiry = minutesToExpiryTimestamp(Number(shop.timeLimitations?.EMAIL_VERIFICATION_EXPIRE_MINUTES) || 10)
+      const   expiry = minutesToExpiryTimestamp(Number(vendor.timeLimitations?.EMAIL_VERIFICATION_EXPIRE_MINUTES) || 10)
       await UserModel.updateOne( { _id: user._id }, { $set: {       'verification.emailVerificationToken': token,
                                                               'verification.emailVerificationTokenExpiry': expiry } } );
 
-      const senderEmail = shop.email || process.env.DEFAULT_SENDER_EMAIL;
+      const senderEmail = vendor.email || process.env.DEFAULT_SENDER_EMAIL;
         await sendEmail({
           receiverEmail: user.email,
           emailType: 'VERIFY',

@@ -6,7 +6,8 @@ import { dbConnect } from '@/lib/mongodb/db';
 import securityHeaders from '../utils/securityHeaders';
 import { imageModel } from '@/models/vendor/Image';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
-import { deleteImageFile } from '@/services/image/blackblaze';
+// import { deleteImageFile } from '@/services/image/blackblaze';
+import { deleteImage } from '@/services/image/blackblaze';
 import logoDTOSchema from './policyDTOSchema';
 import hasUpdateLogoPermission from './hasUpdateLogoPermission';
 import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
@@ -66,7 +67,9 @@ export async function PATCH(request) {
                                                             _id: { $ne: imageData._id }     });
         (async () => {
             try {
-                await Promise.all([ ...fileToDelete.map(item => deleteImageFile({ fileName: item.fileName, fileId: item.fileId }) ),
+                await Promise.all([ ...fileToDelete.map(item => deleteImage({ bucketId: item.bucketId,
+                                                                              fileName: item.fileName, 
+                                                                                fileId: item.fileId }) ),
                                     ImageModel.deleteMany({ bucketName: imageData.bucketName,
                                                                 folder: imageData.folder       })     ]);
             } catch (err) { console.error("Background deletion failed:", err); }

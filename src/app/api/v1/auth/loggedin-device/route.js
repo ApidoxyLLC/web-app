@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { applyRateLimit } from "@/app/utils/rateLimit";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import getAuthenticatedUser from "../utils/getAuthenticatedUser";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { sessionModel } from "@/models/auth/Session";

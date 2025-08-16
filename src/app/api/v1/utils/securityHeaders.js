@@ -1,4 +1,4 @@
-export const securityHeaders = {
+const securityHeaders = {
      'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
         'X-Content-Type-Options': 'nosniff',
                'X-Frame-Options': 'DENY',

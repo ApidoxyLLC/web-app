@@ -41,3 +41,5 @@ export async function getVendor({ id, host, fields = []  }) {
     dbName: vendor.dbInfo.dbName,
   };
 }
+
+export default getVendor

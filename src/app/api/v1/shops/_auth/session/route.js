@@ -6,7 +6,7 @@ import { sessionModel } from "@/models/shop/shop-user/Session";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import jwt from "jsonwebtoken";
-import rateLimit from "@/app/utils/rateLimit";
+
 import mongoose from "mongoose";
 
 export async function GET(request) {

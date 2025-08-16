@@ -36,10 +36,15 @@ export async function POST(request) {
         return NextResponse.json( { error: "Validation failed", details: parsed.error.flatten() }, { status: 422 } )
     const { shippingMethod, shippingAddress, paymentMethod } = parsed.data;
 
-    const { success: authenticated, shop, data: vendorData, isTokenRefreshed, token } = await authenticationStatus(request);
-    if (!authenticated || !user?._id) 
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // const { success: authenticated, shop, data: user, isTokenRefreshed, token } = await authenticationStatus(request);
+    // if (!authenticated || !user?._id) 
+    //     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const { success: authenticated, shop, data, isTokenRefreshed, token } = await authenticationStatus(request);
+    const user = data || null;
+
+    if (!authenticated || !user?._id)
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // Connect to Vendor DB
     const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
     if (!DB_URI_ENCRYPTION_KEY)
@@ -133,7 +138,7 @@ export async function POST(request) {
                     const    inventoryLogs = [];
                     const              now = new Date();
                     const          orderId = new mongoose.Types.ObjectId();
-
+                                
                     // Step 2: Process each item with enriched data
                     for (const item of cart.items) {
                         if (!item.inventory) 

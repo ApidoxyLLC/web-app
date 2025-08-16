@@ -6,7 +6,7 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
-// import { userModel } from "@/models/auth/user";
+
 
 export async function GET(request) {
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||

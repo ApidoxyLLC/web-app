@@ -15,14 +15,7 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import config from "../../../../../../config";
 import crypto from 'crypto';
 import securityHeaders from "../../utils/securityHeaders";
-
-
-
-// function applyHeaders(response, headers) {
-//   Object.entries(headers).forEach(([key, value]) => {
-//     response.headers.set(key, value);
-//   });
-// }
+import { setSession } from "@/lib/redis/helpers/endUserSession";
 
 
 export async function POST(request) {
@@ -39,7 +32,6 @@ export async function POST(request) {
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
 
   // Input validation
-  
   // const fingerprint = request.headers.get('x-fingerprint') || null;
 
   if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
@@ -49,22 +41,21 @@ export async function POST(request) {
 
   try {
     // Connect to auth database
-    const { data, dbUri, dbName } = await getInfrastructure({ referenceId, host })
-    if(!data) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     
-    const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: data.secrets.accessTokenSecret,
+    const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.accessTokenSecret,
                                                     options: { secret: config.accessTokenSecretEncryptionKey } });    
-    const REFRESH_TOKEN_SECRET = await decrypt({ cipherText: data.secrets.refreshTokenSecret,
+    const REFRESH_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret,
                                                     options: { secret: config.refreshTokenSecretEncryptionKey } });
 
     // Connect to vendor DB
     const    shop_db = await dbConnect({ dbKey: dbName, dbUri })
-    const  UserModel = userModel(shop_db);
+    const  User = userModel(shop_db);
     
 
 
     // Validate input
-
     const identifier      = parsed.data.identifier?.trim();
     const password        = parsed.data.password;
     const identifierName  = parsed.data.identifierName;
@@ -73,12 +64,91 @@ export async function POST(request) {
     const userAgent       = request.headers.get('user-agent') || '';
 
     // Get user document (non-lean for updates)
-    const user = await UserModel.findOne({ [identifierName]: identifier.trim() })
-                                .select("security lock");
+    const [user] = await User.aggregate([ { $match: { [identifierName]: identifier.trim() } },
+                                                {
+                                                  $lookup: {
+                                                    from: 'carts',
+                                                    localField: 'cart',
+                                                    foreignField: '_id',
+                                                    as: 'cartData'
+                                                  }
+                                                },
+                                                {
+                                                  $unwind: {
+                                                    path: '$cartData',
+                                                    preserveNullAndEmptyArrays: true
+                                                  }
+                                                },
+                                                {
+                                                  $lookup: {
+                                                    from: 'products',
+                                                    localField: 'cartData.items.productId',
+                                                    foreignField: '_id',
+                                                    as: 'products'
+                                                  }
+                                                },
+                                                {
+                                                  $project: {
+                                                    security: 1,
+                                                    lock: 1,
+                                                    cart: 1,
+                                                    cartItems: {
+                                                      $map: {
+                                                        input: '$cartData.items',
+                                                        as: 'item',
+                                                        in: {
+                                                          $mergeObjects: [
+                                                            '$$item',
+                                                            {
+                                                              product: {
+                                                                $arrayElemAt: [
+                                                                  {
+                                                                    $filter: {
+                                                                      input: '$products',
+                                                                      as: 'prod',
+                                                                      cond: { $eq: ['$$prod._id', '$$item.productId'] }
+                                                                    }
+                                                                  },
+                                                                  0
+                                                                ]
+                                                              },
+                                                              variants: {
+                                                                $cond: {
+                                                                  if: '$$item.variantId',
+                                                                  then: {
+                                                                    $filter: {
+                                                                      input: {
+                                                                        $arrayElemAt: [
+                                                                          {
+                                                                            $filter: {
+                                                                              input: '$products',
+                                                                              as: 'prod',
+                                                                              cond: { $eq: ['$$prod._id', '$$item.productId'] }
+                                                                            }
+                                                                          },
+                                                                          0
+                                                                        ]
+                                                                      }.variants,
+                                                                      as: 'variant',
+                                                                      cond: { $eq: ['$$variant._id', '$$item.variantId'] }
+                                                                    }
+                                                                  },
+                                                                  then: []
+                                                                }
+                                                              }
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ]);
+
+
+    // const cart = await Cart.findById(user.cart).select("items totals currency lastUpdated");
+    
     if (!user) return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
-
-
-
 
     // Account lock check
     if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
@@ -104,15 +174,7 @@ export async function POST(request) {
       await user.save();
       const isLocked = user.lock?.lockUntil && user.lock.lockUntil > Date.now();
       const retrySeconds = Math.ceil((user.lock?.lockUntil - Date.now()) / 1000);
-      return NextResponse.json(
-        { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" },
-        { 
-          status: isLocked ? 429 : 401,
-          ...(isLocked && { headers: { 'Retry-After': retrySeconds.toString() } }),
-        }
-      );
-    }
-
+      return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: isLocked ? 429 : 401, ...(isLocked && { headers: { 'Retry-After': retrySeconds.toString() } }) } ); }
 
     // Handle 2FA if enabled
     // Temporary turn of Two Factor authentication 
@@ -168,63 +230,73 @@ export async function POST(request) {
     const sessionId = new mongoose.Types.ObjectId();
     const newAccessTokenId = crypto.randomBytes(16).toString('hex');
     const newRefreshTokenId = crypto.randomBytes(16).toString('hex');
-    const MAX_SESSIONS = data.maxSessionAllowed || Number(process.env.END_USER_DEFAULT_MAX_SESSIONS) || 5;
+    const MAX_SESSIONS = vendor.maxSessionAllowed || Number(process.env.END_USER_DEFAULT_MAX_SESSIONS) || 5;
 
     // Token configuration
-    const AT_EXPIRY = Number(data.expirations?.accessTokenExpireMinutes) || 15;
-    const RT_EXPIRY = Number(data.expirations?.refreshTokenExpireMinutes) || 1440;
-    
-
-    
+    const AT_EXPIRY = Number(vendor.expirations?.accessTokenExpireMinutes) || 15;
+    const RT_EXPIRY = Number(vendor.expirations?.refreshTokenExpireMinutes) || 1440;
     
     // if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
-    const payload = {    session: sessionId.toString(),
-                     fingerprint,
-                            name: user.name,
-                           email: user.email,
-                           phone: user.phone,
-                            role: user.role,
-                      isVerified: user.isEmailVerified || user.isPhoneVerified };
+    const payload = {         sub: sessionId.toString(),
+                      fingerprint,
+                             name: user.name,
+                            email: user.email,
+                            phone: user.phone,
+                           avatar: user.avatar,
+                             role: user.role,
+                       isVerified: user.isEmailVerified || user.isPhoneVerified,
+                           gender: user.gender,
+                  isEmailVerified: user.isEmailVerified,
+                  isPhoneVerified: user.isPhoneVerified,
+                            theme: user.theme,
+                         language: user.language,
+                         timezone: user.timezone,
+                         currency: user.currency,
+                             cart: user.cart,
+                      };
 
-    const accessToken = jwt.sign( { ...payload, tokenId: newAccessTokenId },
+    const accessToken = jwt.sign( { 
+                                    ...payload, 
+                                       tokenId: newAccessTokenId },
                                     ACCESS_TOKEN_SECRET,
                                   { expiresIn: minutesToExpiresIn(AT_EXPIRY) } );
     
-
-    const refreshToken = jwt.sign( { ...payload, 
+    const refreshToken = jwt.sign( { 
+                                    //  ...payload, 
                                         tokenId: newRefreshTokenId },
                                     REFRESH_TOKEN_SECRET,
                                   { expiresIn: minutesToExpiresIn(RT_EXPIRY) }
                                 );
-
-                   
-
 
     // const    accessTokenIdCipherText = await encrypt({ data: newAccessTokenId,
     //                                             options: { secret: config.endUserAccessTokenIdEncryptionKey }     });
 
     // const    refreshTokenIdCipherText = await encrypt({ data: newRefreshTokenId,
     //                                             options: { secret: config.endUserRefreshTokenIdEncryptionKey }     });
+
     const    ipAddressCipherText = await encrypt({ data: ip,
                                                 options: { secret: config.endUserIpAddressEncryptionKey }     });                                                 
-    const hashedAccessTokenId = crypto.createHmac('sha256', config.accessTokenIdHashKey).update(newAccessTokenId).digest('hex');
+
     const hashedRefreshTokenId = crypto.createHmac('sha256', config.refreshTokenIdHashKey).update(newRefreshTokenId).digest('hex');
 
 
-
+    await setSession({  vendorId: vendor.id,
+                       sessionId: sessionId.toString(),
+                         tokenId: newAccessTokenId,
+                         payload: { userId: user._id, 
+                                      role: user.role, 
+                                     email: user.email,
+                                     phone: user.phone  } 
+                      }) 
     // Verify token Id Example 
     // function verifyToken(originalToken, storedHash, secretKey) { const newHash = hashToken(originalToken, secretKey);
-                                                                
     //                                                             // Compare hashes in constant time
     //                                                             return crypto.timingSafeEqual(
     //                                                               Buffer.from(newHash, 'utf8'),
     //                                                               Buffer.from(storedHash, 'utf8')
     //                                                             );
     //                                                           }
-
-
-
 
     const  accessTokenExpiry = minutesToExpiryTimestamp(AT_EXPIRY)
     const refreshTokenExpiry = minutesToExpiryTimestamp(RT_EXPIRY)
@@ -285,18 +357,45 @@ export async function POST(request) {
                                          refreshToken,
                                   accessTokenExpireAt: new Date(accessTokenExpiry).toISOString(),
                                  refreshTokenExpireAt: new Date(refreshTokenExpiry).toISOString(),
-                                                 user: {    id: user._id,
-                                                          name: user.name,
-                                                         email: user.email,
-                                                         phone: user.phone,
-                                                          role: user.role,
-                                                        avatar: user.avatar,
-                                                         local: { theme   : user.theme,
-                                                                  language: user.language,
-                                                                  timezone: user.timezone,
-                                                                  currency: user.currency   },
-                                                      }
+                                                 user: {                                                      
+                                                      ...(user.name   && {   name: user.name    }),
+                                                      ...(user.email  && {  email: user.email   }),
+                                                      ...(user.avatar && { avatar: user.avatar  }),
+                                                      ...(user.user   && {   user: user.user    }),
+                                                      ...(user.gender && { gender: user.gender  }),
+                                                      ...(user.phone  && {  phone: user.phone   }),
+                                                                             role: user.role,
+                                                                       isVerified: user.isEmailVerified || user.isPhoneVerified,
+                                                                           gender: user.gender,
+                                                                  isEmailVerified: user.isEmailVerified,
+                                                                  isPhoneVerified: user.isPhoneVerified,
+                                                                            local: { 
+                                                                                  ...(user.theme    && {    theme: user.theme    }),
+                                                                                  ...(user.language && { language: user.language }),
+                                                                                  ...(user.timezone && { timezone: user.timezone }),
+                                                                                  ...(user.currency && { currency: user.currency }),
+                                                                                    },
+                                                                            cart: user.cart
+                                                                          }
                                         }, { status: 200 });
+
+                  //             sub: sessionId.toString(),
+                  //     fingerprint,
+                  //            name: user.name,
+                  //           email: user.email,
+                  //           phone: user.phone,
+                  //          avatar: user.avatar,
+                  //            role: user.role,
+                  //      isVerified: user.isEmailVerified || user.isPhoneVerified,
+                  //          gender: user.gender,
+                  // isEmailVerified: user.isEmailVerified,
+                  // isPhoneVerified: user.isPhoneVerified,
+                  //           theme: user.theme,
+                  //        language: user.language,
+                  //        timezone: user.timezone,
+                  //        currency: user.currency,
+                  //            cart: user.cart,
+    
     response.cookies.set('access_token', accessToken, {
       httpOnly: true,
       secure: true,

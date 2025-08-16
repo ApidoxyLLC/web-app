@@ -10,8 +10,8 @@ import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import securityHeaders from '../utils/securityHeaders';
 import { headers } from 'next/headers';
 import { couponModel } from '@/models/shop/product/Coupon';
-import { productModel } from '@/models/shop/product/Product';
-import limiter from './limiter';
+// import { productModel } from '@/models/shop/product/Product';
+
 
 // Rate limiter configuration
 

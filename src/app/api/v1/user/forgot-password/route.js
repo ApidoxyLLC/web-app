@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 import { userModel } from '@/models/shop/shop-user/ShopUser';
 import sendPasswordResetEmail from './sendPasswordResetEmail';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
-import { getVendor } from '@/services/vendor/getVendor';
+// import { getVendor } from '@/services/vendor/getVendor';
+import { getInfrastructure } from '@/services/vendor/getInfrastructure';
 
 const schema = z.object({ email: z.string().email("Invalid email format")   });
 
@@ -29,7 +30,8 @@ export async function POST(request) {
   if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
   
   try {
-    const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
+    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
     if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
 
     const shop_db  = await dbConnect({ dbKey: dbName, dbUri });

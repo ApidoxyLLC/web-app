@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { generateReceiptPDF } from '@/services/reciptPdf/pdfService';
 import { uploadSubscriptionReceipt } from '@/services/reciptPdf/backblazePdf';
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-import { InvoiceModel } from '@/models/subscription/invoice';
+import { InvoiceModel } from '@/models/subscription/Invoice';
 import { sendPaymentNotification } from '@/services/sendReciptPdf/notificationService';
 import { POST as executePayment } from '../../execute-payment/route';
 

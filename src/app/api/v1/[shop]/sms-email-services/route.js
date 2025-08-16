@@ -5,7 +5,7 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 // import authDbConnect from "@/lib/mongodb/authDbConnect";
-// import { userModel } from "@/models/auth/user";
+
 export async function GET(request, { params }) {
     // Rate limiting
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||

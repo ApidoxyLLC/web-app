@@ -5,7 +5,7 @@ import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/mongodb/db';
 import { userModel } from '@/models/shop/shop-user/ShopUser';
-import { rateLimiterResetPassword } from './limiter';
+// import { rateLimiterResetPassword } from './limiter';
 
 const schema = z.object({
   token: z.string().length(96, "Invalid token format"),
@@ -24,8 +24,8 @@ export async function POST(request) {
 
   if (!identity) return NextResponse.json({ error: "Missing identity" }, { status: 400 });
 
-  try { await rateLimiterResetPassword.consume(identity) } 
-  catch (rateLimitError) { return NextResponse.json( { error: "Too many requests. Try again later." }, { status: 429 } ) }
+  // try { await rateLimiterResetPassword.consume(identity) } 
+  // catch (rateLimitError) { return NextResponse.json( { error: "Too many requests. Try again later." }, { status: 429 } ) }
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid  email address..." }, { status: 422 });  

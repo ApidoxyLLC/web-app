@@ -6,8 +6,7 @@ import otpLoginDTOSchema from './otpLoginDTOSchema';
 import { userModel } from '@/models/auth/User';
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import tokenRefresh from '../utils/tokenRefresh';
-import { planModel } from "@/models/subscription/Plan";
-
+import { PlanModel } from "@/models/subscription/Plan";
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google'
 import FacebookProvider from 'next-auth/providers/facebook'
@@ -329,7 +328,7 @@ export const authOptions = {
                     }
                 }
                 const User = userModel(auth_db);
-                const SubscriptionPlan = planModel(auth_db);
+                const SubscriptionPlan = PlanModel(auth_db);
 
                 const auth_db_session = await auth_db.startSession(sessionOptions);
                 await auth_db_session.startTransaction();

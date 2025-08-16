@@ -5,9 +5,9 @@ import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { dbConnect } from '@/lib/mongodb/db';
 import { userModel } from '@/models/shop/shop-user/ShopUser';
 // import { userModel } from '@/models/auth/User';
-import { shopModel } from '@/models/auth/Shop';
-import { decrypt } from '@/lib/encryption/cryptoEncryption';
-import { rateLimiterPhoneToken } from './limiter';
+// import { shopModel } from '@/models/auth/Shop';
+// import { decrypt } from '@/lib/encryption/cryptoEncryption';
+// import { rateLimiterPhoneToken } from './limiter';
 import sendSMS from '@/services/mail/sendSMS';
 import { getVendor } from '@/services/vendor/getVendor';
 // import sendSMS from '@/services/sms/sendSMS'; // Your SMS sending service

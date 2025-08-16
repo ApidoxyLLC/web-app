@@ -4,7 +4,10 @@ import { userModel } from "@/models/shop/shop-user/ShopUser";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import jwt from "jsonwebtoken";
 import { getVendor } from "@/services/vendor/getVendor";
-import { applyRateLimit } from "@/app/utils/rateLimit";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import config from "../../../../../../config";
+import { validateSession } from "@/lib/redis/helpers/endUserSession";
+import { getInfrastructure } from "@/services/vendor/getInfrastructure";
 
 export async function GET(request) {
   const ip = request.headers["x-forwarded-for"]?.split(",")[0]?.trim() || request.headers["x-real-ip"] || request.socket?.remoteAddress || "";
@@ -24,13 +27,14 @@ export async function GET(request) {
   const accessToken = authHeader.split(" ")[1];
 
   try {
-    const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ["createdAt", "primaryDomain", "secrets.accessTokenSecret"],});
-    if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 });
+    // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ["createdAt", "primaryDomain", "secrets.accessTokenSecret"],});
+    // if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 });
 
-    const ACCESS_TOKEN_SECRET_ENCRYPTION_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY;
-    if (!ACCESS_TOKEN_SECRET_ENCRYPTION_KEY) return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+
     const ACCESS_TOKEN_SECRET = await decrypt({cipherText: vendor.secrets.accessTokenSecret, 
-                                                  options: { secret: ACCESS_TOKEN_SECRET_ENCRYPTION_KEY } });
+                                                  options: { secret: config.accessTokenSecretEncryptionKey } });
 
     // Verify token
     let payload;
@@ -46,99 +50,130 @@ export async function GET(request) {
       return NextResponse.json({ success: false, message, code },{ status: 401 });
     }
 
-    if (!payload.session)
-      return NextResponse.json( { success: false, message: "Invalid token payload", code: "INVALID_TOKEN", }, { status: 401 } );
+    if (!payload.sub || !payload.tokenId) return NextResponse.json( { success: false, message: "Invalid token payload", code: "INVALID_TOKEN", }, { status: 401 } );
+
+
+
+    let redisSession;
+    // { vendorId, sessionId, tokenId }
+    try { redisSession = await validateSession({  vendorId: vendor.id,  
+                                                 sessionId: payload.sub, 
+                                                   tokenId: payload.tokenId });} 
+    catch (err) { return { authenticated: false, error: " session check failed" };}
+
+    const { userId, tokenId } = redisSession;
+
 
     // Connect to vendor shop database
-    const shop_db = await dbConnect({ dbKey: dbName, dbUri });
-    const    User = userModel(shop_db);
+    // const shop_db = await dbConnect({ dbKey: dbName, dbUri });
+    // const    User = userModel(shop_db);
 
-    // Aggregate user with session accessTokenExpiry
-    const [user] = await User.aggregate([
-                                        {
-                                          $lookup: {
-                                            from: "sessions", // Session collection name
-                                            localField: "_id",
-                                            foreignField: "userId",
-                                            as: "session",
-                                            pipeline: [
-                                              {
-                                                $match: {
-                                                  _id: new ObjectId(payload.session), 
-                                                },
-                                              },
-                                              {
-                                                $project: {
-                                                  accessTokenExpiry: 1,
-                                                },
-                                              },
-                                            ],
-                                          },
-                                        },
-                                        {
-                                          $unwind: "$session", // Convert session array to single object
-                                        },
-                                        {
-                                          $project: {
-                                            name: 1,
-                                            avatar: 1,
-                                            email: 1,
-                                            phone: 1,
-                                            role: 1,
-                                            theme: 1,
-                                            language: 1,
-                                            timezone: 1,
-                                            currency: 1,
-                                            isEmailVerified: 1,
-                                            isPhoneVerified: 1,
-                                            accessTokenExpiry: "$session.accessTokenExpiry"
-                                          },
-                                        },
-                                      ]);
+    // // Aggregate user with session accessTokenExpiry
+    // const [user] = await User.aggregate([
+    //                                     {
+    //                                       $lookup: {
+    //                                         from: "sessions", // Session collection name
+    //                                         localField: "_id",
+    //                                         foreignField: "userId",
+    //                                         as: "session",
+    //                                         pipeline: [
+    //                                           {
+    //                                             $match: {
+    //                                               _id: new ObjectId(payload.session), 
+    //                                             },
+    //                                           },
+    //                                           {
+    //                                             $project: {
+    //                                               accessTokenExpiry: 1,
+    //                                             },
+    //                                           },
+    //                                         ],
+    //                                       },
+    //                                     },
+    //                                     {
+    //                                       $unwind: "$session", // Convert session array to single object
+    //                                     },
+    //                                     {
+    //                                       $project: {
+    //                                         name: 1,
+    //                                         avatar: 1,
+    //                                         email: 1,
+    //                                         phone: 1,
+    //                                         role: 1,
+    //                                         theme: 1,
+    //                                         language: 1,
+    //                                         timezone: 1,
+    //                                         currency: 1,
+    //                                         isEmailVerified: 1,
+    //                                         isPhoneVerified: 1,
+    //                                         accessTokenExpiry: "$session.accessTokenExpiry"
+    //                                       },
+    //                                     },
+    //                                   ]);
 
-    // No session or session expired
-    if (!user || user.accessTokenExpiry < Date.now()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Session expired",
-          code: "SESSION_EXPIRED",
-        },
-        { status: 401 });
-    }
+    // // No session or session expired
+    // if (!user || user.accessTokenExpiry < Date.now()) {
+    //   return NextResponse.json(
+    //     {
+    //       success: false,
+    //       message: "Session expired",
+    //       code: "SESSION_EXPIRED",
+    //     },
+    //     { status: 401 });
+    // }
 
     // Check account lock
-    if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Account locked",
-          code: "ACCOUNT_LOCKED",
-        },
-        { status: 403 }
-      );
-    }
+    // if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
+    //   return NextResponse.json(
+    //     {
+    //       success: false,
+    //       message: "Account locked",
+    //       code: "ACCOUNT_LOCKED",
+    //     },
+    //     { status: 403 }
+    //   );
+    // }
 
     // Respond with user data
-    return NextResponse.json({
-      success: true,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        avatar: user.avatar,
-        isVerified: user.isEmailVerified || user.isPhoneVerified,
-        local: {
-          theme: user.theme,
-          language: user.language,
-          timezone: user.timezone,
-          currency: user.currency,
-        },
-      },
-      accessTokenExpiry: user.accessTokenExpiry,
-    });
+    // return NextResponse.json({
+    //   success: true,
+    //   user: {
+    //     _id: user._id,
+    //     name: user.name,
+    //     email: user.email,
+    //     phone: user.phone,
+    //     role: user.role,
+    //     avatar: user.avatar,
+    //     isVerified: user.isEmailVerified || user.isPhoneVerified,
+    //     local: {
+    //       theme: user.theme,
+    //       language: user.language,
+    //       timezone: user.timezone,
+    //       currency: user.currency,
+    //     },
+    //   },
+    //   accessTokenExpiry: user.accessTokenExpiry,
+    // });
+
+        return NextResponse.json({
+          success: true,
+          user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            avatar: user.avatar,
+            isVerified: user.isEmailVerified || user.isPhoneVerified,
+            local: {
+              theme: user.theme,
+              language: user.language,
+              timezone: user.timezone,
+              currency: user.currency,
+            },
+          },
+          accessTokenExpiry: user.accessTokenExpiry,
+        });
   } catch (error) {
     console.error(`Session Validation Error: ${error.message}`);
     return NextResponse.json(

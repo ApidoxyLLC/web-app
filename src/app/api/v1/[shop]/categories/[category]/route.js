@@ -9,7 +9,6 @@ import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { dbConnect } from '@/lib/mongodb/db';
 import { imageModel } from '@/models/vendor/Image';
-import { deleteImage } from '@/services/image/blackblaze';
 import getAuthenticatedUser from '../../../auth/utils/getAuthenticatedUser';
 import hasWriteCategoryPermission from './hasWriteCategoryPermission';
 

@@ -10,7 +10,7 @@ import { productModel } from '@/models/shop/product/Product';
 import slugify from 'slugify';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
-import rateLimit from '@/lib/rateLimit';
+// import rateLimit from '../[slug]/rateLimit';
 
 // sample testing input 
 // GET /api/v1/shops/products/slug?title=Fresh Organic Market&vendor=662f3f7e5e1b6d001dd26f0c
@@ -34,16 +34,16 @@ const securityHeaders = {
   'X-XSS-Protection': '1; mode=block'
 };
 
-const limiter = rateLimit({
-  windowMs: RATE_LIMIT_WINDOW_MS,
-  max: RATE_LIMIT_MAX_REQUESTS,
-  keyGenerator: (req) => {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-               req.headers.get('x-real-ip') || 'unknown_ip';
-    const fingerprint = req.headers.get('x-fingerprint') || '';
-    return `${ip}:${fingerprint}`;
-  }
-});
+// const limiter = rateLimit({
+//   windowMs: RATE_LIMIT_WINDOW_MS,
+//   max: RATE_LIMIT_MAX_REQUESTS,
+//   keyGenerator: (req) => {
+//     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+//                req.headers.get('x-real-ip') || 'unknown_ip';
+//     const fingerprint = req.headers.get('x-fingerprint') || '';
+//     return `${ip}:${fingerprint}`;
+//   }
+// });
 
 // Utility Functions
 const createSlugFromTitle = (title) => slugify(title, {

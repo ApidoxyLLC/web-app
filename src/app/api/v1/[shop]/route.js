@@ -5,7 +5,7 @@ import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
-// import { userModel } from "@/models/auth/user";
+
 
 const ALL_SAFE_FIELDS = {
     referenceId: 1,

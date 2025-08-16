@@ -1,10 +1,10 @@
 import VerifyOTPPage from "@/components/verifyPhone";
-import React from "react";
+import { Suspense } from "react";
 
 const page = () => {
   return (
     <div>
-      <VerifyOTPPage></VerifyOTPPage>
+      <Suspense><VerifyOTPPage/></Suspense>
     </div>
   );
 };

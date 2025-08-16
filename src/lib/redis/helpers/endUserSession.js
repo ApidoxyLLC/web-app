@@ -15,35 +15,29 @@ function getKeys({ vendorId, sessionId, userId }) {
   if (!vendorId) throw new Error('Missing vendorId');
   return {
     sessionKey: `vdr:${vendorId}:ssn:${sessionId}`,
-    userSessionsKey: `vdr:${vendorId}:usr:ssn:${userId}`,
+    userSessionsKey: `vdr:${vendorId}:usr:${userId}`,
   };
 }
 
 /**
  * Create/Update a session for a vendor user
  */
-export async function setSession({ vendorId, sessionId, tokenId, payload = {}, TTL=TTL }) {
-  const { sub, role, userId } = payload;
-  if (!vendorId || !sessionId || !tokenId || !sub || !userId) {
-    throw new Error('Missing required session data');
-  }
+export async function setSession({ vendorId, sessionId, tokenId, payload = {}, ttl }) {
+  // email, phone, role,
+  const { userId } = payload;
+  if (!vendorId || !sessionId || !tokenId || !userId)  throw new Error('Missing required session data');
+  
 
   const hashedTokenId = hashTokenId(tokenId);
   const { sessionKey, userSessionsKey } = getKeys({ vendorId, sessionId, userId });
   const now = Date.now();
-//   const effectiveTTL = vendorTTL || TTL;
-
   const pipeline = sessionRedis.pipeline();
   
   // Store session with hashed tokenId
-  pipeline.setex(sessionKey, TTL, JSON.stringify({
-    sub,
-    role,
-    userId,
-    vendorId,
-    tokenId: hashedTokenId,
-    createdAt: new Date().toISOString(),
-  }));
+  pipeline.setex(sessionKey, TTL, JSON.stringify({ ...payload,
+                                                       userId,
+                                                      tokenId: hashedTokenId,
+                                                    createdAt: new Date().toISOString()      }));
 
   // Add sessionId to user's sorted set
   pipeline.zadd(userSessionsKey, now, sessionId);
@@ -55,12 +49,7 @@ export async function setSession({ vendorId, sessionId, tokenId, payload = {}, T
 
   // Enforce max concurrent sessions per vendor user
   if (sessionCount > config.maxConcurrentSession) {
-    const excessSessions = await sessionRedis.zrange(
-      userSessionsKey,
-      0,
-      sessionCount - config.maxConcurrentSession - 1
-    );
-
+    const excessSessions = await sessionRedis.zrange( userSessionsKey, 0, sessionCount - config.maxConcurrentSession - 1 );
     if (excessSessions.length) {
       const delPipeline = sessionRedis.pipeline();
       for (const oldId of excessSessions) {

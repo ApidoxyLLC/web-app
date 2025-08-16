@@ -1,4 +1,3 @@
-import cuid from "@bugsnag/cuid";
 import mongoose from 'mongoose';
 
 const consentSchema = new mongoose.Schema({
@@ -72,8 +71,8 @@ const userSchema = new mongoose.Schema({
   isPhoneVerified: { type: Boolean, default: false },
      verification: { type: verificationSchema, default: () => ({}), select: false },
          security: { type: securitySchema,     default: () => ({}), select: false },
-          consent: { type: consentSchema,      default: () => ({}) },
-           status: { type: statusSchema,       default: () => ({}), select: false  },
+          consent: { type: consentSchema,      default: () => ({}), select: false },
+           status: { type: statusSchema,       default: () => ({}), select: false },
              lock: { type: lockSchema,         default: () => ({}), select: false },
         twoFactor: { type: twoFactorSchema,    default: () => ({}), select: false },
         isDeleted: { type: Boolean,  default: false, select: false  },

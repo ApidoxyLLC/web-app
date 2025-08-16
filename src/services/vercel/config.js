@@ -1,4 +1,4 @@
-export default {
+export const config  = {
     vercel: {
         token: process.env.VERCEL_TOKEN,
         projectId: process.env.VERCEL_PROJECT_ID,
@@ -11,3 +11,5 @@ export default {
         email: process.env.CLOUDFLARE_EMAIL
     }
 };
+
+export default config;

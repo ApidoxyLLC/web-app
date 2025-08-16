@@ -7,7 +7,6 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { vendorModel } from "@/models/vendor/Vendor";
 import deliveryPartnerDTOSchema from "./deliveryPartnerDTOSchema";
 import mongoose from "mongoose";
-// import { userModel } from "@/models/auth/user";
 export async function POST(request) {
     // Rate limiting
     const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';

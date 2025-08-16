@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { planSnapshotSchema } from "./Plan";
+// import { planSnapshotSchema } from "./Plan";
 
 
 const cancellationSchema = new mongoose.Schema({
@@ -13,11 +13,11 @@ const trialSchema = new mongoose.Schema({
     endAt: { type: Date },
 }, { _id: false  });
 
-const subscriptionCouponHistorySchema = new Schema({
+const subscriptionCouponHistorySchema = new mongoose.Schema({
       couponCode: { type: String, required: true, index: true, ref: 'SubscriptionCoupon' },
           userId: {  type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
           usedAt: {  type: Date,  default: Date.now }, 
-         orderId: {  type: Schema.Types.ObjectId, ref: 'Order',  default: nul },
+         orderId: {  type: mongoose.Schema.Types.ObjectId, ref: 'Order',  default: null },
   discountAmount: { type: Number, required: true }
 }, {
   timestamps: true,
@@ -26,7 +26,7 @@ const subscriptionCouponHistorySchema = new Schema({
 export const SubscriptionCouponHistoryModel = (db) =>  db.models.SubscriptionCouponHistory || db.model('SubscriptionCouponHistory', subscriptionCouponHistorySchema);
 
 
-const subscriptionCouponSchema = new Schema({
+const subscriptionCouponSchema = new mongoose.Schema({
         code: { type: String, required: true, unique: true },
     discount: { type: Number, required: true, min: 0 },
         type: { type: String, enum: ['percentage_off', 'fixed_amount' ], required: true },

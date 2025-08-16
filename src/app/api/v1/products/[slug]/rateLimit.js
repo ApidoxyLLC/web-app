@@ -1,4 +1,4 @@
-import LRU from "lru-cache";
+import { LRUCache } from "lru-cache";
 
 const RATE_LIMIT = {
   POINTS: 100,                   // Max 100 requests
@@ -8,7 +8,7 @@ const RATE_LIMIT = {
   CACHE_TTL: 15 * 60 * 1000,     // Cache TTL (15 mins)
 };
 
-const rateLimitCache = new LRU({
+const rateLimitCache = new LRUCache({
   max: RATE_LIMIT.CACHE_MAX,
   ttl: RATE_LIMIT.CACHE_TTL,
   updateAgeOnGet: false,

@@ -26,6 +26,5 @@ export default async function changePassword({ userId, currentPassword, newPassw
                                         },
                                 { new: false } 
                               );
-
   return { success: true };
 }

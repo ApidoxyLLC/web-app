@@ -5,16 +5,9 @@ import { productModel } from "@/models/shop/product/Product";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import securityHeaders from "../utils/securityHeaders";
 import { authenticationStatus } from "../middleware/auth";
-import { RateLimiterMemory } from "rate-limiter-flexible";
 
 export const dynamic = 'force-dynamic';
 
-// Rate limiter configuration
-const getCartLimiter = new RateLimiterMemory({
-     points: 15,
-   duration: 60,
-  keyPrefix: 'getCart',   
-});
 
 export async function GET(request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
@@ -29,12 +22,6 @@ export async function GET(request) {
   if (!vendorId && !host) 
     return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400, headers: securityHeaders });
 
-  try {
-    const key = `getCart:${ip}:${fingerprint}`;
-    await getCartLimiter.consume(key);
-  } catch (rateLimiterRes) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429, headers: { ...securityHeaders, 'Retry-After': rateLimiterRes.msBeforeNext / 1000 } });
-  }
 
   const { success: authenticated, shop, data: user, isTokenRefreshed, token } = await authenticationStatus(request);
 
@@ -132,30 +119,6 @@ const productIdMap = new Map(products.map(p => [p._id.toString(), p.productId]))
         }
   };
 
-  const response = NextResponse.json(responseData, { status: 200, headers: securityHeaders });
+  return NextResponse.json(responseData, { status: 200, headers: securityHeaders });
 
-  // Handle token refresh if needed
-  // if (authenticated && isTokenRefreshed && token) {
-  //   const ACCESS_TOKEN_EXPIRY = Number(shop.timeLimitations?.ACCESS_TOKEN_EXPIRE_MINUTES) || 15;
-  //   const REFRESH_TOKEN_EXPIRY = Number(shop.timeLimitations?.REFRESH_TOKEN_EXPIRE_MINUTES) || 1440;
-  //   const accessTokenExpiry = minutesToExpiryTimestamp(ACCESS_TOKEN_EXPIRY);
-  //   const refreshTokenExpiry = minutesToExpiryTimestamp(REFRESH_TOKEN_EXPIRY);
-
-  //   response.cookies.set('access_token', token.accessToken, {
-  //     httpOnly: true,
-  //     secure: process.env.NODE_ENV === 'production',
-  //     sameSite: 'Lax',
-  //     path: '/',
-  //     maxAge: Math.floor((accessTokenExpiry - Date.now()) / 1000),
-  //   });
-  //   response.cookies.set('refresh_token', token.refreshToken, {
-  //     httpOnly: true,
-  //     secure: process.env.NODE_ENV === 'production',
-  //     sameSite: 'Lax',
-  //     path: '/',
-  //     maxAge: Math.floor((refreshTokenExpiry - Date.now()) / 1000),
-  //   });
-  // }
-
-  return response;
 }
