@@ -440,7 +440,7 @@ export async function GET(request) {
                                                   {
                                                     stuffs: {
                                                       $elemMatch: {
-                                                        userId: user._id,
+                                                        userId: data.userId,
                                                         status: "active"
                                                       }
                                                     }
