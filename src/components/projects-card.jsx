@@ -127,7 +127,7 @@ export function ProjectsCard() {
             <PopoverTrigger asChild>
               <div className="cursor-pointer">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={`http://localhost:3000/api/v1/image/${shop}/${data.data.fileName}`}/>
+                  <AvatarImage src={`http://localhost:3000/api/v1/image/${shop}/${data.fileName}`}/>
                   <AvatarFallback>
                     {userData?.data?.user?.name?.charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -193,7 +193,7 @@ export function ProjectsCard() {
               >
                 <KeyRound className="size-4" />Change Password
               </button>
-              <button
+              {/* <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveModal("twoFactor");
@@ -210,7 +210,7 @@ export function ProjectsCard() {
                 className="px-4 py-2 flex gap-2 items-center hover:bg-accent dark:hover:bg-zinc-800 text-sm text-left"
               >
                <UserLock  className="size-4" /> Login Activity
-              </button>
+              </button> */}
             </div>
           </div>
         </div>

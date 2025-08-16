@@ -71,16 +71,16 @@ export function TeamSwitcher( {teams} ) {
               Shops
             </DropdownMenuLabel>
             {teams.map((team, index) => (
-              <Link href={`/${team.id}/dashboard`}>
+              <Link 
+                  key={index} href={`/${team.id}/dashboard`}>
                 <DropdownMenuItem
-                  key={index}
                   onClick={() => {
                     setActiveTeam(team)
                   }}
                   className="gap-2 p-2"
                 >
                   <Avatar className="h-10 w-10">
-                  <AvatarImage src={`http://localhost:3000/api/v1/image/${team.id}/${shops.data?.configuration?.logo?.imageName}`}/>
+                  <AvatarImage src={`http://localhost:3000/api/v1/image/${team.id}/${team?.logo?.imageName}`}/>
                   <AvatarFallback>
                     {team?.businessName?.charAt(0).toUpperCase()}
                   </AvatarFallback>
