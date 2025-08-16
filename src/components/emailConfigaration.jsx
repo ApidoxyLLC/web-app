@@ -46,7 +46,7 @@ export default function EmailConfigDashboard() {
       if (response.ok) {
         toast.success("Configured Email Service");
         setFormData({});
-        refetch(); 
+        refetch();
       } else {
         toast.error(result?.error || "Failed to update");
       }
@@ -62,7 +62,7 @@ export default function EmailConfigDashboard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({  providerName: "smtp", providerType:"email", referenceId: shop}),
+        body: JSON.stringify({ provider: "smtp" }),
       });
 
       if (response.ok) {
@@ -135,27 +135,27 @@ export default function EmailConfigDashboard() {
               <h4 className="font-semibold mb-4">Email Configuration</h4>
               <div className="grid grid-cols-2 gap-4">
                 {Object.entries(emailConfig).map(([key, value]) => (
-  <p
-    key={key}
-    className="text-sm border rounded-md py-2 px-3 col-span-1"
-  >
-    <strong>
-      {key.charAt(0).toUpperCase() + key.slice(1)}
-    </strong>
-    :{" "}
-    {key.toLowerCase().includes("password") ||
-    key.toLowerCase().includes("secret") ? (
-      <input
-        type="password"
-        value={value}
-        readOnly
-        className="bg-transparent border-none outline-none"
-      />
-    ) : (
-      value
-    )}
-  </p>
-))}
+                  <p
+                    key={key}
+                    className="text-sm border rounded-md py-2 px-3 col-span-1"
+                  >
+                    <strong>
+                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                    </strong>
+                    :{" "}
+                    {key.toLowerCase().includes("password") ||
+                      key.toLowerCase().includes("secret") ? (
+                      <input
+                        type="password"
+                        value={value}
+                        readOnly
+                        className="bg-transparent border-none outline-none"
+                      />
+                    ) : (
+                      value
+                    )}
+                  </p>
+                ))}
               </div>
               <div className="flex justify-end mt-6">
                 <Button
