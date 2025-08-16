@@ -18,6 +18,7 @@ import { addDNSRecord } from "@/services/cloudflare/addDNSRecord";
 import { domainModel } from "@/models/vendor/Domain";
 import { PlanModel } from "@/models/subscription/Plan";
 import { subscriptionModel } from "@/models/subscription/Subscribe"
+
 export async function POST(request) {
   let body;
   try { body = await request.json(); }
@@ -318,117 +319,203 @@ export async function GET(request) {
     const skip = (page - 1) * limit;
 
     // Connect to the auth database
-    const auth_db = await authDbConnect();
-    const ShopModel = shopModel(auth_db);
+    // const auth_db = await authDbConnect();
+    const vendor_db = await vendorDbConnect();
+    // const User = userModel(auth_db)
+    const Vendor = vendorModel(vendor_db);
+    // const { sessionId, userId, userReferenceId, name, email, phone, role, isVerified, timezone, theme, language, currency } = data
 
-    const { sessionId, userId, userReferenceId, name, email, phone, role, isVerified, timezone, theme, language, currency } = data
+    // const result = await Vendor.aggregate([{
+    //   $lookup: {
+    //     from: "users",
+    //     let: { userReferenceId, sessionId, email },
+    //     pipeline: [{
+    //       $match: {
+    //         $expr: {
+    //           $or: [
+    //             { $eq: ["$referenceId", "$$userReferenceId"] },
+    //             { $eq: ["$$email", "$email"] },
+    //             { $in: ["$$sessionId", "$activeSessions"] },
+    //           ]
+    //         },
+    //         isDeleted: false
+    //       }
+    //     },
+    //     { $limit: 1 },
+    //     { $project: { _id: 1 } }
+    //     ],
+    //     as: "user"
+    //   }
+    // },
+    // {
+    //   $match: {
+    //     $or: [
+    //       { $expr: { $eq: ["$ownerId", { $arrayElemAt: ["$user._id", 0] }] } },
+    //       {
+    //         stuffs: {
+    //           $elemMatch: {
+    //             userId: { $eq: { $arrayElemAt: ["$user._id", 0] } },
+    //             status: "active"
+    //           }
+    //         }
+    //       }
+    //     ]
+    //   }
+    // },
+    // {
+    //   $facet: {
+    //     shops: [{ $skip: skip },
+    //     { $limit: limit },
+    //     {
+    //       $project: {
+    //         id: "$referenceId",
+    //         email: 1,
+    //         phone: 1,
+    //         businessName: 1,
+    //         domain: 1,
+    //         country: 1,
+    //         industry: 1,
+    //         location: 1,
+    //         slug: 1,
+    //         activeApps: 1,
+    //         web: 1,
+    //         android: 1,
+    //         ios: 1,
+    //         stuffs: {
+    //           $cond: [
+    //             { $gt: [{ $size: { $ifNull: ["$stuffs", []] } }, 0] },
+    //             {
+    //               $map: {
+    //                 input: "$stuffs",
+    //                 as: "s",
+    //                 in: "$$s.name"
+    //               }
+    //             },
+    //             []
+    //           ]
+    //         },
+    //         _id: 0,
+    //         // __v: 0,
+    //         // user: 0,
+    //         // ownerId: 0,
+    //         // transaction: 0,
+    //         // stuffs: 0,
+    //       }
+    //     }],
+    //     total: [{ $count: "count" }]
+    //   }
+    // },
+    // {
+    //   $project: {
+    //     shops: "$shops",
+    //     total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+    //     currentPage: { $literal: page },
+    //     totalPages: {
+    //       $ceil: {
+    //         $divide: [
+    //           { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+    //           limit
+    //         ]
+    //       }
+    //     }
+    //   }
+    // },
+    // {
+    //   $addFields: {
+    //     nextPage: {
+    //       $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
+    //     },
+    //     prevPage: {
+    //       $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
+    //     }
+    //   }
+    // }
+    // ]);
 
-    const result = await ShopModel.aggregate([{
-      $lookup: {
-        from: "users",
-        let: { userReferenceId, sessionId, email },
-        pipeline: [{
-          $match: {
-            $expr: {
-              $or: [
-                { $eq: ["$referenceId", "$$userReferenceId"] },
-                { $eq: ["$$email", "$email"] },
-                { $in: ["$$sessionId", "$activeSessions"] },
-              ]
-            },
-            isDeleted: false
-          }
-        },
-        { $limit: 1 },
-        { $project: { _id: 1 } }
-        ],
-        as: "user"
-      }
-    },
-    {
-      $match: {
-        $or: [
-          { $expr: { $eq: ["$ownerId", { $arrayElemAt: ["$user._id", 0] }] } },
-          {
-            stuffs: {
-              $elemMatch: {
-                userId: { $eq: { $arrayElemAt: ["$user._id", 0] } },
-                status: "active"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      $facet: {
-        shops: [{ $skip: skip },
-        { $limit: limit },
-        {
-          $project: {
-            id: "$referenceId",
-            email: 1,
-            phone: 1,
-            businessName: 1,
-            domain: 1,
-            country: 1,
-            industry: 1,
-            location: 1,
-            slug: 1,
-            activeApps: 1,
-            web: 1,
-            android: 1,
-            ios: 1,
-            stuffs: {
-              $cond: [
-                { $gt: [{ $size: { $ifNull: ["$stuffs", []] } }, 0] },
-                {
-                  $map: {
-                    input: "$stuffs",
-                    as: "s",
-                    in: "$$s.name"
-                  }
-                },
-                []
-              ]
-            },
-            _id: 0,
-            // __v: 0,
-            // user: 0,
-            // ownerId: 0,
-            // transaction: 0,
-            // stuffs: 0,
-          }
-        }],
-        total: [{ $count: "count" }]
-      }
-    },
-    {
-      $project: {
-        shops: "$shops",
-        total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-        currentPage: { $literal: page },
-        totalPages: {
-          $ceil: {
-            $divide: [
-              { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-              limit
-            ]
-          }
-        }
-      }
-    },
-    {
-      $addFields: {
-        nextPage: {
-          $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
-        },
-        prevPage: {
-          $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
-        }
-      }
-    }
-    ]);
+    // 2️⃣ Use aggregation in `vendor_db`
+    const result = await Vendor.aggregate([ {
+                                              $match: {
+                                                $or: [
+                                                  { ownerId: data.userId }, // Owner
+                                                  {
+                                                    stuffs: {
+                                                      $elemMatch: {
+                                                        userId: user._id,
+                                                        status: "active"
+                                                      }
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            {
+                                              $facet: {
+                                                shops: [
+                                                  { $skip: skip },
+                                                  { $limit: limit },
+                                                  {
+                                                    $project: {
+                                                      id: "$referenceId",
+                                                      email: 1,
+                                                      phone: 1,
+                                                      businessName: 1,
+                                                      domain: 1,
+                                                      country: 1,
+                                                      industry: 1,
+                                                      location: 1,
+                                                      slug: 1,
+                                                      activeApps: 1,
+                                                      web: 1,
+                                                      android: 1,
+                                                      ios: 1,
+                                                      logo: 1, 
+                                                      stuffs: {
+                                                        $cond: [
+                                                          { $gt: [{ $size: { $ifNull: ["$stuffs", []] } }, 0] },
+                                                          {
+                                                            $map: {
+                                                              input: "$stuffs",
+                                                              as: "s",
+                                                              in: "$$s.name"
+                                                            }
+                                                          },
+                                                          []
+                                                        ]
+                                                      },
+                                                      _id: 0
+                                                    }
+                                                  }
+                                                ],
+                                                total: [{ $count: "count" }]
+                                              }
+                                            },
+                                            {
+                                              $project: {
+                                                shops: "$shops",
+                                                total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+                                                currentPage: { $literal: page },
+                                                totalPages: {
+                                                  $ceil: {
+                                                    $divide: [
+                                                      { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+                                                      limit
+                                                    ]
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              $addFields: {
+                                                nextPage: {
+                                                  $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
+                                                },
+                                                prevPage: {
+                                                  $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
+                                                }
+                                              }
+                                            }
+                                          ]);
+
 
     const response = result[0] || {
       shops: [],

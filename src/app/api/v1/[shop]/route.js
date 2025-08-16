@@ -1,36 +1,32 @@
 import { NextResponse } from "next/server";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { vendorModel } from "@/models/vendor/Vendor";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 
 
-const ALL_SAFE_FIELDS = {
-    referenceId: 1,
-    businessName: 1,
-    location: 1,
-    country: 1,
-    industry: 1,
-    email: 1,
-    phone: 1,
-    policies: 1,
-    socialLinks: 1,
-    notification: 1,
-    chatSupport: 1,
-    deliveryCharges: 1,
-    logo: 1
-};
+const ALL_SAFE_FIELDS = {     referenceId: 1,
+                             businessName: 1,
+                                 location: 1,
+                                  country: 1,
+                                 industry: 1,
+                                    email: 1,
+                                    phone: 1,
+                                 policies: 1,
+                              socialLinks: 1,
+                             notification: 1,
+                              chatSupport: 1,
+                          deliveryCharges: 1,
+                                     logo: 1
+                        };
 
-const SECTION_FIELDS = {
-    configuration: ['businessName', 'location', 'country', 'industry', 'email', 'phone', 'logo'],
-    policy: ['policies'],
-    socialLinks: ['socialLinks'],
-    realTimeUpdates: ['notification'],
-    supportChat: ['chatSupport'],
-    delivery: ['deliveryCharges'],
-};
+const SECTION_FIELDS = {   configuration: ['businessName', 'location', 'country', 'industry', 'email', 'phone', 'logo'],
+                                  policy: ['policies'],
+                             socialLinks: ['socialLinks'],
+                         realTimeUpdates: ['notification'],
+                             supportChat: ['chatSupport'],
+                                delivery: ['deliveryCharges'] };
 
 export async function GET(request, { params }) {
     // Rate limiting
@@ -110,8 +106,8 @@ export async function GET(request, { params }) {
         }
 
         const vendorData = await Vendor.findOne(permissionFilter)
-            .select(projection)
-            .lean();
+                                       .select(projection)
+                                       .lean();
 
         if (!vendorData) {
             return NextResponse.json(
@@ -192,40 +188,20 @@ export async function GET(request, { params }) {
             responseData.socialLinks = vendorData.socialLinks || [];
             responseData.realTimeUpdates = {
                 notification: vendorData.notification || {
-                    email: null,
-                    preferredChannel: null,
-                    hourlyNotification: {
-                        enabled: false,
-                        intervalHours: 1
-                    },
-                    orderNotifications: {
-                        enabled: false,
-                        frequency: 1
-                    }
-                }
+                                                            email: null,
+                                                            preferredChannel: null,
+                                                            hourlyNotification: { enabled: false,  intervalHours: 1 },
+                                                            orderNotifications: { enabled: false, frequency: 1 }
+                                                        }
             };
             responseData.supportChat = vendorData.chatSupport || null;
-            responseData.delivery = {
-                charges: vendorData.deliveryCharges || []
-            };
+            responseData.delivery = { charges: vendorData.deliveryCharges || []   };
         }
 
-        return NextResponse.json(
-            {
-                success: true,
-                data: responseData
-            },
-            { status: 200 }
-        );
+        return NextResponse.json({ success: true, data: responseData }, { status: 200 } );
 
     } catch (error) {
         console.error("GET Vendor Configuration Error:", error);
-        return NextResponse.json(
-            {
-                error: error.message || "Failed to retrieve vendor configuration",
-                stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-            },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message || "Failed to retrieve vendor configuration", stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined }, { status: 500 } );
     }
 }
