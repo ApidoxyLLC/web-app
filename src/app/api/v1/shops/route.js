@@ -343,8 +343,8 @@ export async function GET(request) {
                       email: 1,
                       phone: 1,
                       businessName: 1,
-                      primaryDomain: 1,   // instead of domain
-                      domains: 1,         // optional
+                      primaryDomain: 1,  
+                      domains: 1,  
                       country: 1,
                       industry: 1,
                       location: 1,
