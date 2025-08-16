@@ -38,7 +38,7 @@ async function uploadFile({ file, shopId, onProgress }) {
 
     xhr.onerror = () => reject({ error: 'Upload failed' })
 
-    xhr.open('POST', '/api/v1/products/upload-image') // ← your route path here
+    xhr.open('POST', '/api/v1/products/upload-image') 
     xhr.send(formData)
   })
 }
@@ -74,14 +74,15 @@ async function uploadFile({ file, shopId, onProgress }) {
           },
         })
           .then((res) => {
+            console.log(res)
             setImages((prev) => {
               const updated = [...prev]
               updated[index].status = 'uploaded'
               return updated
             })
-            if (res?.url && onImageUpload) {
-    onImageUpload(res.url) // 👈 এখানে parent কে url পাঠানো হচ্ছে
-  }
+            if (res?.data?.url && onImageUpload) {
+   onImageUpload(res.data.url) 
+}
           })
           .catch((err) => {
             console.error('Upload failed', err)

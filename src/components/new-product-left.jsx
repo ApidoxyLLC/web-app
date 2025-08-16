@@ -14,36 +14,19 @@ import {
   InputBaseInput,
 } from "@/components/ui/input-base";
 import {
-  Dropzone,
-  DropzoneDescription,
-  DropzoneGroup,
-  DropzoneInput,
-  DropzoneTitle,
-  DropzoneUploadIcon,
-  DropzoneZone,
-} from "@/components/ui/dropzone";
-import {
-  FileList,
-  FileListDescription,
-  FileListHeader,
-  FileListIcon,
-  FileListInfo,
-  FileListItem,
-  FileListName,
-  FileListSize,
-} from "@/components/ui/file-list";
-
-import {
   Sortable,
   SortableItem,
   SortableItemTrigger,
   SortableList,
 } from "@/components/ui/sortable";
-import {
+import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -54,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -63,29 +46,18 @@ import { useParams, useRouter } from "next/navigation";
 import UploadImage from "@/app/[shop]/products/add/FormInputsComponents/UploadImage";
 import { toast } from "sonner";
 import { Router } from "next/router";
+import useFetch from "@/hooks/useFetch";
 
 export default function NewProduct() {
   const [activeTagIndex, setActiveTagIndex] = useState(null);
   const [variants, setVariants] = useState([
     { id: '1', name: '', options: [] } 
   ]);
-  const [collections, setCollections] = useState([
-    { id: "123456789", title: "Clothing", handle: "clothing", description: "All clothing items.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-    { id: "987654321", title: "Men's Clothing", handle: "mens-clothing", description: "Trendy men's clothing.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "123456789" },
-    { id: "567890123", title: "Jackets", handle: "mens-jackets", description: "Stylish jackets for men.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "987654321" },
-    { id: "567890124", title: "Shirts", handle: "mens-shirts", description: "Casual and formal shirts for men.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "987654321" },
-    { id: "987654322", title: "Women's Clothing", handle: "womens-clothing", description: "Stylish women's fashion.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "123456789" },
-    { id: "567890125", title: "Dresses", handle: "womens-dresses", description: "Elegant dresses for all occasions.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "987654322" },
-    { id: "567890126", title: "Tops", handle: "womens-tops", description: "Trendy tops for everyday wear.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: "987654322" },
-    { id: "123456743489", title: "Food and beverage", handle: "food-beverage", description: "All food and drink items.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-    { id: "1245573456789", title: "Plastics", handle: "plastics", description: "Plastic materials and goods.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-    { id: "12345645454789", title: "Fabrics", handle: "fabrics", description: "Various fabric types.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-    { id: "123445456789", title: "Chemicals", handle: "chemicals", description: "Chemical products and materials.", image: "https://placehold.co/400x400.png", cover: "https://placehold.co/400x400.png", parent: null },
-  ]);
   const [selectedCategory, setSelectedCategory] = useState("All Products");
   const [activeTagIndexx, setActiveTagIndexx] = useState(null);
-  const {shop}=useParams()
+  const {shop} = useParams()
   const router = useRouter()
+  const { data, loading, error } = useFetch(`/${shop}/categories`);
   const [productData, setProductData] = useState({
   shop,
   title: "",
@@ -110,6 +82,7 @@ export default function NewProduct() {
   vendor: "",
   tags:[]
 });
+console.log(productData)
   const handleChange = (key, value) => {
   setProductData((prev) => ({
     ...prev,
@@ -140,61 +113,23 @@ export default function NewProduct() {
   const deleteVariant = (variantId) => {
     setVariants(variants.filter(v => v.id !== variantId));
   };
-  const renderCollectionMenu = (items) => {
-    const buildNestedMenu = (parent = null) => {
-      const children = items.filter(item => item.parent === parent);
-      
-      return children.map(item => {
-        const hasChildren = items.some(child => child.parent === item.id);
-        
-        if (hasChildren) {
-          return (
-            <DropdownMenuItem key={item.id} className="p-0"   
-                onClick={() => handleChange("selectedCategory",item.title )}>
-              <DropdownMenu>
-                <DropdownMenuTrigger 
-                  className="w-full px-2 py-1.5 text-sm hover:bg-accent"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    {item.title}
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  side="right" 
-                  className="w-48"
-                  align="start"
-                  sideOffset={-5}
-                >
-                  {buildNestedMenu(item.id)}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </DropdownMenuItem>
-          );
-        }
-        
-        return (
-          <DropdownMenuItem 
-            key={item.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedCategory(item.title);
-            }}
-            onSelect={(e) => {
-              e.preventDefault();
-            }}
-          >
-            {item.title}
-          </DropdownMenuItem>
-        );
-      });
-    };
-
-    return buildNestedMenu(null);
+  const renderCollectionMenu = (categories) => {
+    return categories.map((cat) =>
+      cat.children && cat.children.length > 0 ? (
+        <DropdownMenuSub key={cat.id}>
+          <DropdownMenuSubTrigger>
+            {cat.title}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-48">
+            {renderCollectionMenu(cat.children)}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      ) : (
+        <DropdownMenuItem key={cat.id} onClick={() => handleSelect(cat)}>
+          {cat.title}
+        </DropdownMenuItem>
+      )
+    );
   };
  const handleCheckbox = (key, value) => {
     setProductData((prev) => ({
@@ -203,11 +138,55 @@ export default function NewProduct() {
     }));
   };
   const handleImageUpload = (url) => {
+  console.log("urllll",url)
   setProductData((prev) => ({
     ...prev,
     images: [...prev.images, url],
   }))
-}
+  }
+  const uploadImage = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("shop", shop);
+
+    const res = await fetch("/api/v1/logo/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || "Image upload failed");
+    }
+
+    const imageUrl = `http://localhost:3000/api/v1/image/${shop}/${data.data.fileName}`;
+    setPic(imageUrl);
+
+  return data?.data?.fileName;
+  };
+   const handleSelect = (cat) => {
+    setSelectedCategory(cat.title);
+    setProductData((prev) => ({
+      ...prev,
+      category: cat.title,
+    }));
+  };
+  const categoryTree = useMemo(() => {
+    if (!data) return [];
+    const map = {};
+    data.forEach((cat) => {
+      map[cat.id] = { ...cat, children: [] };
+    });
+    const tree = [];
+    data.forEach((cat) => {
+      if (cat.parent && map[cat.parent]) {
+        map[cat.parent].children.push(map[cat.id]);
+      } else {
+        tree.push(map[cat.id]);
+      }
+    });
+    return tree;
+  }, [data]);
   const handleSubmit = async () => {
    try {
   const response = await fetch("/api/v1/products", {
@@ -255,27 +234,34 @@ export default function NewProduct() {
             </ControlGroupItem>
           </ControlGroup>
 
-            <Textarea placeholder="Product description"         onChange={(e) => handleChange("description", e.target.value)}
- />
+            <Textarea 
+            placeholder="Product description" 
+            onChange={(e) => handleChange("description", e.target.value)}
+            />
             <UploadImage shopId = {shop} onImageUpload={handleImageUpload} ></UploadImage>
 
-            <ControlGroup>
-              <ControlGroupItem className="flex-1">
-                <Button variant="outline">{selectedCategory}</Button>
-              </ControlGroupItem>
-              <DropdownMenu>
-                <ControlGroupItem>
-                  <DropdownMenuTrigger  asChild>
-                    <Button size="icon" variant="outline">
-                      <ChevronDown />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </ControlGroupItem>
-                <DropdownMenuContent align="end" className="w-48">
-                  {renderCollectionMenu(collections)}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </ControlGroup>
+             <ControlGroup className="w-full">
+      <ControlGroupItem className="flex-1">
+        <Button variant="outline">{selectedCategory}</Button>
+      </ControlGroupItem>
+
+      <DropdownMenu>
+        <ControlGroupItem>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="outline">
+              <ChevronDown />
+            </Button>
+          </DropdownMenuTrigger>
+        </ControlGroupItem>
+
+        <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto">
+          {loading && <DropdownMenuItem>Loading...</DropdownMenuItem>}
+          {error && <DropdownMenuItem>Error loading</DropdownMenuItem>}
+          {categoryTree.length > 0 && renderCollectionMenu(categoryTree)}
+
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </ControlGroup>
       
 
         </CardContent>

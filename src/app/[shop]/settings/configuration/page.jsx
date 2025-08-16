@@ -25,6 +25,7 @@ import {
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
+import PicturePreviewInput from "@/components/picture-preview-input";
 
 export default function StoreSettings() {
   const {shop} = useParams()
@@ -42,7 +43,8 @@ export default function StoreSettings() {
     country: "",
     address: "",
   });
-  
+  const [pic,setPic] = useState(null)
+  const [image, setImage] = useState("")
   useEffect(()=>{
     setFormData({
       businessName: configuration?.businessName,
@@ -53,13 +55,13 @@ export default function StoreSettings() {
       address: configuration?.location,
     })
   },[configuration])
+
   const handleChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
   };
-
   const handleUpdate = async () => {
     try {
       const res = await fetch(`/api/v1/settings/configuration`, {
@@ -114,6 +116,55 @@ export default function StoreSettings() {
       setLoadingState(false);
     }
   };
+  const uploadImage = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("shop", shop);
+
+    const res = await fetch("/api/v1/logo/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || "Image upload failed");
+    }
+
+    const imageUrl = `http://localhost:3000/api/v1/image/${shop}/${data.data.fileName}`;
+    setPic(imageUrl);
+
+  return data?.data?.fileName;
+  };
+  const logoSubmit = async () => {
+  const payload = { shop, image };
+  console.log(payload)
+  try {
+    const res = await fetch("/api/v1/logo", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error("Upload failed", errorData);
+      toast.error(errorData.error || "Logo upload failed");
+      return;
+    }
+    const data = await res.json();
+    console.log("API Response:", data);
+    toast.success("Shop Logo Uploaded");
+    setPic(null)
+  } catch (err) {
+    console.error("Unexpected error", err);
+    toast.error("Unexpected error occurred");
+  }
+};
+
+  
   if(loading){
     return (
       <div className="flex h-64 items-center justify-center">
@@ -125,7 +176,7 @@ export default function StoreSettings() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 bg-muted/100 ">
       <div className="lg:col-span-2 h-fit flex flex-col gap-6">
         <Card>
-          <CardContent className="space-y-4 p-6">
+          <CardContent className="space-y-4">
             <h2 className="text-md -mt-1 font-semibold">
               Business Information
             </h2>
@@ -269,7 +320,7 @@ export default function StoreSettings() {
          <Card>
           <CardContent className="space-y-4">
       <div>
-        <h2 className="text-md font-semibold pt-5">Language Settings</h2>
+        <h2 className="text-md font-semibold ">Language Settings</h2>
         <div className="flex flex-col gap-3 mt-2 md:flex-row md:items-center md:justify-between">
           <label className="block text-sm text-gray-400 font-medium">
             Default Language
@@ -304,18 +355,31 @@ export default function StoreSettings() {
     </CardContent>
         </Card>
       </div>
-
       <div className="flex flex-col gap-6">
-       
-
         <Card>
-          <CardContent className="p-6 pt-5 text-center space-y-4">
+          <CardContent className=" text-center">
             <h2 className="text-md font-semibold mb-4 text-start">Store Logo</h2>
-            <div className="w-full h-28 bg-primary-foreground border-2 border-dashed flex items-center justify-center rounded-md cursor-pointer">
-              <FaRegImages className="text-4xl" />
-            </div>
-            <div className="pt-1">
-              <Button className="w-full">Upload</Button>
+            <PicturePreviewInput
+              width={250}
+              height={100}
+              label="Upload Store Logo"
+              picture={pic ? pic : null}
+              onChange={async (file) => {
+              if (file instanceof File) {
+                try {
+                  const uploadedUrl = await uploadImage(file);
+                  setImage(uploadedUrl)
+                  } catch (err) {
+                  console.error("Upload failed", err);
+                  alert("Image upload failed");
+                }
+              }else{
+                console.log("err")
+                setPic(null); 
+              }}}
+            />
+            <div className="pt-6">
+              <Button className="w-full" onClick={logoSubmit}>Upload</Button>
             </div>
           </CardContent>
         </Card>

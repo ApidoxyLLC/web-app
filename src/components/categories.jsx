@@ -84,10 +84,11 @@ export default function Categories() {
     const data = await res.json();
     if (data.success) {
       refetch()
-      toast.success("Category created successfully. Please refresh to see it.");
+      toast.success("Category created successfully.");
       setNewCategory({ title: "", slug: "", description: "", image: undefined });
       setSlugCheck({ isAvailable: null, suggestions: [] });
       setIsOpen(false);
+      setPic(null)
     } else {
       toast.error(data.error || "Category creation failed");
     }
@@ -243,6 +244,7 @@ export default function Categories() {
       }
     }else{
       console.log("err")
+      setPic(null); 
     }}}
 
 

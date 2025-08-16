@@ -90,6 +90,7 @@ export default function Website() {
       }
     }else{
       console.log("err")
+      setPic(null); 
     }}}/>
             <Textarea placeholder="Meta description" onChange={(e)=> handleChange("metaDescription", e.target.value)}  />
           </div>

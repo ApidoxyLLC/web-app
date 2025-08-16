@@ -6,33 +6,36 @@ import Dropzone from "react-dropzone";
 import { cn } from "@/lib/utils";
 
 const ImagePreview = ({ width, height, url, onRemove }) => {
-  // console.log(url)
   return (
-  
-  <div
-    className="relative border border-border rounded-md overflow-hidden"
-    style={{ width: `${width}px`, height: `${height}px` }}
-  >
-    <button
-      className="absolute top-1 right-1 bg-destructive text-primary-foreground p-1 rounded hover:opacity-90"
-      onClick={onRemove}
+    <div
+      className="relative border border-border rounded-md overflow-hidden"
+      style={{ width: `${width}px`, height: `${height}px` }}
     >
-      <XIcon className="h-4 w-4 stroke-destructive-foreground" />
-    </button>
-    <Image
-      src={url}
-      alt="lskdjf"
-      width={width}
-      height={height}
-      className="w-full h-full object-contain"
-    />
-  </div>
-);
-}
+      <button
+        type="button"
+        className="absolute top-1 right-1 bg-destructive text-primary-foreground p-1 rounded hover:opacity-90"
+        onClick={onRemove}
+      >
+        <XIcon className="h-4 w-4 stroke-destructive-foreground" />
+      </button>
+      <Image
+        src={typeof url === "string" ? url : URL.createObjectURL(url)}
+        alt="preview"
+        width={width}
+        height={height}
+        className="w-full h-full object-contain"
+      />
+    </div>
+  );
+};
 
-
-export default function PicturePreviewInput({ width = 100, height = 100, label, picture, onChange }) {
-  console.log("pictureee",picture)
+export default function PicturePreviewInput({
+  width = 100,
+  height = 100,
+  label,
+  picture,
+  onChange,
+}) {
   return (
     <div style={{ width: `${width}px`, height: `${height}px` }}>
       {picture ? (
@@ -40,15 +43,14 @@ export default function PicturePreviewInput({ width = 100, height = 100, label, 
           width={width}
           height={height}
           url={picture}
-          onRemove={() => onChange(null)}
+          onRemove={() => onChange(null)} // remove করলে parent state null হবে
         />
       ) : (
         <Dropzone
           onDrop={(acceptedFiles) => {
             const file = acceptedFiles[0];
             if (file) {
-              const imageUrl = URL.createObjectURL(file);
-              onChange(file);
+              onChange(file); // file state এ save হবে
             }
           }}
           accept={{
@@ -69,14 +71,11 @@ export default function PicturePreviewInput({ width = 100, height = 100, label, 
               style={{ width: `${width}px`, height: `${height}px` }}
             >
               <input {...getInputProps()} />
-              {
-                label &&
+              {label ? (
                 <p className="text-xs text-muted-foreground text-center p-2">{label}</p>
-              }
-              {
-                !label &&
+              ) : (
                 <ImageIcon className="h-8 w-8" strokeWidth={1.5} />
-              }
+              )}
             </div>
           )}
         </Dropzone>
