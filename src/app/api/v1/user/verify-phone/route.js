@@ -3,10 +3,9 @@ import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/mongodb/db';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import verifyPhoneDTOSchema from './verifyPhoneDTOSchema';
-import { getVendor } from '@/services/vendor/getVendor';
+// import { getVendor } from '@/services/vendor/getVendor';
 import { userModel } from '@/models/shop/shop-user/ShopUser';
-
-
+import { getInfrastructure } from '@/services/vendor/getInfrastructure';
 
 export async function POST(request) {
   // Rate limiter setup
@@ -24,15 +23,20 @@ export async function POST(request) {
   const parsed = verifyPhoneDTOSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid request data", details: parsed.error.format() },{ status: 422 });
   const { phone, otp } = parsed.data;
-
-  const vendorId = request.headers.get('x-vendor-identifier');
+  console.log(parsed.data)
+  
+  const referenceId = request.headers.get('x-vendor-identifier');
   const host = request.headers.get('host');
 
-  if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
+  return NextResponse.json({ error: "Test Reponse" }, { status: 200 })
+  if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
   try {
-    const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
+    // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
+    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host: "" })
     if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
 
+    console.log(referenceId)
+  console.log(host)
     const shop_db  = await dbConnect({ dbKey: dbName, dbUri });
     const UserModel = userModel(shop_db);
     

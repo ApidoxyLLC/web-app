@@ -124,10 +124,10 @@ export async function DELETE(request, {params}) {
         const vendor_db = await vendorDbConnect();
         const Vendor = vendorModel(vendor_db);
         const vendor = await Vendor.findOne({ referenceId: vendorReferenceId })
-                                 .select('_id deliveryCharges ownerId');
+                                  .select('_id deliveryCharges ownerId');
         
         if (!vendor) return NextResponse.json( { success: false, error: "Vendor not found" }, { status: 404, headers: securityHeaders });
-
+        console.log(vendor)
         // Authorization
         if (!hasPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 403,headers: securityHeaders });
         

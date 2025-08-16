@@ -10,7 +10,6 @@ import { getInfrastructure } from '@/services/vendor/getInfrastructure';
 const schema = z.object({ email: z.string().email("Invalid email format")   });
 
 export async function POST(request) {
-
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
