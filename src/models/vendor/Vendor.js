@@ -120,7 +120,7 @@ const facebookPixelSchema = new mongoose.Schema({
 
 const paymentPartnerSchema = new mongoose.Schema({
   bkash: { type: bkashSchema, default: null }
-}, { timestamps: facebookPixelSchema, _id: false })
+}, { timestamps: true, _id: false })
 
 const baseAppSchema = new mongoose.Schema({
   appId: { type: String, default: null },

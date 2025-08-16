@@ -318,11 +318,150 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get("limit") || "10", 10);
     const skip = (page - 1) * limit;
 
-    // Connect to the auth database
-    // const auth_db = await authDbConnect();
     const vendor_db = await vendorDbConnect();
-    // const User = userModel(auth_db)
     const Vendor = vendorModel(vendor_db);
+
+
+  const userObjectId = new mongoose.Types.ObjectId(data.userId);
+    const result = await Vendor.aggregate([
+  {
+    $match: {
+      $or: [
+            { ownerId: userObjectId },
+            { staffs: { $elemMatch: { userId: userObjectId, status: "active" } } }
+          ]
+    }
+  },
+  {
+    $facet: {
+      shops: [
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+                      id: "$referenceId",
+                      email: 1,
+                      phone: 1,
+                      businessName: 1,
+                      primaryDomain: 1,   // instead of domain
+                      domains: 1,         // optional
+                      country: 1,
+                      industry: 1,
+                      location: 1,
+                      activeApps: 1,
+                      web: 1,
+                      android: 1,
+                      ios: 1,
+                      logo: 1,
+                      staffs: {
+                        $cond: [
+                          { $gt: [{ $size: { $ifNull: ["$staffs", []] } }, 0] },
+                          { $map: { input: "$staffs", as: "s", in: "$$s.email" } },
+                          []
+                        ]
+                      },
+                      _id: 0
+                    }
+        }
+      ],
+      total: [{ $count: "count" }]
+    }
+  },
+  {
+    $project: {
+      shops: "$shops",
+      total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+      currentPage: { $literal: page },
+      totalPages: {
+        $ceil: {
+          $divide: [
+            { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+            limit
+          ]
+        }
+      }
+    }
+  },
+  {
+    $addFields: {
+      nextPage: {
+        $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
+      },
+      prevPage: {
+        $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
+      }
+    }
+  }
+]);
+
+  console.log(result)
+
+    const response = result[0] || {
+      shops: [],
+      total: 0,
+      currentPage: page,
+      totalPages: 0,
+      nextPage: null,
+      prevPage: null
+    };
+
+    return NextResponse.json({
+      success: true,
+      data: response.shops,
+      total: response.total,
+      currentPage: response.currentPage,
+      totalPages: response.totalPages,
+      nextPage: response.nextPage,
+      prevPage: response.prevPage
+    }, { status: 200 });
+  } catch (error) {
+    console.log(error)
+    return NextResponse.json({
+      error: error.message || "Failed to retrieve shop data",
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+    }, { status: 500 });
+  }
+}
+
+
+async function createAppDatabase(dbName) {
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) throw new Error('MONGODB_URI is not defined');
+  let conn;
+  try {
+    conn = await dbConnect({ dbKey: dbName, dbUri: MONGODB_URI })
+    const shopCollections = [
+      'shops',
+      'shop_users',
+      'shop_sessions',
+      'shop_login_histories',
+      'products',
+      'categories',
+      'carts',
+      'rating_reviews',
+      'delivery_partners'
+    ];
+
+    // Create collections
+    await Promise.all(
+      shopCollections.map(collectionName =>
+        conn.db.createCollection(collectionName)
+      )
+    );
+
+    console.log(`Database '${dbName}' initialized with ${shopCollections.length} collections`);
+    return { success: true, dbName };
+  } catch (error) {
+    console.error('Database creation failed:', error);
+    throw new Error(`Database setup failed: ${error.message}`);
+  } finally {
+    if (conn) {
+      await conn.close();
+      console.log('Temporary connection closed');
+    }
+  }
+}
+
     // const { sessionId, userId, userReferenceId, name, email, phone, role, isVerified, timezone, theme, language, currency } = data
 
     // const result = await Vendor.aggregate([{
@@ -515,161 +654,3 @@ export async function GET(request) {
     //                                           }
     //                                         }
     //                                       ]);
-
-
-
-    const result = await Vendor.aggregate([
-  {
-    $match: {
-      $or: [
-        { ownerId: data.userId },
-        {
-          staffs: {
-            $elemMatch: {
-              userId: data.userId,
-              status: "active"
-            }
-          }
-        }
-      ]
-    }
-  },
-  {
-    $facet: {
-      shops: [
-        { $skip: skip },
-        { $limit: limit },
-        {
-          $project: {
-            id: "$referenceId",
-            email: 1,
-            phone: 1,
-            businessName: 1,
-            domain: 1,
-            country: 1,
-            industry: 1,
-            location: 1,
-            slug: 1,
-            activeApps: 1,
-            web: 1,
-            android: 1,
-            ios: 1,
-            logo: 1,
-            staffs: {
-              $cond: [
-                { $gt: [{ $size: { $ifNull: ["$staffs", []] } }, 0] },
-                {
-                  $map: {
-                    input: "$staffs",
-                    as: "s",
-                    in: "$$s.name"
-                  }
-                },
-                []
-              ]
-            },
-            _id: 0
-          }
-        }
-      ],
-      total: [{ $count: "count" }]
-    }
-  },
-  {
-    $project: {
-      shops: "$shops",
-      total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-      currentPage: { $literal: page },
-      totalPages: {
-        $ceil: {
-          $divide: [
-            { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-            limit
-          ]
-        }
-      }
-    }
-  },
-  {
-    $addFields: {
-      nextPage: {
-        $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
-      },
-      prevPage: {
-        $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
-      }
-    }
-  }
-]);
-
-  console.log(result)
-  
-    const response = result[0] || {
-      shops: [],
-      total: 0,
-      currentPage: page,
-      totalPages: 0,
-      nextPage: null,
-      prevPage: null
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: response.shops,
-      total: response.total,
-      currentPage: response.currentPage,
-      totalPages: response.totalPages,
-      nextPage: response.nextPage,
-      prevPage: response.prevPage
-    }, { status: 200 });
-  } catch (error) {
-    console.log(error)
-    return NextResponse.json({
-      error: error.message || "Failed to retrieve shop data",
-      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-    }, { status: 500 });
-  }
-}
-
-
-
-
-
-
-async function createAppDatabase(dbName) {
-  const MONGODB_URI = process.env.MONGODB_URI;
-  if (!MONGODB_URI) throw new Error('MONGODB_URI is not defined');
-  let conn;
-  try {
-    conn = await dbConnect({ dbKey: dbName, dbUri: MONGODB_URI })
-    const shopCollections = [
-      'shops',
-      'shop_users',
-      'shop_sessions',
-      'shop_login_histories',
-      'products',
-      'categories',
-      'carts',
-      'rating_reviews',
-      'delivery_partners'
-    ];
-
-    // Create collections
-    await Promise.all(
-      shopCollections.map(collectionName =>
-        conn.db.createCollection(collectionName)
-      )
-    );
-
-    console.log(`Database '${dbName}' initialized with ${shopCollections.length} collections`);
-    return { success: true, dbName };
-  } catch (error) {
-    console.error('Database creation failed:', error);
-    throw new Error(`Database setup failed: ${error.message}`);
-  } finally {
-    if (conn) {
-      await conn.close();
-      console.log('Temporary connection closed');
-    }
-  }
-}
