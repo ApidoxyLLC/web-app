@@ -1,14 +1,12 @@
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
-import mongoose from 'mongoose';
-import { getServerSession } from "next-auth/next";
 import { NextResponse } from 'next/server';
 import { InvoiceModel } from '@/models/subscription/Invoice';
-import { userModel } from "@/models/auth/User";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import invoiceDTOSchema from './invoiceDTOSchema';
 import { PlanModel } from "@/models/subscription/Plan";
 import { initiateBkashPayment } from '@/services/bkash/initiateBkashPayment';
 import {shopModel} from '@/models/auth/Shop';
+import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 
 export async function POST(request) {
     const body = await request.json();
@@ -27,6 +25,16 @@ export async function POST(request) {
         );
     }
 
+
+ const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
+        if (!authenticated) {
+            return NextResponse.json(
+                { error: authError || "Not authorized" },
+                { status: 401 }
+            );
+        }
+
+
     /** 
                          * fake Authentication for test purpose only 
                          * *******************************************
@@ -40,23 +48,23 @@ export async function POST(request) {
                          * *               *           
                          * */
 
-    const authDb = await authDbConnect()
-    const User = userModel(authDb);
-    const user = await User.findOne({
-        referenceId: "cmdwxn2sg0000o09w6morw1mv"
-    })
-        .select('referenceId _id name email phone role isEmailVerified')
-    console.log(user)
-    const data = {
-        // sessionId: "cmdags8700000649w6qyzu8xx",
-        userReferenceId: user.referenceId,
-        userId: user?._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        isVerified: user.isEmailVerified || user.isPhoneVerified,
-    }
+    // const authDb = await authDbConnect()
+    // const User = userModel(authDb);
+    // const user = await User.findOne({
+    //     referenceId: "cmdwxn2sg0000o09w6morw1mv"
+    // })
+    //     .select('referenceId _id name email phone role isEmailVerified')
+    // console.log(user)
+    // const data = {
+    //     // sessionId: "cmdags8700000649w6qyzu8xx",
+    //     userReferenceId: user.referenceId,
+    //     userId: user?._id,
+    //     name: user.name,
+    //     email: user.email,
+    //     phone: user.phone,
+    //     role: user.role,
+    //     isVerified: user.isEmailVerified || user.isPhoneVerified,
+    // }
 
     /** 
      * fake Authentication for test purpose only 

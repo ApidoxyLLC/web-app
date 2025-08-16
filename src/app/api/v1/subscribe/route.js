@@ -169,4 +169,3 @@ function calculateBillingCycle( {billingCycle, trialPeriod}){
   return { startDate, endDate };
 }
 
-

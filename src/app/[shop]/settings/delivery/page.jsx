@@ -1,5 +1,5 @@
 "use client";
-import React, { useState,useEffect } from "react";
+import React, { useState,useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import {
   SelectLabel,
   SelectValue,
 } from "@/components/ui/select";
-import RSPVInput from "@/components/rspv-input";
 
 import {
   ControlGroup,
@@ -175,7 +174,7 @@ export default function DeliverySettings() {
   const [savedCourierData, setSavedCourierData] = useState({}); 
   const { shop } = useParams();
 
-  const { data } = useFetch(`/${shop}/delivery-partner`);
+  const { data, refetch } = useFetch(`/${shop}/delivery-partner`);
 
   React.useEffect(() => {
     if (data) {
@@ -262,99 +261,130 @@ export default function DeliverySettings() {
       toast.error("An error occurred.");
     }
   };
-  const fetchDeliveryCharges = async () => {
-    try {
-      const res = await fetch(`/api/v1/${shop}/delivery-charge`);
-      if (!res.ok) throw new Error("Failed to load delivery charges");
-      const data = await res.json();
-      setZonesList(data.zones || []);
-      setDistrictsList(data.districts || []);
-      setUpazilasList(data.upazilas || []);
-    } catch (err) {
-      toast.error(err.message);
-    }
+  const handleSaveDeliveryCharge = async () => {
+  const payload = {
+    shop: shop, 
+    chargeBasedOn:
+      deliveryOptions === "zones"
+        ? "zone"
+        : deliveryOptions === "upazilla"
+        ? "upazilla"
+        : "district",
+    regionName:
+      deliveryOptions === "zones"
+        ? zoneInput.name
+        : deliveryOptions === "upazilla"
+        ? upazilaInput.name
+        : districtInput.name,
+    charge: Number(
+      deliveryOptions === "zones"
+        ? zoneInput.charge
+        : deliveryOptions === "upazilla"
+        ? upazilaInput.charge
+        : districtInput.charge
+    ),
+    partner: selectedCourier || undefined,
   };
 
-  useEffect(() => {
-    fetchDeliveryCharges();
-  }, []);
- const saveDeliveryCharges = async () => {
   try {
-    const updates = [];
+    const res = await fetch(`/api/v1/settings/delivery-charge`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-    // Zones
-    for (const z of zonesList) {
-      updates.push({
-        shop: shop,
-        chargeBasedOn: "zone",
-        regionName: z.name,
-        charge: Number(z.charge),
-        ...(z.partner ? { partner: z.partner } : {}), // untouched partner
-      });
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to save");
     }
+      fetchDeliveryData();
+    toast.success("Delivery charge saved successfully!");
 
-    // Districts
-    for (const d of districtsList) {
-      updates.push({
-        shop: shop,
-        chargeBasedOn: "district",
-        regionName: d.name,
-        charge: Number(d.charge),
-        ...(d.partner ? { partner: d.partner } : {}),
-      });
-    }
+    if (deliveryOptions === "zones") setZoneInput({ name: "", charge: "" });
+    if (deliveryOptions === "districts")
+      setDistrictInput({ name: "", charge: "" });
+    if (deliveryOptions === "upazilla")
+      setUpazilaInput({ name: "", charge: "" });
 
-    // Upazilas
-    for (const u of upazilasList) {
-      updates.push({
-        shop: shop,
-        chargeBasedOn: "upazilla",
-        regionName: u.name,
-        charge: Number(u.charge),
-        ...(u.partner ? { partner: u.partner } : {}),
-      });
-    }
-
-    // Loop & send requests
-    for (const payload of updates) {
-      const res = await fetch(`/api/v1/settings/delivery-charges`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData?.error || "One or more updates failed");
-      }
-    }
-
-    toast.success("Delivery charges updated successfully");
-    fetchDeliveryCharges();
   } catch (err) {
     toast.error(err.message);
   }
-};
-
-
-
-  const deleteDeliveryCharge = async (type, index) => {
-    try {
-      const res = await fetch(`/api/v1/${shop}/delivery-charge`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ type, index }), 
-      });
-
-      if (!res.ok) throw new Error("Failed to delete delivery charge");
-      toast.success("Deleted successfully");
-      fetchDeliveryCharges();
-    } catch (err) {
-      toast.error(err.message);
-    }
   };
+  const fetchDeliveryData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/v1/${shop}`); 
+      if (!res.ok) throw new Error("Failed to fetch delivery charges");
+
+      const data = await res.json();
+      const charges = data?.data?.delivery?.charges || [];
+
+      setZonesList(
+        charges
+          .filter((item) => item.chargeBasedOn === "zone")
+          .map((item) => ({
+            name: item.regionName,
+            charge: item.charge,
+          }))
+      );
+
+      setDistrictsList(
+        charges
+          .filter((item) => item.chargeBasedOn === "district")
+          .map((item) => ({
+            name: item.regionName,
+            charge: item.charge,
+          }))
+      );
+
+      setUpazilasList(
+        charges
+          .filter((item) => item.chargeBasedOn === "upazilla")
+          .map((item) => ({
+            name: item.regionName,
+            charge: item.charge,
+          }))
+      );
+    } catch (err) {
+      console.error("Error fetching delivery charges:", err);
+    }
+  }, []);
+  useEffect(() => {
+    fetchDeliveryData();
+  }, [fetchDeliveryData]);
+  
+  const handleDeleteCharge = async (chargeId) => {
+  if (!window.confirm("Are you sure you want to delete this delivery charge?")) return;
+
+  try {
+    const res = await fetch(`/api/v1/${shop}/delivery-charges`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ charge: chargeId }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      if (deliveryOptions === "zones") {
+        setZonesList(prev => prev.filter(zone => zone._id !== chargeId));
+      } else if (deliveryOptions === "districts") {
+        setDistrictsList(prev => prev.filter(dist => dist._id !== chargeId));
+      } else if (deliveryOptions === "upazilla") {
+        setUpazilasList(prev => prev.filter(upz => upz._id !== chargeId));
+      }
+      alert("Delivery charge deleted successfully");
+    } else {
+      alert(data.error || "Failed to delete");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong");
+  }
+};
 
   return (
     <div className=" w-full mx-auto p-6 space-y-6 bg-muted/100">
@@ -498,16 +528,16 @@ export default function DeliverySettings() {
               </ControlGroupItem>
             </ControlGroup>
                 <Button
-                  onClick={saveDeliveryCharges}
                   variant="outline"
                   className="h-10"
+                  onClick={handleSaveDeliveryCharge}
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
               </div>
               <div className="">
                 {zonesList.map((zone, index) => (
-                  <div key={index} className="flex items-center gap-6 h-full">
+                  <div key={index} className={`flex ${index === 0 || "mt-6"} items-center gap-6 h-full`}>
                     <div className="w-full pl-3 py-2 border rounded-md">
                       {zone.name}
                     </div>
@@ -517,7 +547,8 @@ export default function DeliverySettings() {
                     <Button
                       variant="destructive"
                       className="flex items-center gap-2 w-20 h-10"
-                      onClick={() => deleteDeliveryCharge("zone", i)}
+                        onClick={() => handleDeleteCharge(zone._id)}
+
 
                     >
                       Del
@@ -643,9 +674,10 @@ export default function DeliverySettings() {
               </ControlGroupItem>
             </ControlGroup>
                 <Button
-                   onClick={saveDeliveryCharges}
                   variant="outline"
                   className='h-10'
+                  onClick={handleSaveDeliveryCharge}
+
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
@@ -663,7 +695,8 @@ export default function DeliverySettings() {
                       variant="destructive"
                       size="sm"
                       className=" flex items-center gap-2 px-4 w-20 h-10"
-                      onClick={() => deleteDeliveryCharge("district", i)}
+                        onClick={() => handleDeleteCharge(district._id)}
+
 
                     >
                       Del
@@ -759,9 +792,10 @@ export default function DeliverySettings() {
               </ControlGroupItem>
             </ControlGroup>
                 <Button
-                   onClick={saveDeliveryCharges}
                   variant="outline"
                   className="h-10"
+                  onClick={handleSaveDeliveryCharge}
+
                 >
                   Add <span className="text-xl">+</span>
                 </Button>
@@ -779,7 +813,8 @@ export default function DeliverySettings() {
                       variant="destructive"
                       size="sm"
                       className="flex items-center gap-2 px-4 w-20 h-10"
-                      onClick={() => deleteDeliveryCharge("upazila", i)}
+                        onClick={() => handleDeleteCharge(upazila._id)}
+
 
                     >
                       Del

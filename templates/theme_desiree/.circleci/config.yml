@@ -1,0 +1,127 @@
+version: 2.1
+parameters:
+  builderId:
+    type: string
+    default: default-builder-id
+jobs:
+  build_apk:
+    docker:
+      - image: ghcr.io/cirruslabs/flutter:3.29.3
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Timestamp
+          command: echo '1755164601517'
+      - run:
+          name: Check Flutter Version
+          command: >-
+            flutter --version && curl -X POST
+            "https://sdk.apidoxy.com/api/android-build-status-hook" -H
+            'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 0, "buildMessageType":
+            "pending", "buildMessage": "Flutter version checked"}'
+      - run:
+          name: Install dependencies
+          command: >-
+            flutter pub get && curl -X POST
+            "https://sdk.apidoxy.com/api/android-build-status-hook" -H
+            'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 0, "buildMessageType":
+            "pending", "buildMessage": "Dependencies installed"}'
+      - run:
+          name: Rename Package Name
+          command: >-
+            dart run change_app_package_name:main com.mycoolapp.app && curl -X
+            POST "https://sdk.apidoxy.com/api/android-build-status-hook" -H
+            'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 0, "buildMessageType":
+            "pending", "buildMessage": "Package name updated"}'
+      - run:
+          name: Rename App Nickname
+          command: >-
+            dart run rename_app:main all='My Cool App' && curl -X POST
+            "https://sdk.apidoxy.com/api/android-build-status-hook" -H
+            'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 0, "buildMessageType":
+            "pending", "buildMessage": "App name updated"}'
+      - run:
+          name: Generate Splash Screen
+          command: >-
+            dart run flutter_native_splash:create --path=native_splash.yaml &&
+            curl -X POST "https://sdk.apidoxy.com/api/android-build-status-hook"
+            -H 'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 0, "buildMessageType":
+            "pending", "buildMessage": "Splash screen generated"}'
+      - run:
+          name: Generate App Icon
+          command: >-
+            dart run flutter_launcher_icons:generate && curl -X POST
+            "https://sdk.apidoxy.com/api/android-build-status-hook" -H
+            'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 0, "buildMessageType":
+            "pending", "buildMessage": "App icon generated"}'
+      - run:
+          name: Generate Version Code
+          command: >-
+            dart run cider version 1.0.0 && curl -X POST
+            "https://sdk.apidoxy.com/api/android-build-status-hook" -H
+            'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 0, "buildMessageType":
+            "pending", "buildMessage": "Version code updated"}'
+      - run:
+          name: Build APK
+          command: >-
+            flutter build apk --release && curl -X POST
+            "https://sdk.apidoxy.com/api/android-build-status-hook" -H
+            'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 1, "buildMessageType":
+            "success", "buildMessage": "APK built successfully"}'
+      - store_artifacts:
+          path: build/app/outputs/flutter-apk/app-release.apk
+          destination: app-release.apk
+      - run:
+          name: Upload APK to Cloud
+          command: |2-
+
+                              APK_PATH="build/app/outputs/flutter-apk/app-release.apk" &&
+                              if [ -f "$APK_PATH" ]; then
+                                FORM_DATA="$(echo -n 'file=@'$APK_PATH'&bucketName=releaseble-apks')" &&
+                                RESPONSE=$(curl -X POST https://cloud.apidoxy.com/file/upload                       -H "Authorization: Bearer undefined"                       -F "file=@$APK_PATH"                       -F "bucketName=releaseble-apks") &&
+                                if [ $? -eq 0 ]; then
+                                  DOWNLOAD_URL=$(echo $RESPONSE | jq -r '.downloadableUrl') &&
+                                  curl -X POST "https://sdk.apidoxy.com/api/android-build-status-hook"                         -H 'Content-Type: application/json'                         -d "{
+                                      \"builderId\": \"689daf9da2639e55a4810aa7\",
+                                      \"buildStatus\": 1,
+                                      \"buildMessageType\": \"success\",
+                                      \"buildMessage\": \"APK uploaded successfully\",
+                                      \"downloadUrl\": \"$DOWNLOAD_URL\"
+                                    }"
+                                else
+                                  curl -X POST "https://sdk.apidoxy.com/api/android-build-status-hook"                         -H 'Content-Type: application/json'                         -d '{
+                                      "builderId": "689daf9da2639e55a4810aa7",
+                                      "buildStatus": -1,
+                                      "buildMessageType": "error",
+                                      "buildMessage": "Failed to upload APK"
+                                    }'
+                                fi
+                              else
+                                curl -X POST "https://sdk.apidoxy.com/api/android-build-status-hook"                       -H 'Content-Type: application/json'                       -d '{
+                                    "builderId": "689daf9da2639e55a4810aa7",
+                                    "buildStatus": -1,
+                                    "buildMessageType": "error",
+                                    "buildMessage": "APK file not found"
+                                  }'
+                              fi
+                            
+      - run:
+          name: Final Status Update
+          command: >-
+            curl -X POST "https://sdk.apidoxy.com/api/android-build-status-hook"
+            -H 'Content-Type: application/json' -d '{"builderId":
+            "689daf9da2639e55a4810aa7", "buildStatus": 1, "buildMessageType":
+            "success", "buildMessage": "Build completed successfully"}'
+workflows:
+  build:
+    jobs:
+      - build_apk

@@ -39,6 +39,7 @@ import CreatShop from "./shop-info-modal";
 import useFetch from "@/hooks/useFetch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 export function ProjectsCard() {
   const router = useRouter()
   const userData = useSession()
@@ -47,6 +48,12 @@ export function ProjectsCard() {
   const [activeModal, setActiveModal] = useState(null);
   const submenuRef = useRef(null);
   const [submenuHeight, setSubmenuHeight] = useState(0);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loadingState, setLoadingState] = useState(false);
+
+  const { data, loading } = useFetch("/shops")
 
   useEffect(() => {
     if (submenuRef.current) {
@@ -61,8 +68,39 @@ export function ProjectsCard() {
       }
   }, [userData, userData.status, router]);
   
-  const { data, loading } = useFetch("/shops")
-  console.log(data)
+  const handleChangePassword = async () => {
+    setLoadingState(true);
+
+    try {
+      const res = await fetch("/api/v1/user/change-password", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success(data.message || "Password changed successfully");
+        setActiveModal(null);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        toast.error(data.error || "Something went wrong");
+      }
+    } catch (error) {
+      toast.error("Network error");
+    } finally {
+      setLoadingState(false);
+    }
+  };
   if (loading) {
   return (
     <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 gap-6 px-4 py-6 lg:px-6">
@@ -199,21 +237,42 @@ export function ProjectsCard() {
         </button>
       </div>
       <Dialog open={activeModal === "changePassword"} onOpenChange={() => setActiveModal(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input type="password" placeholder="Current Password" />
-            <Input type="password" placeholder="New Password" />
-            <Input type="password" placeholder="Confirm New Password" />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setActiveModal(null)}>Cancel</Button>
-            <Button>Update</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Change Password</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <Input
+            type="password"
+            placeholder="Current Password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
+          <Input
+            type="password"
+            placeholder="New Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <Input
+            type="password"
+            placeholder="Confirm New Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => setActiveModal(null)}>
+            Cancel
+          </Button>
+          <Button onClick={handleChangePassword} disabled={loadingState}>
+            {loadingState ? "Updating..." : "Update"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
       <Dialog open={activeModal === "twoFactor"} onOpenChange={() => setActiveModal(null)}>
         <DialogContent>

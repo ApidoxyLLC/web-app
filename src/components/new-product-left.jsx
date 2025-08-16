@@ -59,8 +59,10 @@ import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import CustomTagInput from "./custom-tag-input";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import UploadImage from "@/app/[shop]/products/add/FormInputsComponents/UploadImage";
+import { toast } from "sonner";
+import { Router } from "next/router";
 
 export default function NewProduct() {
   const [activeTagIndex, setActiveTagIndex] = useState(null);
@@ -83,8 +85,7 @@ export default function NewProduct() {
   const [selectedCategory, setSelectedCategory] = useState("All Products");
   const [activeTagIndexx, setActiveTagIndexx] = useState(null);
   const {shop}=useParams()
-  console.log(variants)
-
+  const router = useRouter()
   const [productData, setProductData] = useState({
   shop,
   title: "",
@@ -109,7 +110,6 @@ export default function NewProduct() {
   vendor: "",
   tags:[]
 });
-  console.log(productData)
   const handleChange = (key, value) => {
   setProductData((prev) => ({
     ...prev,
@@ -221,13 +221,12 @@ export default function NewProduct() {
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-
   const data = await response.json();
   console.log("✅ Product created:", data);
-  alert("Product created successfully!");
+  toast.success("Product created successfully!");
+  router.push(`/${shop}/products`)
 } catch (err) {
-  console.log("❌ Error:", err);
-  alert("Error submitting product. Check console.");
+  toast.error("Error submitting product. Check console.");
 }
 
   };

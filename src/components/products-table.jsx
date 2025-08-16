@@ -134,7 +134,9 @@ function DragHandle({ id }) {
   )
 }
 
-const columns = [
+
+export function ProductsTable() {
+   const columns = [
   {
     accessorKey: "title",
     header: "Title",
@@ -210,59 +212,21 @@ const columns = [
   header: "Actions",
   cell: ({ row }) => {
     const product = row.original;
-
-    
-
     return (
       <Button
         variant="destructive"
         size="sm"
-        onClick={handleDelete}
-        className="text-xs"
+        onClick={() => handleDelete(product.id)}
       >
-        <Trash2Icon className="h-4 w-4" />
+        <Trash2Icon></Trash2Icon>
       </Button>
     );
   },
-  }
-]
-
-const handleDelete = () => {
-  const confirm = window.confirm("Are you sure you want to delete this product?");
-  if (!confirm) return;
-
-  console.log("Deleting product with ID:", product.id);
-};
-
-
-function DraggableRow({ row }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.id,
-  })
-
-  return (
-    <TableRow
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
-      ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: transition,
-      }}
-    >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  )
 }
 
-export function ProductsTable() {
+]
   const {shop} = useParams()
-  const { data, loading, error } = useFetch(`/${shop}/products`)
+  const { data, loading, error, refetch } = useFetch(`/${shop}/products`)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState({
@@ -328,11 +292,62 @@ export function ProductsTable() {
       })
     }
   }
+function DraggableRow({ row }) {
+  const { transform, transition, setNodeRef, isDragging } = useSortable({
+    id: row.original.id,
+  })
+
+  return (
+    <TableRow
+      data-state={row.getIsSelected() && "selected"}
+      data-dragging={isDragging}
+      ref={setNodeRef}
+      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition,
+      }}
+    >
+      {row.getVisibleCells().map((cell) => (
+        <TableCell key={cell.id}>
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </TableCell>
+      ))}
+    </TableRow>
+  )
+}
+async function handleDelete(productId) {
+  const confirmed = window.confirm("Are you sure you want to delete this product?");
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/api/v1/${shop}/products/${productId}`, {
+      method: "DELETE",
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw new Error(result.error || "Failed to delete product");
+    }
+    refetch()
+    toast.success(`✅ ${result.message}`);
+    table.options.data = table.options.data.filter((item) => item.id !== productId);
+    table.setOptions((prev) => ({ ...prev }));
+  } catch (err) {
+    toast.error(`❌ ${err.message}`);
+  }
+  } 
  if (loading) {
       return (
-        <div className="flex h-64 items-center justify-center">
-          <LoaderIcon className="h-8 w-8 animate-spin" />
-        </div>
+        <div className="">
+      {[...Array(2)].map((_, idx) => (
+        <div
+          key={idx}
+          className="h-[100px] mt-3 animate-pulse rounded-xl bg-muted/50 dark:bg-muted mx-6"
+        />
+      ))}
+    </div>
       )
     }
   
