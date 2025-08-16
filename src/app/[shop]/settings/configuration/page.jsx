@@ -44,7 +44,7 @@ export default function StoreSettings() {
     address: "",
   });
   const [pic,setPic] = useState(null)
-  const [image, setImage] = useState("")
+  const [image, setImage] = useState(null)
   useEffect(()=>{
     setFormData({
       businessName: configuration?.businessName,
@@ -158,6 +158,7 @@ export default function StoreSettings() {
     console.log("API Response:", data);
     toast.success("Shop Logo Uploaded");
     setPic(null)
+    setImage(null)
   } catch (err) {
     console.error("Unexpected error", err);
     toast.error("Unexpected error occurred");
@@ -379,7 +380,7 @@ export default function StoreSettings() {
               }}}
             />
             <div className="pt-6">
-              <Button className="w-full" onClick={logoSubmit}>Upload</Button>
+              <Button className="w-full" disabled={image ? false : true } onClick={logoSubmit}>Upload</Button>
             </div>
           </CardContent>
         </Card>

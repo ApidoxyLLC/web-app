@@ -19,12 +19,17 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { useRouter } from "next/navigation";
+import { Avatar,AvatarImage, AvatarFallback } from "./ui/avatar";
+import { useParams, useRouter } from "next/navigation";
+import useFetch from "@/hooks/useFetch";
 export function TeamSwitcher( {teams} ) {
   const { isMobile } = useSidebar();
   const [activeTeam, setActiveTeam] = React.useState(teams?.[0]);
   const router = useRouter()
+  const {shop} = useParams()
+  const {data} = useFetch(`/${shop}`)
+  const shops = useFetch(`/shops`)
+  const imageUrl = `http://localhost:3000/api/v1/image/${shop}/${data?.configuration?.logo?.imageName}`;
   if (!activeTeam) {
     return null;
   }
@@ -39,7 +44,13 @@ export function TeamSwitcher( {teams} ) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground">
-                {/* <Image src={activeTeam.logo} width={32} height={32} alt={activeTeam.name} className="size-8 rounded-lg" /> */}
+                
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={imageUrl} />
+                  <AvatarFallback>
+                    {activeTeam?.businessName?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
@@ -60,31 +71,23 @@ export function TeamSwitcher( {teams} ) {
               Shops
             </DropdownMenuLabel>
             {teams.map((team, index) => (
-              <DropdownMenuItem
-                key={index}
-                onClick={() => {
-                  setActiveTeam(team)
-                  router.push(`/${team?.id}/dashboard`)
-                }}
-                className="gap-2 p-2"
-              >
-                {/* <div className="flex size-6 items-center justify-center rounded-sm border overflow-hidden">
-                  <Image
-                    width={32}
-                    height={32}
-                    src={team.logo}
-                    alt={activeTeam.name}
-                    className="size-6 shrink-0 object-cover"
-                  />
-                </div> */}
-                <Avatar className="h-10 w-10">
-                  {/* <AvatarImage src="https://github.com/shadcn.png" /> */}
+              <Link href={`/${team.id}/dashboard`}>
+                <DropdownMenuItem
+                  key={index}
+                  onClick={() => {
+                    setActiveTeam(team)
+                  }}
+                  className="gap-2 p-2"
+                >
+                  <Avatar className="h-10 w-10">
+                  <AvatarImage src={`http://localhost:3000/api/v1/image/${team.id}/${shops.data?.configuration?.logo?.imageName}`}/>
                   <AvatarFallback>
                     {team?.businessName?.charAt(0).toUpperCase()}
                   </AvatarFallback>
-                </Avatar>
-                {team.businessName}
-              </DropdownMenuItem>
+                  </Avatar>
+                  {team.businessName}
+                </DropdownMenuItem>
+              </Link>
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 p-2" asChild>

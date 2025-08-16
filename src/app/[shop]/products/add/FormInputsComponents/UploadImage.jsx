@@ -80,8 +80,8 @@ async function uploadFile({ file, shopId, onProgress }) {
               updated[index].status = 'uploaded'
               return updated
             })
-            if (res?.data?.url && onImageUpload) {
-   onImageUpload(res.data.url) 
+            if (res?.data?.fileName && onImageUpload) {
+   onImageUpload(res.data.fileName) 
 }
           })
           .catch((err) => {

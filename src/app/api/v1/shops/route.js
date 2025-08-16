@@ -323,6 +323,9 @@ export async function GET(request) {
 
 
   const userObjectId = new mongoose.Types.ObjectId(data.userId);
+  console.log("Owner Id *********************")
+  console.log(data.userId)
+
     const result = await Vendor.aggregate([
   {
     $match: {
@@ -341,6 +344,7 @@ export async function GET(request) {
           $project: {
                       id: "$referenceId",
                       email: 1,
+                      ownerId: 1,
                       phone: 1,
                       businessName: 1,
                       primaryDomain: 1,  

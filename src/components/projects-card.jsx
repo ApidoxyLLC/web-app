@@ -31,7 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ModeToggle } from "./mode-toggle";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect,useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import logo from "../../public/favicon.ico"
 import { TreePalm, MapPin, User2, ChevronRight  } from "lucide-react";
 import Image from "next/image";
@@ -43,7 +43,6 @@ import { toast } from "sonner";
 export function ProjectsCard() {
   const router = useRouter()
   const userData = useSession()
-  console.log(userData)
   const [showSecuritySub, setShowSecuritySub] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const submenuRef = useRef(null);
@@ -52,9 +51,8 @@ export function ProjectsCard() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loadingState, setLoadingState] = useState(false);
-
+  const {shop} = useParams()
   const { data, loading } = useFetch("/shops")
-
   useEffect(() => {
     if (submenuRef.current) {
       setSubmenuHeight(showSecuritySub ? submenuRef.current.scrollHeight : 0);
@@ -112,7 +110,7 @@ export function ProjectsCard() {
       ))}
     </div>
   );
-}
+  }
   return (
     <div>
       <div className="flex flex-row items-center justify-between px-6 py-4 gap-4 border-b bg-white dark:bg-background">
@@ -129,7 +127,7 @@ export function ProjectsCard() {
             <PopoverTrigger asChild>
               <div className="cursor-pointer">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src="https://github.com/shadcn.png" />
+                  <AvatarImage src={`http://localhost:3000/api/v1/image/${shop}/${data.data.fileName}`}/>
                   <AvatarFallback>
                     {userData?.data?.user?.name?.charAt(0).toUpperCase()}
                   </AvatarFallback>
