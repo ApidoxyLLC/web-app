@@ -23,13 +23,12 @@ const ALL_SAFE_FIELDS = {
 };
 
 const SECTION_FIELDS = {
-    configuration: ['businessName', 'location', 'country', 'industry', 'email', 'phone'],
+    configuration: ['businessName', 'location', 'country', 'industry', 'email', 'phone', 'logo'],
     policy: ['policies'],
     socialLinks: ['socialLinks'],
     realTimeUpdates: ['notification'],
     supportChat: ['chatSupport'],
-    delivery: ['deliveryCharges']
-
+    delivery: ['deliveryCharges'],
 };
 
 export async function GET(request, { params }) {
