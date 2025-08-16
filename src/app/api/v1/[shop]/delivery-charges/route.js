@@ -113,7 +113,7 @@ export async function DELETE(request, {params}) {
         const { shop: vendorReferenceId } = await params;
         const body = await request.json();
         const { charge: chargeId } = body;
-        
+        console.log("joy bangla",body)
         if (!vendorReferenceId || !chargeId)  return NextResponse.json( { success: false, error: "Both vendorReferenceId and chargeId are required" }, { status: 400, headers: securityHeaders } );
 
         // Authentication

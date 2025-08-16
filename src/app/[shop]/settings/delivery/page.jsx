@@ -175,7 +175,7 @@ export default function DeliverySettings() {
   const { shop } = useParams();
 
   const { data, refetch } = useFetch(`/${shop}/delivery-partner`);
-
+  console.log(zonesList)
   React.useEffect(() => {
     if (data) {
       setSavedCourierData(data);
@@ -354,7 +354,7 @@ export default function DeliverySettings() {
     fetchDeliveryData();
   }, [fetchDeliveryData]);
   
-  const handleDeleteCharge = async (chargeId) => {
+  const handleDeleteCharge = async (charge) => {
   if (!window.confirm("Are you sure you want to delete this delivery charge?")) return;
 
   try {
@@ -363,7 +363,7 @@ export default function DeliverySettings() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ charge: chargeId }),
+      body: JSON.stringify({ charge }),
     });
 
     const data = await res.json();
@@ -547,7 +547,7 @@ export default function DeliverySettings() {
                     <Button
                       variant="destructive"
                       className="flex items-center gap-2 w-20 h-10"
-                        onClick={() => handleDeleteCharge(zone._id)}
+                        onClick={() => handleDeleteCharge(zone.charge)}
 
 
                     >
@@ -695,7 +695,7 @@ export default function DeliverySettings() {
                       variant="destructive"
                       size="sm"
                       className=" flex items-center gap-2 px-4 w-20 h-10"
-                        onClick={() => handleDeleteCharge(district._id)}
+                        onClick={() => handleDeleteCharge(district.charge)}
 
 
                     >
@@ -813,7 +813,7 @@ export default function DeliverySettings() {
                       variant="destructive"
                       size="sm"
                       className="flex items-center gap-2 px-4 w-20 h-10"
-                        onClick={() => handleDeleteCharge(upazila._id)}
+                        onClick={() => handleDeleteCharge(upazila.charge)}
 
 
                     >
