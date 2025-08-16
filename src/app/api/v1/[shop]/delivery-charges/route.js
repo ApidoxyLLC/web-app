@@ -131,8 +131,10 @@ export async function DELETE(request, {params}) {
         // Authorization
         if (!hasPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 403,headers: securityHeaders });
         
+        console.log(chargeId)
         // Check if charge exists
         const chargeExists = vendor.deliveryCharges.some(charge => charge._id.toString() === chargeId);
+        console.log(chargeExists)
         if (!chargeExists) return NextResponse.json({ success: false, error: "Delivery charge not found"  },  { status: 404, headers: securityHeaders } );
         
 

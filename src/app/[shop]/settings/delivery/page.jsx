@@ -319,13 +319,14 @@ export default function DeliverySettings() {
 
       const data = await res.json();
       const charges = data?.data?.delivery?.charges || [];
-
+      console.log(charges)
       setZonesList(
         charges
           .filter((item) => item.chargeBasedOn === "zone")
           .map((item) => ({
             name: item.regionName,
             charge: item.charge,
+            _id: item._id
           }))
       );
 
@@ -335,6 +336,7 @@ export default function DeliverySettings() {
           .map((item) => ({
             name: item.regionName,
             charge: item.charge,
+            _id: item._id
           }))
       );
 
@@ -344,6 +346,7 @@ export default function DeliverySettings() {
           .map((item) => ({
             name: item.regionName,
             charge: item.charge,
+            _id: item._id
           }))
       );
     } catch (err) {
@@ -354,7 +357,7 @@ export default function DeliverySettings() {
     fetchDeliveryData();
   }, [fetchDeliveryData]);
   
-  const handleDeleteCharge = async (charge) => {
+  const handleDeleteCharge = async (chargeId) => {
   if (!window.confirm("Are you sure you want to delete this delivery charge?")) return;
 
   try {
@@ -363,7 +366,7 @@ export default function DeliverySettings() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ charge }),
+      body: JSON.stringify({ charge: chargeId }),
     });
 
     const data = await res.json();
@@ -547,7 +550,7 @@ export default function DeliverySettings() {
                     <Button
                       variant="destructive"
                       className="flex items-center gap-2 w-20 h-10"
-                        onClick={() => handleDeleteCharge(zone.charge)}
+                        onClick={() => handleDeleteCharge(zone._id)}
 
 
                     >
@@ -695,7 +698,7 @@ export default function DeliverySettings() {
                       variant="destructive"
                       size="sm"
                       className=" flex items-center gap-2 px-4 w-20 h-10"
-                        onClick={() => handleDeleteCharge(district.charge)}
+                        onClick={() => handleDeleteCharge(district._id)}
 
 
                     >
@@ -813,7 +816,7 @@ export default function DeliverySettings() {
                       variant="destructive"
                       size="sm"
                       className="flex items-center gap-2 px-4 w-20 h-10"
-                        onClick={() => handleDeleteCharge(upazila.charge)}
+                        onClick={() => handleDeleteCharge(upazila._id)}
 
 
                     >
@@ -825,9 +828,9 @@ export default function DeliverySettings() {
               </div>
             </div>
           )}
-          <div className="flex justify-end pt-2">
+          {/* <div className="flex justify-end pt-2">
             <Button>Save Delivery Charges</Button>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
 
