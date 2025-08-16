@@ -433,90 +433,177 @@ export async function GET(request) {
     // ]);
 
     // 2️⃣ Use aggregation in `vendor_db`
-    const result = await Vendor.aggregate([ {
-                                              $match: {
-                                                $or: [
-                                                  { ownerId: data.userId }, // Owner
-                                                  {
-                                                    staffs: {
-                                                      $elemMatch: {
-                                                        userId: data.userId,
-                                                        status: "active"
-                                                      }
-                                                    }
-                                                  }
-                                                ]
-                                              }
-                                            },
-                                            {
-                                              $facet: {
-                                                shops: [
-                                                  { $skip: skip },
-                                                  { $limit: limit },
-                                                  {
-                                                    $project: {
-                                                      id: "$referenceId",
-                                                      email: 1,
-                                                      phone: 1,
-                                                      businessName: 1,
-                                                      domain: 1,
-                                                      country: 1,
-                                                      industry: 1,
-                                                      location: 1,
-                                                      slug: 1,
-                                                      activeApps: 1,
-                                                      web: 1,
-                                                      android: 1,
-                                                      ios: 1,
-                                                      logo: 1, 
-                                                      staffs: {
-                                                        $cond: [
-                                                          { $gt: [{ $size: { $ifNull: ["$staffs", []] } }, 0] },
-                                                          {
-                                                            $map: {
-                                                              input: "$staffs",
-                                                              as: "s",
-                                                              in: "$$s.name"
-                                                            }
-                                                          },
-                                                          []
-                                                        ]
-                                                      },
-                                                      _id: 0
-                                                    }
-                                                  }
-                                                ],
-                                                total: [{ $count: "count" }]
-                                              }
-                                            },
-                                            {
-                                              $project: {
-                                                shops: "$shops",
-                                                total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-                                                currentPage: { $literal: page },
-                                                totalPages: {
-                                                  $ceil: {
-                                                    $divide: [
-                                                      { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-                                                      limit
-                                                    ]
-                                                  }
-                                                }
-                                              }
-                                            },
-                                            {
-                                              $addFields: {
-                                                nextPage: {
-                                                  $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
-                                                },
-                                                prevPage: {
-                                                  $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
-                                                }
-                                              }
-                                            }
-                                          ]);
+    // const result = await Vendor.aggregate([ {
+    //                                           $match: {
+    //                                             $or: [
+    //                                               { ownerId: data.userId }, // Owner
+    //                                               {
+    //                                                 staffs: {
+    //                                                   $elemMatch: {
+    //                                                     userId: data.userId,
+    //                                                     status: "active"
+    //                                                   }
+    //                                                 }
+    //                                               }
+    //                                             ]
+    //                                           }
+    //                                         },
+    //                                         {
+    //                                           $facet: {
+    //                                             shops: [
+    //                                               { $skip: skip },
+    //                                               { $limit: limit },
+    //                                               {
+    //                                                 $project: {
+    //                                                   id: "$referenceId",
+    //                                                   email: 1,
+    //                                                   phone: 1,
+    //                                                   businessName: 1,
+    //                                                   domain: 1,
+    //                                                   country: 1,
+    //                                                   industry: 1,
+    //                                                   location: 1,
+    //                                                   slug: 1,
+    //                                                   activeApps: 1,
+    //                                                   web: 1,
+    //                                                   android: 1,
+    //                                                   ios: 1,
+    //                                                   logo: 1, 
+    //                                                   staffs: {
+    //                                                     $cond: [
+    //                                                       { $gt: [{ $size: { $ifNull: ["$staffs", []] } }, 0] },
+    //                                                       {
+    //                                                         $map: {
+    //                                                           input: "$staffs",
+    //                                                           as: "s",
+    //                                                           in: "$$s.name"
+    //                                                         }
+    //                                                       },
+    //                                                       []
+    //                                                     ]
+    //                                                   },
+    //                                                   _id: 0
+    //                                                 }
+    //                                               }
+    //                                             ],
+    //                                             total: [{ $count: "count" }]
+    //                                           }
+    //                                         },
+    //                                         {
+    //                                           $project: {
+    //                                             shops: "$shops",
+    //                                             total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+    //                                             currentPage: { $literal: page },
+    //                                             totalPages: {
+    //                                               $ceil: {
+    //                                                 $divide: [
+    //                                                   { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+    //                                                   limit
+    //                                                 ]
+    //                                               }
+    //                                             }
+    //                                           }
+    //                                         },
+    //                                         {
+    //                                           $addFields: {
+    //                                             nextPage: {
+    //                                               $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
+    //                                             },
+    //                                             prevPage: {
+    //                                               $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
+    //                                             }
+    //                                           }
+    //                                         }
+    //                                       ]);
 
 
+
+    const result = await Vendor.aggregate([
+  {
+    $match: {
+      $or: [
+        { ownerId: data.userId },
+        {
+          staffs: {
+            $elemMatch: {
+              userId: data.userId,
+              status: "active"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    $facet: {
+      shops: [
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            id: "$referenceId",
+            email: 1,
+            phone: 1,
+            businessName: 1,
+            domain: 1,
+            country: 1,
+            industry: 1,
+            location: 1,
+            slug: 1,
+            activeApps: 1,
+            web: 1,
+            android: 1,
+            ios: 1,
+            logo: 1,
+            staffs: {
+              $cond: [
+                { $gt: [{ $size: { $ifNull: ["$staffs", []] } }, 0] },
+                {
+                  $map: {
+                    input: "$staffs",
+                    as: "s",
+                    in: "$$s.name"
+                  }
+                },
+                []
+              ]
+            },
+            _id: 0
+          }
+        }
+      ],
+      total: [{ $count: "count" }]
+    }
+  },
+  {
+    $project: {
+      shops: "$shops",
+      total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+      currentPage: { $literal: page },
+      totalPages: {
+        $ceil: {
+          $divide: [
+            { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+            limit
+          ]
+        }
+      }
+    }
+  },
+  {
+    $addFields: {
+      nextPage: {
+        $cond: [{ $lt: [page, "$totalPages"] }, { $add: [page, 1] }, null]
+      },
+      prevPage: {
+        $cond: [{ $gt: [page, 1] }, { $subtract: [page, 1] }, null]
+      }
+    }
+  }
+]);
+
+  console.log(result)
+  
     const response = result[0] || {
       shops: [],
       total: 0,
