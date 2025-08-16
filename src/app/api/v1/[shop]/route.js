@@ -19,7 +19,8 @@ const ALL_SAFE_FIELDS = {
     socialLinks: 1,
     notification: 1,
     chatSupport: 1,
-    deliveryCharges: 1
+    deliveryCharges: 1,
+    logo: 1
 };
 
 const SECTION_FIELDS = {
