@@ -438,7 +438,7 @@ export async function GET(request) {
                                                 $or: [
                                                   { ownerId: data.userId }, // Owner
                                                   {
-                                                    stuffs: {
+                                                    staffs: {
                                                       $elemMatch: {
                                                         userId: data.userId,
                                                         status: "active"
@@ -469,12 +469,12 @@ export async function GET(request) {
                                                       android: 1,
                                                       ios: 1,
                                                       logo: 1, 
-                                                      stuffs: {
+                                                      staffs: {
                                                         $cond: [
-                                                          { $gt: [{ $size: { $ifNull: ["$stuffs", []] } }, 0] },
+                                                          { $gt: [{ $size: { $ifNull: ["$staffs", []] } }, 0] },
                                                           {
                                                             $map: {
-                                                              input: "$stuffs",
+                                                              input: "$staffs",
                                                               as: "s",
                                                               in: "$$s.name"
                                                             }
