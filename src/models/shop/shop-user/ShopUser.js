@@ -23,7 +23,9 @@ const securitySchema = new mongoose.Schema({
 
   resetPasswordToken: { type: String, default: undefined },
   resetPasswordTokenExpiry: { type: Number, default: undefined },
-  
+
+  attemptWith: { type: String, enum: ['phone', 'email'], default: undefined },
+
   passwordChangedAt: { type: Date, select: false, default: undefined },
   isFlagged: { type: Boolean, default: false, select: false  },
 }, { _id: false });

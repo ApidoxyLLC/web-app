@@ -144,7 +144,7 @@ export async function POST(request) {
       paymentMethod: "Cash on Delivery",
       activeSubscriptions: [{
         ...subscriptionData,
-      }]
+      }],
     }
 
     console.log(shopPayload)
@@ -186,7 +186,9 @@ export async function POST(request) {
       activeSubscriptions: [{
         ...subscriptionData,
       }],
-      transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() }
+      transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() },
+      expirations: { emailVerificationExpireMinutes: config.emailVerificationDefaultExpireMinutes, 
+                     phoneVerificationExpireMinutes: config.phoneVerificationDefaultExpireMinutes },
     }
 
     console.log(vendorPayload)

@@ -4,10 +4,11 @@ import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/mongodb/db';
 import { userModel } from '@/models/shop/shop-user/ShopUser';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
-import { getVendor } from '@/services/vendor/getVendor';
+// import { getVendor } from '@/services/vendor/getVendor';
+import { getInfrastructure } from '@/services/vendor/getInfrastructure';
 
 // Create schema for query parameters
-const schema = z.object({ token: z.string().length(96, "Invalid token format") });
+const schema = z.object({ token: z.string().min(32 ) });
 
 export async function POST(request) {
   // Rate limiter setup
@@ -23,20 +24,22 @@ export async function POST(request) {
     if (!parsed.success) return NextResponse.json({ error: "Invalid request data", details: parsed.error.format() },{ status: 422 });
     const { token } = parsed.data;
 
-  const vendorId = request.headers.get('x-vendor-identifier');
+  const referenceId = request.headers.get('x-vendor-identifier');
   const host     = request.headers.get('host');
-  if (!vendorId && !host) return NextResponse.json({ error: "Missing host" }, { status: 400 });
+  if (!referenceId && !host) return NextResponse.json({ error: "Missing host" }, { status: 400 });
   
   try {
-    const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
-    if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
+    // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
+    // if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
 
+    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
     const shop_db  = await dbConnect({ dbKey: dbName, dbUri });
 
 
     const             User = userModel(shop_db);
     const      hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const       resetToken = crypto.randomBytes(48).toString('hex');
+    const       resetToken = crypto.randomBytes(64).toString('hex');
     const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
     const RESET_PASSWORD_TOKEN_EXPIRE = Number(process.env.END_USER_RESET_PASSWORD_TOKEN_EXPIRE_MINUTES)
@@ -48,11 +51,13 @@ export async function POST(request) {
                                                               "security.isFlagged"                 : true              },
                                                    $unset : { "security.forgotPasswordToken"       : "",
                                                               "security.forgotPasswordTokenExpiry" : ""                } },
-                                               { new: true, projection: { _id: 1, email: 1, name: 1 }, lean: true } );
+                                               { new: true, projection: { _id: 1, email: 1, phone: 1,  name: 1, security: 1 }, lean: true } );
 
     if (!user) { return NextResponse.json({ error: "Invalid or expired password reset token" }, { status: 400 })}
 
-    return NextResponse.json( { success : true, token: resetToken, email: user.email,
+    const { security, email, phone } =  user
+    const { attemptWith } =  security 
+    return NextResponse.json( { success : true, token: resetToken, ...(attemptWith === "email" &&   { email }), ...(attemptWith === "phone" &&   { phone }), 
                                 expireAt: new Date(tokenExpiry).toISOString() } );
   } catch (error) {
     console.error("Token verification error:", error);

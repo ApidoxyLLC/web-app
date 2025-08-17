@@ -36,8 +36,10 @@ const config = {
   accessTokenIdHashKey: process.env.END_USER_ACCESS_TOKEN_ID_HASH_KEY,
   refreshTokenIdHashKey: process.env.END_USER_REFRESH_TOKEN_ID_HASH_KEY,
   endUserIpAddressEncryptionKey: process.env.END_USER_IP_ADDRESS_ENCRYPTION_KEY,
+  endUserBcryptSaltRounds: process.env.END_USER_BCRYPT_SALT_ROUNDS,
 
   // time durations limitations
+  // (Core user)
   accessTokenExpireMinutes: Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15'),
   shopCacheExpireMinutes: Number(process.env.ACCESS_TOKEN_EXPIRE_MINUTES  || '15'),
   refreshTokenExpireMinutes: Number(process.env.REFRESH_TOKEN_EXPIRE_MINUTES || '1440'),
@@ -47,12 +49,17 @@ const config = {
   vendorDataCacheExpireMinutes: Number(process.env.VENDOR_DATA_CACHE_EXPIRE_MINUTES || '15'),
   vendorIdCacheExpireMinutes: Number(process.env.VENDOR_ID_CACHE_EXPIRE_MINUTES || '30'),
 
-  // end user default durations limitations
+  //( end user )default durations limitations
   accessTokenDefaultExpireMinutes: Number(process.env.END_USER_ACCESS_TOKEN_DEFAULT_EXPIRE_MINUTES || '30'),
   refreshTokenDefaultExpireMinutes: Number(process.env.END_USER_REFRESH_TOKEN_DEFAULT_EXPIRE_MINUTES || '10080'),
   emailVerificationDefaultExpireMinutes: Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRE_MINUTES || '10'),
   phoneVerificationDefaultExpireMinutes: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRE_MINUTES || '4'),
   phoneOtpDigits: Number(process.env.PHONE_OTP_DIGITS || '6'),
+
+  endUserEmailTokenExpireMinuts: Number(process.env.END_USER_EMAIL_TOKEN_EXPIRE_MINUTES || '30'),
+  endUserPhoneTokenExpireMinuts: Number(process.env.END_USER_PHONE_OTP_EXPIRE_MINUTES || '30'),
+
+  // endUserForgetPasswordTokenExpireMinutes: Number(process.env.END_USER_FORGET_PASSWORD_TOKEN_EXPIRE_MINUTES || '4'), 
   
   //
   defaultVendorDbProvider: process.env.VENDOR_DEFAULT_DB_PROVIDER,

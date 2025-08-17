@@ -9,7 +9,7 @@ import { getInfrastructure } from '@/services/vendor/getInfrastructure';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import config from '../../../../../../config';
 
-const schema = z.object({ phone: z.string().regex(/^\d{10,15}$/, 'Invalid phone number') });
+const schema = z.object({ phone: z.string().regex(/^(\+?[1-9]\d{1,14}|0\d{9,14})$/, "Invalid phone number") });
 
 export async function POST(request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || request.ip || "";
@@ -36,26 +36,51 @@ export async function POST(request) {
     const shop_db  = await dbConnect({ dbKey: dbName, dbUri });
     const  User = userModel(shop_db);
 
-    const user = await User.findOne({ phone, $and: [ { $or: [  { isPhoneVerified: false              }, 
-                                                               { isPhoneVerified: { $exists: false } }] },
-                                                     { $or: [  { "verification.phoneVerificationOTPExpiry": { $lte: Date.now() } },
-                                                               { "verification.phoneVerificationOTPExpiry": { $exists: false      } },
-                                                               { "verification.phoneVerificationOTP"      : { $exists: false      } } ] } ]    })
-                           .select('+_id +phone +verification +isPhoneVerified');
+    const OTP_DIGITS = config.phoneOtpDigits || 6;
 
-    if (!user) return NextResponse.json({ success: true, message: "If your phone number exists and isn't verified, you'll receive a verification code." },{ status: 200 });
+    // generate OTP first
+    const otp = crypto.randomInt(0, Math.pow(10, OTP_DIGITS))
+                      .toString()
+                      .padStart(OTP_DIGITS, '0');
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    const expiry = minutesToExpiryTimestamp(config.phoneVerificationDefaultExpireMinutes || 10);
 
-    const OTP_DIGITS = config.phoneOtpDigits || 6
-    const        otp = crypto.randomInt(0, Math.pow(10, OTP_DIGITS)).toString().padStart(OTP_DIGITS, '0');
-    const  hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
-    const     expiry = minutesToExpiryTimestamp(config.phoneVerificationDefaultExpireMinutes || 10);
+    // console.log(`Phone number  ${phone}`)
+    // console.log(`OTP number  ${otp}`)
+    // console.log(hashedOtp)
+    // console.log(expiry)
+    // return NextResponse.json({ MESSAGE: "TEST RESPONSE" }, { status: 200 } )
 
-    await User.updateOne({ _id: user._id },
-                         { $set: { 'verification.phoneVerificationOTP'      : hashedOtp,
-                                   'verification.phoneVerificationOTPExpiry': expiry } });
+    
+    const user = await User.findOneAndUpdate( { phone,
+                                                  $and: [
+                                                    { $or: [ { isPhoneVerified: false }, { isPhoneVerified: { $exists: false } } ] },
+                                                    { $or: [
+                                                        { "verification.phoneVerificationOTPExpiry": { $lte: Date.now() } },
+                                                        { "verification.phoneVerificationOTPExpiry": { $exists: false } },
+                                                        { "verification.phoneVerificationOTP": { $exists: false } }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  $set: {
+                                                    'verification.phoneVerificationOTP': hashedOtp,
+                                                    'verification.phoneVerificationOTPExpiry': expiry
+                                                  }
+                                                },
+                                                {
+                                                  new: true, // return the updated document
+                                                  projection: {
+                                                    _id: 1,
+                                                    phone: 1,
+                                                    verification: 1,
+                                                    isPhoneVerified: 1
+                                                  }
+                                                }
+                                              );
 
-    // await sendSMS({   phone: user.phone, 
-    //                 message: `Your verification code: ${otp} (valid for ${(config.phoneVerificationDefaultExpireMinutes - 1)} minutes)`});
+    if (!user) return NextResponse.json({ success: true, message: "If your phone number exists and isn't verified, you'll receive a verification code." }, { status: 200 })
 
     try {
           await sendSMS({ phone: user.phone, message: `Your code is: ${otp}` });
@@ -72,3 +97,26 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+
+
+    // const user = await User.findOne({ phone, $and: [ { $or: [  { isPhoneVerified: false              }, 
+    //                                                            { isPhoneVerified: { $exists: false } }] },
+    //                                                  { $or: [  { "verification.phoneVerificationOTPExpiry": { $lte: Date.now() } },
+    //                                                            { "verification.phoneVerificationOTPExpiry": { $exists: false      } },
+    //                                                            { "verification.phoneVerificationOTP"      : { $exists: false      } } ] } ]    })
+    //                        .select('+_id +phone +verification +isPhoneVerified');
+
+    // if (!user) return NextResponse.json({ success: true, message: "If your phone number exists and isn't verified, you'll receive a verification code." },{ status: 200 });
+
+    // const OTP_DIGITS = config.phoneOtpDigits || 6
+    // const        otp = crypto.randomInt(0, Math.pow(10, OTP_DIGITS)).toString().padStart(OTP_DIGITS, '0');
+    // const  hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    // const     expiry = minutesToExpiryTimestamp(config.phoneVerificationDefaultExpireMinutes || 10);
+
+    // await User.updateOne({ _id: user._id },
+    //                      { $set: { 'verification.phoneVerificationOTP'      : hashedOtp,
+    //                                'verification.phoneVerificationOTPExpiry': expiry } });
+
+    // await sendSMS({   phone: user.phone, 
+    //                 message: `Your verification code: ${otp} (valid for ${(config.phoneVerificationDefaultExpireMinutes - 1)} minutes)`});
