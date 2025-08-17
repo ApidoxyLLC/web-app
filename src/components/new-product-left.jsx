@@ -63,10 +63,10 @@ export default function NewProduct() {
   title: "",
   description: "",
   images: [],
-  category: "",
+  category: selectedCategory,
   isPhysical: true,
   weight: 0,
-  weightUnit:"",
+  weightUnit:"kg",
   price: 0,
   compareAtPrice: 0,
   costPerItem: 0,
@@ -114,6 +114,7 @@ console.log(productData)
     setVariants(variants.filter(v => v.id !== variantId));
   };
   const renderCollectionMenu = (categories) => {
+    console.log(categories)
     return categories.map((cat) =>
       cat.children && cat.children.length > 0 ? (
         <DropdownMenuSub key={cat.id}>
@@ -137,38 +138,17 @@ console.log(productData)
       [key]: value === true,
     }));
   };
-  const handleImageUpload = (url) => {
-  console.log("urllll",url)
+  const handleImageUpload = (fileName) => {
   setProductData((prev) => ({
     ...prev,
-    images: [...prev.images, url],
+    images: [...prev.images, fileName],
   }))
   }
-  const uploadImage = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("shop", shop);
-
-    const res = await fetch("/api/v1/logo/upload", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-    if (!data.success) {
-      throw new Error(data.error || "Image upload failed");
-    }
-
-    const imageUrl = `http://localhost:3000/api/v1/image/${shop}/${data.data.fileName}`;
-    setPic(imageUrl);
-
-  return data?.data?.fileName;
-  };
    const handleSelect = (cat) => {
     setSelectedCategory(cat.title);
     setProductData((prev) => ({
       ...prev,
-      category: cat.title,
+      category: cat.id,
     }));
   };
   const categoryTree = useMemo(() => {
