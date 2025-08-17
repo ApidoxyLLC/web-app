@@ -15,8 +15,7 @@ export async function POST(request) {
   const forwarded = request.headers.get("x-forwarded-for");
   const ip = forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || request.socket?.remoteAddress || "unknown";
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: "register" });
-  if (!allowed) 
-    return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
+  if (!allowed) return NextResponse.json( { message: `Too many requests. Retry after ${retryAfter}s.` }, { status: 429 });
 
   // Validation with zod
   const parsed = registerDTOSchema.safeParse(body);

@@ -18,11 +18,8 @@ const changePasswordSchema = z.object({
 
 export async function PATCH(request) {
   let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  try { body = await request.json(); } 
+  catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }) }
 
   const forwarded = request.headers.get("x-forwarded-for");
   const ip = forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || request.socket?.remoteAddress || "unknown";
@@ -38,8 +35,7 @@ export async function PATCH(request) {
   const { currentPassword, newPassword } = parsed.data;
 
   const { authenticated, data: authUser, error } = await getAuthenticatedUser(request);
-  if (!authenticated)
-    return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+  if (!authenticated) return NextResponse.json({ error: "Not authorized" }, { status: 401 });
 
   try {
 

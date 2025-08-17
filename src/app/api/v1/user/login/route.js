@@ -59,7 +59,7 @@ export async function POST(request) {
     const identifier      = parsed.data.identifier?.trim();
     const password        = parsed.data.password;
     const identifierName  = parsed.data.identifierName;
-    const fingerprint     = parsed.data.fingerprint;
+    // const fingerprint     = parsed.data.fingerprint;
     const timezone        = parsed.data.timezone?.trim();
     const userAgent       = request.headers.get('user-agent') || '';
 
@@ -239,7 +239,7 @@ export async function POST(request) {
     // if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
     const payload = {         
-                      fingerprint,
+                      // fingerprint,
                              name: user.name,
                             email: user.email,
                             phone: user.phone,
@@ -319,7 +319,7 @@ export async function POST(request) {
                                       // refreshToken: refreshTokenCipherText,
                             refreshTokenExpiry: refreshTokenExpiry,                                     
                                             ip: ipAddressCipherText,
-                                   fingerprint,
+                                  //  fingerprint,
                                      userAgent
                                 }).save({ session: dbSession });
 
@@ -346,7 +346,7 @@ export async function POST(request) {
                                          provider: `local-${identifierName}`, // Fixed template literal
                                                ip: ipAddressCipherText,
                                         userAgent,
-                                      fingerprint,
+                                      // fingerprint,
                                     }).save({ session: dbSession });
       });
     }    

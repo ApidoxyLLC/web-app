@@ -11,8 +11,10 @@ import minutesToExpiryTimestamp from '@/app/utils/shop-user/minutesToExpiryTimes
 import { getInfrastructure } from '@/services/vendor/getInfrastructure'
 
 export async function getVendorShop(request) {
+
     const   vendorId = request.headers.get('x-vendor-identifier');
     const       host = request.headers.get('host');
+
     if (!vendorId && !host)
       return { success: false, error: "Missing host" };
     const vendor_db = await vendorDbConnect();
@@ -43,20 +45,31 @@ export async function authenticationStatus(request) {
   const   accessToken = tokenFromCookie || tokenFromHeader || null;
   const isUsingBearerToken = (tokenFromHeader && !tokenFromCookie);
 
-
-
+    const   referenceId = request.headers.get('x-vendor-identifier');
+    const       host = request.headers.get('host');
 
 
   if (!accessToken) return { success: false, error: "Invalid request: missing token or fingerprint" };
 
   try {
-    const vendorFetchResult = await getVendorShop(request);
-    if (!vendorFetchResult.success) return { success: false, error: "Missing host" };
-    const       vendor = vendorFetchResult.data;
+      const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+      if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+
+    // const vendorFetchResult = await getVendorShop(request);
+    // if (!vendorFetchResult.success) return { success: false, error: "Missing host" };
+    // const       vendor = vendorFetchResult.data;
+
     const accessSecret = await decrypt({ cipherText: vendor.secrets.accessTokenSecret, 
                                             options: { secret: process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY } });
+    
     try {
       const decoded = jwt.verify(accessToken, accessSecret);
+
+
+
+
+
+
       return { success: true, isTokenRefreshed: false, data: decoded, vendor };
     } catch (err) {
       if (isUsingBearerToken) return { success: false, error: "Unauthorized", vendor };
@@ -64,7 +77,7 @@ export async function authenticationStatus(request) {
         const  refreshToken = cookieStore.get('refresh_token')?.value || null;
       
       if (err.name === 'TokenExpiredError' && refreshToken) {
-        const       accessExpire = Number(vendor.expirations?.accessTokenExpireMinutes || 15);
+        const       accessExpire = Number(vendor.expirations?.accessTokenExpireMinutes  ||   15);
         const      refreshExpire = Number(vendor.expirations?.refreshTokenExpireMinutes || 1440);
         const      refreshSecret = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret, 
                                                       options: { secret: process.env.END_USER_REFRESH_TOKEN_ENCRYPTION_KEY } });
@@ -86,7 +99,7 @@ export async function authenticationStatus(request) {
         if(result.isTokenRefreshed ){
           const { accessToken, refreshToken, accessTokenExpireAt, refreshTokenExpireAt }  =  result.token 
           const now = Date.now();
-          
+
           cookieStore.set({   name: 'access_token',
                              value: accessToken,
                               path: '/',
