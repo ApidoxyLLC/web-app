@@ -8,6 +8,7 @@ import { dbConnect } from '@/lib/mongodb/db'
 import crypto from 'crypto';
 import minutesToExpiresIn from '@/app/utils/shop-user/minutesToExpiresIn'
 import minutesToExpiryTimestamp from '@/app/utils/shop-user/minutesToExpiryTimestamp'
+import { getInfrastructure } from '@/services/vendor/getInfrastructure'
 
 export async function getVendorShop(request) {
     const   vendorId = request.headers.get('x-vendor-identifier');
@@ -20,9 +21,9 @@ export async function getVendorShop(request) {
     if (!vendorId && !host) return { success: false, error: "Missing host" };
         // return { success: false, data: null , error: "No vendor shop found" };
 
-    const vendor = await Vendor.findOne({ $or: [   vendorId ? {   referenceId: vendorId } : null,
-                                               host ? { primaryDomain: host } : null,
-                                               host ? {       domains: { $in: [host] } } : null,
+    const vendor = await Vendor.findOne({ $or: [   vendorId ? {   referenceId: vendorId }        : null,
+                                                       host ? { primaryDomain: host }            : null,
+                                                       host ? {       domains: { $in: [host] } } : null,
                                             ].filter(Boolean), })
                                 .select("dbInfo bucketInfo secrets expirations")
                                 .lean()
@@ -40,8 +41,11 @@ export async function authenticationStatus(request) {
   const tokenFromHeader = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
 
   const   accessToken = tokenFromCookie || tokenFromHeader || null;
-  const  refreshToken = cookieStore.get('refresh_token')?.value || null;
   const isUsingBearerToken = (tokenFromHeader && !tokenFromCookie);
+
+
+
+
 
   if (!accessToken) return { success: false, error: "Invalid request: missing token or fingerprint" };
 
@@ -56,6 +60,8 @@ export async function authenticationStatus(request) {
       return { success: true, isTokenRefreshed: false, data: decoded, vendor };
     } catch (err) {
       if (isUsingBearerToken) return { success: false, error: "Unauthorized", vendor };
+
+        const  refreshToken = cookieStore.get('refresh_token')?.value || null;
       
       if (err.name === 'TokenExpiredError' && refreshToken) {
         const       accessExpire = Number(vendor.expirations?.accessTokenExpireMinutes || 15);
@@ -80,6 +86,7 @@ export async function authenticationStatus(request) {
         if(result.isTokenRefreshed ){
           const { accessToken, refreshToken, accessTokenExpireAt, refreshTokenExpireAt }  =  result.token 
           const now = Date.now();
+          
           cookieStore.set({   name: 'access_token',
                              value: accessToken,
                               path: '/',
@@ -87,6 +94,7 @@ export async function authenticationStatus(request) {
                             secure: process.env.NODE_ENV === 'production',
                             maxAge:  Math.floor((new Date(accessTokenExpireAt).getTime() - now) / 1000),
                           sameSite: 'lax' });
+
           cookieStore.set({   name: 'refresh_token',
                              value: refreshToken,
                               path: '/',

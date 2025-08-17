@@ -62,7 +62,7 @@ export async function POST(request) {
     const _id = new mongoose.Types.ObjectId();
     const referenceId = cuid();
     const txId = cuid();
-    const dbName = `${config.vendorDbPrefix}_${_id}_db`
+    const dbName = `s_${_id}`
     const bucketName = `${referenceId}`
     const primaryDomain = _id.toString() + '.' + process.env.DEFAULT_SHOP_DOMAIN;
     const Domain = domainModel(vendor_db);
