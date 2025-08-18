@@ -36,7 +36,6 @@ export async function POST(request) {
 
   if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
   const parsed = loginDTOSchema.safeParse(body);
-  console.log(parsed.error)
   if (!parsed.success) return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 422 });
 
   try {
@@ -52,9 +51,7 @@ export async function POST(request) {
     // Connect to vendor DB
     const    shop_db = await dbConnect({ dbKey: dbName, dbUri })
     const  User = userModel(shop_db);
-    
-
-
+  
     // Validate input
     const identifier      = parsed.data.identifier?.trim();
     const password        = parsed.data.password;
