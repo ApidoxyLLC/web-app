@@ -165,7 +165,7 @@ export async function POST(request) {
     
     if (!user) return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
 
-    console.log(user)
+    
 
     
 
@@ -178,6 +178,8 @@ export async function POST(request) {
     // Password validation
     if (!user.security?.password) return NextResponse.json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
     const validPassword = await bcrypt.compare(password, user.security.password);
+
+
 
     // if (!validPassword) {
     //   const MAX_ATTEMPTS = parseInt(process.env.END_USER_MAX_LOGIN_ATTEMPT || "5", 10);
@@ -209,8 +211,26 @@ export async function POST(request) {
       }
 
       await User.updateOne({ _id: user._id }, { $set: updateDoc });
+      console.log(".....******Invalid password")
 
       return NextResponse.json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 });
+    }
+
+    console.log("identifierName")
+    console.log(identifierName)
+   
+    const notVerified = (identifierName === 'email' && !user.isEmailVerified) ||
+      (identifierName === 'phone' && !user.isPhoneVerified) ||
+      (identifierName === 'username' && !(user.isEmailVerified || user.isPhoneVerified));
+
+    if (notVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Account not verified",
+        },
+        { status: 403 } 
+      );
     }
 
     // Handle 2FA if enabled
@@ -313,9 +333,7 @@ export async function POST(request) {
     const hashedRefreshTokenId = crypto.createHmac('sha256', config.refreshTokenIdHashKey).update(newRefreshTokenId).digest('hex');
 
 
-      console.log(vendor)
-      console.log(sessionId)
-      console.log(newAccessTokenId)
+
     await setSession({  vendorId: vendor.id,
                        sessionId: sessionId.toString(),
                          tokenId: newAccessTokenId,
