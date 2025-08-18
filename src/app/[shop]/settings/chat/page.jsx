@@ -12,6 +12,7 @@ import useFetch from "@/hooks/useFetch";
 import { LoaderIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 
 const chatSupportDTOSchema = z.object({
@@ -71,7 +72,7 @@ export default function Dashboard() {
       // Build full WhatsApp URL from phone number
       const phoneNumber = formData.whatsapp.trim();
       if (!phoneNumber) {
-        alert("Please enter a valid WhatsApp number");
+        toast.error("Please enter a valid WhatsApp number");
         return;
       }
       link = `https://wa.me/${phoneNumber}`;
@@ -88,12 +89,12 @@ export default function Dashboard() {
       chatSupportDTOSchema.parse(mainData);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        alert(
+        toast.error(
           "Validation error: " +
             error.errors.map((e) => e.message).join(", ")
         );
       } else {
-        alert("Invalid input");
+        toast.error("Invalid input");
       }
       return;
     }
@@ -110,15 +111,15 @@ export default function Dashboard() {
       const resData = await res.json();
 
       if (res.ok) {
-        alert("Shop updated successfully!");
+        toast.success("Shop updated successfully!");
         // Optionally reload data or clear form here
       } else {
         console.error(resData);
-        alert(resData.error || "Update failed");
+        toast.error(resData.error || "Update failed");
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      toast.error("Something went wrong");
     } finally{
       setloadingState(false)
     }

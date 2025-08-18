@@ -51,8 +51,8 @@ export function ProjectsCard() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loadingState, setLoadingState] = useState(false);
-  const {shop} = useParams()
   const { data, loading } = useFetch("/shops")
+  console.log(data)
   useEffect(() => {
     if (submenuRef.current) {
       setSubmenuHeight(showSecuritySub ? submenuRef.current.scrollHeight : 0);
@@ -85,7 +85,7 @@ export function ProjectsCard() {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success(data.message || "Password changed successfully");
+        toast.success( "Password changed successfully");
         setActiveModal(null);
         setCurrentPassword("");
         setNewPassword("");
@@ -127,7 +127,7 @@ export function ProjectsCard() {
             <PopoverTrigger asChild>
               <div className="cursor-pointer">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={`http://localhost:3000/api/v1/image/${shop}/${data.fileName}`}/>
+                  <AvatarImage src={`http://localhost:3000/api/v1/image/${data.id}/${data?.logo?.imageName}`}/>
                   <AvatarFallback>
                     {userData?.data?.user?.name?.charAt(0).toUpperCase()}
                   </AvatarFallback>

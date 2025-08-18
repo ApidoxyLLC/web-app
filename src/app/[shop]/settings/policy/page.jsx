@@ -23,6 +23,7 @@ import { HardBreakToolbar } from "@/components/toolbars/hard-break";
 import { ToolbarProvider } from "@/components/toolbars/toolbar-provider";
 import { LoaderIcon } from "lucide-react";
 import useFetch from "@/hooks/useFetch";
+import { toast } from "sonner";
 
 export default function ShopUpdatePage() {
   const params = useParams();
@@ -81,7 +82,7 @@ export default function ShopUpdatePage() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Something went wrong");
 
-      alert("Shop updated successfully!");
+      toast.success("Shop updated successfully!");
     } catch (err) {
       setError(err.message || "Error updating shop");
     } finally {

@@ -17,6 +17,7 @@ const payment = [
     name: "Cash On Delivery",
     id: "cashOnDelivery",
     fields: [],
+    disabled: false
   },
   {
     name: "Bkash",
@@ -27,6 +28,7 @@ const payment = [
       { label: "Merchant Username", name: "username", type: "text" },
       { label: "Merchant Password", name: "password", type: "password" },
     ],
+    disabled: true
   },
 ];
 export default function Dashboard() {
@@ -66,6 +68,7 @@ export default function Dashboard() {
                 className={`border-2 rounded-md ${
                   selected === p.name ? "border-foreground" : ""
                 }`}
+                disabled={p.disabled}
               >
                 {p.name}
               </Button>

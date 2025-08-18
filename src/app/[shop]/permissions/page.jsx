@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
 import useFetch from "@/hooks/useFetch";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { data: session } = useSession();
@@ -74,7 +75,7 @@ export default function Dashboard() {
 
   const handleDoneClick = async () => {
     const selected = suggestions.find((s) => s.email === value);
-    if (!selected) return alert("User not selected");
+    if (!selected) return toast.error("User not selected");
 
     try {
       setUsers((prev) => [
@@ -136,7 +137,7 @@ export default function Dashboard() {
     console.log("✅ User deleted successfully:", result);
   } catch (error) {
     console.error("❌ Error deleting user:", error.message);
-    alert(`Delete failed: ${error.message}`);
+    toast.error(`Delete failed: ${error.message}`);
   } finally {
     setDeletingUserId(null);
   }

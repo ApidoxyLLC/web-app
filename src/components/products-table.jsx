@@ -331,7 +331,7 @@ async function handleDelete(productId) {
       throw new Error(result.error || "Failed to delete product");
     }
     refetch()
-    toast.success(`✅ ${result.message}`);
+    toast.success(` Product deleted`);
     table.options.data = table.options.data.filter((item) => item.id !== productId);
     table.setOptions((prev) => ({ ...prev }));
   } catch (err) {
