@@ -21,6 +21,7 @@ export async function GET(request) {
   const host = request.headers.get("host");
   const authHeader = request.headers.get("authorization");
 
+
   if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
   
 
@@ -32,41 +33,47 @@ export async function GET(request) {
     // const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ["createdAt", "primaryDomain", "secrets.accessTokenSecret"],});
     // if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 });
 
-    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
-    if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    // const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    // if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-    const ACCESS_TOKEN_SECRET = await decrypt({cipherText: vendor.secrets.accessTokenSecret, 
-                                                  options: { secret: config.accessTokenSecretEncryptionKey } });
+    // const ACCESS_TOKEN_SECRET = await decrypt({cipherText: vendor.secrets.accessTokenSecret, 
+    //                                               options: { secret: config.accessTokenSecretEncryptionKey } });
 
-    const { success: authenticated, shop, data, isTokenRefreshed, token } = await authenticationStatus(request);
+    const { success: authenticated, vendor, data, isTokenRefreshed, token } = await authenticationStatus(request);
     const user = data || null;
 
+        // return { success: true, isTokenRefreshed: false, data: { ...decoded, ...cachedSession}, vendor };
+// 
+    // console.log(vendor)
+    // console.log(data)
+    // console.log(token)
+    // return NextResponse.json({ message: "TEST response " },{ status: 200 });
     // Verify token
-    let payload;
-    try { payload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET); } 
-    catch (err) {
-      const code = (err instanceof jwt.TokenExpiredError) 
-                    ? "TOKEN_EXPIRED" 
-                    : "INVALID_TOKEN";
+    // let payload;
+    // try { payload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET); } 
+    // catch (err) {
+    //   const code = (err instanceof jwt.TokenExpiredError) 
+    //                 ? "TOKEN_EXPIRED" 
+    //                 : "INVALID_TOKEN";
                     
-      const message = (code === "TOKEN_EXPIRED") 
-                        ? "Token expired" 
-                        : "Invalid token";
-      return NextResponse.json({ success: false, message, code },{ status: 401 });
-    }
+    //   const message = (code === "TOKEN_EXPIRED") 
+    //                     ? "Token expired" 
+    //                     : "Invalid token";
+    //   return NextResponse.json({ success: false, message, code },{ status: 401 });
+    // }
 
-    if (!payload.sub || !payload.tokenId) return NextResponse.json( { success: false, message: "Invalid token payload", code: "INVALID_TOKEN", }, { status: 401 } );
+    // if (!payload.sub || !payload.tokenId) return NextResponse.json( { success: false, message: "Invalid token payload", code: "INVALID_TOKEN", }, { status: 401 } );
 
 
 
-    let redisSession;
-    // { vendorId, sessionId, tokenId }
-    try { redisSession = await validateSession({  vendorId: vendor.id,  
-                                                 sessionId: payload.sub, 
-                                                   tokenId: payload.tokenId });} 
-    catch (err) { return { authenticated: false, error: " session check failed" };}
+    // let redisSession;
+    // // { vendorId, sessionId, tokenId }
+    // try { redisSession = await validateSession({  vendorId: vendor.id,  
+    //                                              sessionId: payload.sub, 
+    //                                                tokenId: payload.tokenId });} 
+    // catch (err) { return { authenticated: false, error: " session check failed" };}
 
-    const { userId, tokenId } = redisSession;
+    // const { userId, tokenId } = redisSession;
 
 
     // Connect to vendor shop database

@@ -31,6 +31,7 @@ export async function POST(request) {
   const    email = parsed.data.email?.trim().toLowerCase()  || null;
   const    phone = parsed.data.phone?.trim()                || null;
   const password = parsed.data?.password                    || null;
+  const   gender = parsed.data?.gender                      || null;
 
   if(password){
     // add more containing common password
@@ -68,8 +69,9 @@ export async function POST(request) {
                                             phoneVerificationOTPExpiry: new Date(Date.now() + (data.expirations.phoneVerificationExpireMinutes * 60 * 1000)).getTime()
                                         })
                                     },
-                    ...(email && { email: email.trim().toLowerCase() }),
-                    ...(phone && { phone: phone?.trim() })
+                    ...(email  && {  email: email.trim().toLowerCase() }),
+                    ...(phone  && {  phone: phone?.trim() }),
+                    ...(gender && { gender: gender?.trim() })
                   };
 
         const newEndUser = new User(payload);

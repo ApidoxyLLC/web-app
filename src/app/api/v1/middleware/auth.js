@@ -10,14 +10,16 @@ import minutesToExpiresIn from '@/app/utils/shop-user/minutesToExpiresIn'
 import minutesToExpiryTimestamp from '@/app/utils/shop-user/minutesToExpiryTimestamp'
 import { getInfrastructure } from '@/services/vendor/getInfrastructure'
 import { validateSession } from '@/lib/redis/helpers/endUserSession'
+import config from '../../../../../config'
+import { NextResponse } from 'next/server'
 
 export async function getVendorShop(request) {
 
     const   vendorId = request.headers.get('x-vendor-identifier');
     const       host = request.headers.get('host');
 
-    if (!vendorId && !host)
-      return { success: false, error: "Missing host" };
+    // if (!vendorId && !host)
+    //   return { success: false, error: "Missing host" };
     const vendor_db = await vendorDbConnect();
     const    Vendor = vendorModel(vendor_db);
 
@@ -32,7 +34,7 @@ export async function getVendorShop(request) {
                                 .lean()
 
     if (!vendor) return { success: false, data: null , error: "No vendor shop found" };
-    return { success: true, data: vendor };   
+    return { success: true, vendor };   
 }
 
 export async function authenticationStatus(request) {
@@ -40,11 +42,14 @@ export async function authenticationStatus(request) {
 
   const cookieStore = await cookies();
 
+
   const tokenFromCookie = cookieStore.get('access_token')?.value;
   const tokenFromHeader = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
 
   const   accessToken = tokenFromCookie || tokenFromHeader || null;
   const isUsingBearerToken = (tokenFromHeader && !tokenFromCookie);
+
+
 
   const referenceId = request.headers.get('x-vendor-identifier');
   const        host = request.headers.get('host');
@@ -55,22 +60,26 @@ export async function authenticationStatus(request) {
       const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
       if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
+
+
+
     // const vendorFetchResult = await getVendorShop(request);
     // if (!vendorFetchResult.success) return { success: false, error: "Missing host" };
     // const       vendor = vendorFetchResult.data;
 
     const accessSecret = await decrypt({ cipherText: vendor.secrets.accessTokenSecret, 
-                                            options: { secret: process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY } });
+                                            options: { secret: config.accessTokenSecretEncryptionKey } });
+    const db = await dbConnect({ dbKey: dbName, dbUri });
     try {
       const decoded = jwt.verify(accessToken, accessSecret);
     let cachedSession;
       try { 
         cachedSession = await validateSession({ vendorId: vendor._id, sessionId: decoded.sub, tokenId: decoded.tokenId });
-        return { success: true, isTokenRefreshed: false, data: { ...decoded, ...cachedSession}, vendor };
-      } catch (err) { return { success: false, error: "Unauthorized", vendor };}
+        return { success: true, isTokenRefreshed: false,  data: { ...decoded, ...cachedSession}, vendor, hasBearer: isUsingBearerToken, db };
+      } catch (err) { return { success: false, error: "Unauthorized", vendor, hasBearer: isUsingBearerToken, db  };}
 
     } catch (err) {
-      if (isUsingBearerToken) return { success: false, error: "Unauthorized", vendor };
+      if (isUsingBearerToken) return { success: false, error: "Unauthorized", vendor, hasBearer: isUsingBearerToken, db };
 
         const  refreshToken = cookieStore.get('refresh_token')?.value || null;
       
@@ -78,13 +87,13 @@ export async function authenticationStatus(request) {
         const       accessExpire = Number(vendor.expirations?.accessTokenExpireMinutes  ||   15);
         const      refreshExpire = Number(vendor.expirations?.refreshTokenExpireMinutes || 1440);
         const      refreshSecret = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret, 
-                                                      options: { secret: process.env.END_USER_REFRESH_TOKEN_ENCRYPTION_KEY } });
+                                                      options: { secret: config.refreshTokenSecretEncryptionKey } });
 
         // const              dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri, 
         //                                               options: { secret: process.env.VENDOR_DB_URI_ENCRYPTION_KEY } });
         // const        dbName = vendor.dbInfo.dbName
         
-        const            db = await dbConnect({ dbKey: dbName, dbUri });
+
 
         const        result = await handleRefreshToken({        db: db,
                                                              token: refreshToken,
@@ -116,11 +125,12 @@ export async function authenticationStatus(request) {
                           sameSite: 'lax' });
         }
 
-        if (!result.success) return { success: false, error: "Authorization Failed", vendor };
-          return { ...result, vendor };
+            if (!result.success) return { success: false, error: "Authorization Failed", vendor, hasBearer: isUsingBearerToken, db };
+
+          return { ...result, vendor, db };
       }
 
-      return { success: false, error: "Unauthorized", vendor };
+      return { success: false, error: "Unauthorized", vendor, hasBearer: isUsingBearerToken, db };
     }
   } catch (error) {
     console.error("authenticationStatus error:", error);
@@ -133,7 +143,7 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
     const   decoded = jwt.verify(token, refresh_secret)
     // if (decoded.fingerprint !== fingerprint)
     //     return { success: false, error: "Fingerprint mismatch" };
-    if(!decoded.session) {
+    if(!decoded.sub) {
       console.warn('Session not found or expired for session ID:', decoded.session);
       return { success: false, error: "Unauthorized" };
     }
@@ -192,7 +202,8 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
                                refreshToken, 
                         accessTokenExpireAt: new Date(session.accessTokenExpiry).toISOString(),
                        refreshTokenExpireAt: new Date(session.refreshTokenExpiry).toISOString() 
-                      }
+                      },
+              db
               }
 
   } catch (error) {

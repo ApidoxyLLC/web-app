@@ -8,6 +8,7 @@ import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import { cookies } from "next/headers";
 import { getInfrastructure } from "@/services/vendor/getInfrastructure";
 import config from "../../../../../../config";
+import { authenticationStatus } from "../../middleware/auth";
 
 export async function POST(request) {
   // Get vendor identification
@@ -29,20 +30,26 @@ export async function POST(request) {
     return clearTokensAndRespond({ success: true, message: "Already logged out" }, 200);
 
   try {
-    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
-    if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 });
+    // const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+    // if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 });
 
     // Decrypt token secrets
-    const ACCESS_TOKEN_SECRET = await decrypt({
-      cipherText: vendor.secrets.accessTokenSecret,
-      options: { secret: config.accessTokenSecretEncryptionKey }
-    });
+    // const ACCESS_TOKEN_SECRET = await decrypt({
+    //   cipherText: vendor.secrets.accessTokenSecret,
+    //   options: { secret: config.accessTokenSecretEncryptionKey }
+    // });
 
-    const REFRESH_TOKEN_SECRET = await decrypt({
-      cipherText: vendor.secrets.refreshTokenSecret,
-      options: { secret: config.refreshTokenSecretEncryptionKey }
-    });
-    const vendor_db = await dbConnect({ dbKey: dbName, dbUri });
+    // const REFRESH_TOKEN_SECRET = await decrypt({
+    //   cipherText: vendor.secrets.refreshTokenSecret,
+    //   options: { secret: config.refreshTokenSecretEncryptionKey }
+    // });
+
+        // return { success: true, isTokenRefreshed: false,  data: { ...decoded, ...cachedSession}, vendor, hasBearer: isUsingBearerToken, db };
+
+        const { success: authenticated, vendor, data, isTokenRefreshed, token, hasBearer, db: vendor_db } = await authenticationStatus(request);
+        const user = data || null;
+
+    // const vendor_db = await dbConnect({ dbKey: dbName, dbUri });
     const Session = sessionModel(vendor_db);
     const User = userModel(vendor_db);
 
