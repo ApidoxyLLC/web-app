@@ -75,6 +75,8 @@ export async function POST(request) {
         const newEndUser = new User(payload);
         const savedUser =  await newEndUser.save();
     
+console.log(payload)
+
     if(savedUser){
       if(email && password) {
         const senderEmail = data.email || process.env.DEFAULT_SENDER_EMAIL;
@@ -94,7 +96,7 @@ export async function POST(request) {
     } 
 
   } catch (error) {
-    console.error(`User Creation Error: ${error.message}`);
+    console.log(`User Creation Error: ${error.message}`);
     return NextResponse.json( { error: "Internal server error" }, { status: 500 });
   }
 }

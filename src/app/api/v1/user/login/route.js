@@ -56,7 +56,7 @@ export async function POST(request) {
     const identifier      = parsed.data.identifier?.trim();
     const password        = parsed.data.password;
     const identifierName  = parsed.data.identifierName;
-    const fingerprint     = parsed.data.fingerprint;
+    // const fingerprint     = parsed.data.fingerprint;
     const timezone        = parsed.data.timezone?.trim();
     const userAgent       = request.headers.get('user-agent') || '';
 
@@ -165,10 +165,6 @@ export async function POST(request) {
     
     if (!user) return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
 
-    console.log(user)
-
-    
-
     // Account lock check
     if (user.lock?.lockUntil && user.lock.lockUntil > Date.now()) {
       const retryAfter = Math.ceil((user.lock.lockUntil - Date.now()) / 1000);
@@ -179,39 +175,21 @@ export async function POST(request) {
     if (!user.security?.password) return NextResponse.json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 } );
     const validPassword = await bcrypt.compare(password, user.security.password);
 
-    // if (!validPassword) {
-    //   const MAX_ATTEMPTS = parseInt(process.env.END_USER_MAX_LOGIN_ATTEMPT || "5", 10);
-    //   user.security.failedAttempts = (user.security.failedAttempts || 0) + 1;
-      
-    //   if (user.security.failedAttempts >= MAX_ATTEMPTS) {
-    //     // Exponential backoff lock
-    //     const LOCK_MINUTES = parseInt(process.env.END_USER_LOCK_MINUTES || "15", 10);
-    //     const lockMinutes = LOCK_MINUTES * Math.pow(2, user.security.failedAttempts - MAX_ATTEMPTS);
-    //     user.lock = { lockUntil: Date.now() + lockMinutes * 60 * 1000 };
-    //   }
-
-    //   await user.save();
-    //   const isLocked = user.lock?.lockUntil && user.lock.lockUntil > Date.now();
-    //   const retrySeconds = Math.ceil((user.lock?.lockUntil - Date.now()) / 1000);
-    //   return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: isLocked ? 429 : 401, ...(isLocked && { headers: { 'Retry-After': retrySeconds.toString() } }) } ); 
-    // }
-
     if (!validPassword) {
       const MAX_ATTEMPTS = parseInt(process.env.END_USER_MAX_LOGIN_ATTEMPT || "5", 10);
-      const failedAttempts = (user.security?.failedAttempts || 0) + 1;
-
-      let updateDoc = { "security.failedAttempts": failedAttempts };
-
-      if (failedAttempts >= MAX_ATTEMPTS) {
+      user.security.failedAttempts = (user.security.failedAttempts || 0) + 1;
+      
+      if (user.security.failedAttempts >= MAX_ATTEMPTS) {
+        // Exponential backoff lock
         const LOCK_MINUTES = parseInt(process.env.END_USER_LOCK_MINUTES || "15", 10);
-        const lockMinutes = LOCK_MINUTES * Math.pow(2, failedAttempts - MAX_ATTEMPTS);
-        updateDoc.lock = { lockUntil: Date.now() + lockMinutes * 60 * 1000 };
+        const lockMinutes = LOCK_MINUTES * Math.pow(2, user.security.failedAttempts - MAX_ATTEMPTS);
+        user.lock = { lockUntil: Date.now() + lockMinutes * 60 * 1000 };
       }
 
-      await User.updateOne({ _id: user._id }, { $set: updateDoc });
-
-      return NextResponse.json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: 401 });
-    }
+      await user.save();
+      const isLocked = user.lock?.lockUntil && user.lock.lockUntil > Date.now();
+      const retrySeconds = Math.ceil((user.lock?.lockUntil - Date.now()) / 1000);
+      return NextResponse.json( { success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" }, { status: isLocked ? 429 : 401, ...(isLocked && { headers: { 'Retry-After': retrySeconds.toString() } }) } ); }
 
     // Handle 2FA if enabled
     // Temporary turn of Two Factor authentication 
@@ -276,7 +254,7 @@ export async function POST(request) {
     // if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
     const payload = {         
-                      ...(fingerprint && { fingerprint }),
+                      // fingerprint,
                              name: user.name,
                             email: user.email,
                             phone: user.phone,
@@ -307,6 +285,12 @@ export async function POST(request) {
                                   { expiresIn: minutesToExpiresIn(RT_EXPIRY) }
                                 );
 
+    // const    accessTokenIdCipherText = await encrypt({ data: newAccessTokenId,
+    //                                             options: { secret: config.endUserAccessTokenIdEncryptionKey }     });
+
+    // const    refreshTokenIdCipherText = await encrypt({ data: newRefreshTokenId,
+    //                                             options: { secret: config.endUserRefreshTokenIdEncryptionKey }     });
+
     const    ipAddressCipherText = await encrypt({ data: ip,
                                                 options: { secret: config.endUserIpAddressEncryptionKey }     });                                                 
 
@@ -335,27 +319,29 @@ export async function POST(request) {
 
     const  accessTokenExpiry = minutesToExpiryTimestamp(AT_EXPIRY)
     const refreshTokenExpiry = minutesToExpiryTimestamp(RT_EXPIRY)
-
-
+    // Start transaction for login
     const dbSession = await shop_db.startSession();
     try {
-      await dbSession.withTransaction(async () => {
+        await dbSession.withTransaction(async () => {
         const Session = sessionModel(shop_db);
         const LoginHistoryModel = loginHistoryModel(shop_db);
-        const User = userModel(shop_db);
 
         
 
         // 1. Create session
-        await Session.create([{ _id: sessionId,
-                                userId: user._id,
-                                provider: `local-${identifierName}`,
+        await new Session({                _id: sessionId,
+                                        userId: user._id,
+                                      provider: `local-${identifierName}`, // Fixed template literal
+                                    //  accessTokenId: hashedAccessTokenId,
                                 refreshTokenId: hashedRefreshTokenId,
-                                refreshTokenExpiry,
-                                ip: ipAddressCipherText,
-                                userAgent,
-                                ...(fingerprint && { fingerprint })
-                              }], { session: dbSession });
+                                      //  accessToken: accessTokenCipherText,
+                                //  accessTokenExpiry: accessTokenExpiry,
+                                      // refreshToken: refreshTokenCipherText,
+                            refreshTokenExpiry: refreshTokenExpiry,                                     
+                                            ip: ipAddressCipherText,
+                                  //  fingerprint,
+                                     userAgent
+                                }).save({ session: dbSession });
 
         // 2. Update user sessions (push + prune in one update)
         const pushAndPruneOps = {
@@ -371,7 +357,11 @@ export async function POST(request) {
         }
 
         // Use updateOne to modify the user
-        await User.updateOne({ _id: user._id }, pushAndPruneOps, { session: dbSession } );
+        await User.updateOne(
+          { _id: user._id },
+          pushAndPruneOps,
+          { session: dbSession }
+        );
 
         // If pruning needed → do extra cleanup
         if (user.activeSessions.length + 1 > MAX_SESSIONS) {
@@ -379,22 +369,32 @@ export async function POST(request) {
           const sessionsToRemove = user.activeSessions.slice(0, excessSessions);
 
           if (sessionsToRemove.length) {
-            await Session.deleteMany({ _id: { $in: sessionsToRemove }}, { session: dbSession }  );
-            await User.updateOne( { _id: user._id }, { $pull: { activeSessions: { $in: sessionsToRemove } } }, { session: dbSession } );
+            await Session.deleteMany(
+              { _id: { $in: sessionsToRemove } },
+              { session: dbSession }
+            );
+
+            await User.updateOne(
+              { _id: user._id },
+              { $pull: { activeSessions: { $in: sessionsToRemove } } },
+              { session: dbSession }
+            );
           }
         }
 
         // 3. Record login history
-        await LoginHistoryModel.create([{    userId: user._id,
-                                          sessionId,
-                                           provider: `local-${identifierName}`,
-                                                 ip: ipAddressCipherText,
-                                          userAgent,
-                   ...(fingerprint && { fingerprint })   }], { session: dbSession });
+        await LoginHistoryModel.create([{
+          userId: user._id,
+          sessionId,
+          provider: `local-${identifierName}`,
+          ip: ipAddressCipherText,
+          userAgent,
+          ...(fingerprint && { fingerprint })
+        }], { session: dbSession });
       });
-    } finally {
-      await dbSession.endSession();
-    }
+    }    
+
+    finally { await dbSession.endSession() }
     
     const response = NextResponse.json({      success: true,
                                           accessToken,
@@ -422,7 +422,22 @@ export async function POST(request) {
                                                                           }
                                         }, { status: 200 });
 
-
+                  //             sub: sessionId.toString(),
+                  //     fingerprint,
+                  //            name: user.name,
+                  //           email: user.email,
+                  //           phone: user.phone,
+                  //          avatar: user.avatar,
+                  //            role: user.role,
+                  //      isVerified: user.isEmailVerified || user.isPhoneVerified,
+                  //          gender: user.gender,
+                  // isEmailVerified: user.isEmailVerified,
+                  // isPhoneVerified: user.isPhoneVerified,
+                  //           theme: user.theme,
+                  //        language: user.language,
+                  //        timezone: user.timezone,
+                  //        currency: user.currency,
+                  //            cart: user.cart,
     
     response.cookies.set('access_token', accessToken, {
       httpOnly: true,
@@ -450,77 +465,6 @@ export async function POST(request) {
     return NextResponse.json( { error: "Authentication failed" }, { status: 500 } );
   }
 }
-
-
-                  //             sub: sessionId.toString(),
-                  //     fingerprint,
-                  //            name: user.name,
-                  //           email: user.email,
-                  //           phone: user.phone,
-                  //          avatar: user.avatar,
-                  //            role: user.role,
-                  //      isVerified: user.isEmailVerified || user.isPhoneVerified,
-                  //          gender: user.gender,
-                  // isEmailVerified: user.isEmailVerified,
-                  // isPhoneVerified: user.isPhoneVerified,
-                  //           theme: user.theme,
-                  //        language: user.language,
-                  //        timezone: user.timezone,
-                  //        currency: user.currency,
-                  //            cart: user.cart,
-
-    // Start transaction for login
-    // const dbSession = await shop_db.startSession();
-    // try {
-    //     await dbSession.withTransaction(async () => {
-    //     const Session = sessionModel(shop_db);
-    //     const LoginHistoryModel = loginHistoryModel(shop_db);
-
-    //     // 1. Create session
-    //     await new Session({                _id: sessionId,
-    //                                     userId: user._id,
-    //                                   provider: `local-${identifierName}`, // Fixed template literal
-    //                                 //  accessTokenId: hashedAccessTokenId,
-    //                             refreshTokenId: hashedRefreshTokenId,
-    //                                   //  accessToken: accessTokenCipherText,
-    //                             //  accessTokenExpiry: accessTokenExpiry,
-    //                                   // refreshToken: refreshTokenCipherText,
-    //                         refreshTokenExpiry: refreshTokenExpiry,                                     
-    //                                         ip: ipAddressCipherText,
-    //                               //  fingerprint,
-    //                                  userAgent
-    //                             }).save({ session: dbSession });
-
-    //     // 2. Update user sessions (prune if exceeding limit)
-    //     user.activeSessions = user.activeSessions || [];
-    //     user.activeSessions.push(sessionId);
-
-    //     if (user.activeSessions.length > MAX_SESSIONS) {
-    //       const excessSessions = user.activeSessions.length - MAX_SESSIONS;
-    //       const sessionsToRemove = user.activeSessions.splice(0, excessSessions);
-    //       const sessionIds = sessionsToRemove.map(s => s.sessionId);
-    //       await Session.deleteMany( { _id: { $in: sessionIds } }, { session: dbSession } );
-    //     }
-
-    //     // 3. Reset security flags        
-    //     if ((!user.timezone || user.timezone.trim() === '') && timezone) user.timezone = timezone;
-    //     user.security.failedAttempts = 0;
-    //     user.lock = undefined;
-    //     await user.save({ session: dbSession });
-
-    //     // 4. Record login history
-    //     await new LoginHistoryModel({      userId: user._id,
-    //                                     sessionId,
-    //                                      provider: `local-${identifierName}`, // Fixed template literal
-    //                                            ip: ipAddressCipherText,
-    //                                     userAgent,
-    //                                   // fingerprint,
-    //                                 }).save({ session: dbSession });
-    //   });
-    // }    
-    // finally { await dbSession.endSession() }
-
-
 
 
 
