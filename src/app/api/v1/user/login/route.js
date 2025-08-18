@@ -316,7 +316,7 @@ export async function POST(request) {
       console.log(vendor)
       console.log(sessionId)
       console.log(newAccessTokenId)
-    await setSession({  vendorId: vendor._id,
+    await setSession({  vendorId: vendor.id,
                        sessionId: sessionId.toString(),
                          tokenId: newAccessTokenId,
                          payload: { userId: user._id, 
@@ -343,6 +343,8 @@ export async function POST(request) {
         const Session = sessionModel(shop_db);
         const LoginHistoryModel = loginHistoryModel(shop_db);
         const User = userModel(shop_db);
+
+        
 
         // 1. Create session
         await Session.create([{ _id: sessionId,

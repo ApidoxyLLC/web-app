@@ -27,22 +27,30 @@ export async function getInfrastructure({ referenceId, host }) {
   const Vendor = await vendorModel(vendor_db);
 
   let vendor;
-  if (cached.id) 
+  if (cached.id) {
     vendor = await Vendor.findById(cached.id)
                          .select("_id ownerId email phone referenceId dbInfo bucketInfo primaryDomain domains secrets expirations maxSessionAllowed")
                          .lean();
-  else 
-    vendor = await Vendor.findOne({ $or: [ referenceId ? {   referenceId                  } : null,
-                                                  host ? { primaryDomain: host            } : null,
-                                                  host ? {       domains: { $in: [host] } } : null,
-                                          ].filter(Boolean),
-                                  })
-                         .select("_id ownerId email phone referenceId dbInfo bucketInfo primaryDomain domains secrets expirations maxSessionAllowed")
-                         .lean();
+    console.log("fetch by id ")
+    console.log(vendor)
+  }
+    else{ 
+      vendor = await Vendor.findOne({ $or: [ referenceId ? {   referenceId                  } : null,
+                                                    host ? { primaryDomain: host            } : null,
+                                                    host ? {       domains: { $in: [host] } } : null,
+                                            ].filter(Boolean),
+                                    })
+                          .select("_id ownerId email phone referenceId dbInfo bucketInfo primaryDomain domains secrets expirations maxSessionAllowed")
+                          .lean();
+    console.log("fetch by reference ")
+      
+      console.log(vendor)
+  }
   
 
   if (!vendor) throw new Error("Vendor not found");
 
+  // console.log(vendor)
   const domains = new Set([vendor.primaryDomain, ...(vendor.domains || [])]);
 
   // 3️⃣ Populate cache
@@ -55,6 +63,8 @@ export async function getInfrastructure({ referenceId, host }) {
                                              dbInfo: vendor.dbInfo,
                                          bucketInfo: vendor.bucketInfo,
                                             secrets: vendor.secrets,
+                                            primaryDomain: vendor.primaryDomain,
+                                            domains: vendor.domains,
                                         expirations: vendor.expirations,
                                   maxSessionAllowed: vendor.maxSessionAllowed },
                 });
@@ -63,7 +73,18 @@ export async function getInfrastructure({ referenceId, host }) {
   const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
                                 options: { secret: config.vendorDbUriEncryptionKey }, });
 
-  return {    data: vendor,
+  return {    data: {
+                        ...(vendor.email && { email: vendor.email }),
+                        ...(vendor.phone && { phone: vendor.phone }),
+                        ...(vendor.dbInfo && { dbInfo: vendor.dbInfo }),
+                        ...(vendor.secrets && { secrets: vendor.secrets }),
+                        ...(vendor.expirations && { expirations: vendor.expirations }),
+                        ...(vendor.maxSessionAllowed && { maxSessionAllowed: vendor.maxSessionAllowed }),
+                        ...(vendor.domains && { domains: vendor.domains }),
+                        ...(vendor._id && { id: vendor._id }),
+                        ...(vendor.secrets && { secrets: vendor.secrets }),
+
+                    },
              dbUri,
             dbName: vendor.dbInfo.dbName };
 }

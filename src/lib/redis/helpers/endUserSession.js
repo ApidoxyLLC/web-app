@@ -23,6 +23,8 @@ function getKeys({ vendorId, sessionId, userId }) {
  * Create/Update a session for a vendor user
  */
 export async function setSession({ vendorId, sessionId, tokenId, payload = {}, ttl }) {
+
+  
   // email, phone, role,
   const { userId } = payload;
   if (!vendorId || !sessionId || !tokenId || !userId)  throw new Error('Missing required session data');
