@@ -65,7 +65,7 @@ export async function getInfrastructure({ referenceId, host }) {
 
   return {    data: vendor,
              dbUri,
-           dbName: vendor.dbInfo.dbName };
+            dbName: vendor.dbInfo.dbName };
 }
 
 

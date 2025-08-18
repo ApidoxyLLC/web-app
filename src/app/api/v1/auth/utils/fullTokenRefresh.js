@@ -12,8 +12,7 @@ import { setSession } from "@/lib/redis/helpers/session";
 export async function tokenRefresh({ token }) {
   console.log("from inside tokenRefresh() function******************")
   console.log(token)
-if (!token?.accessToken || !token?.refreshToken) 
-            return null;
+if (!token?.accessToken || !token?.refreshToken) return null;
         
   try { 
       const { sessionId } = jwt.decode(token.accessToken, config.accessTokenSecret)

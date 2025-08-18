@@ -65,103 +65,103 @@ export async function POST(request) {
 
     // Get user document (non-lean for updates)
     const [user] = await User.aggregate([ { $match: { [identifierName]: identifier.trim() } },
-                                                {
-                                                  $lookup: {
-                                                    from: 'carts',
-                                                    localField: 'cart',
-                                                    foreignField: '_id',
-                                                    as: 'cartData'
-                                                  }
-                                                },
-                                                {
-                                                  $unwind: {
-                                                    path: '$cartData',
-                                                    preserveNullAndEmptyArrays: true
-                                                  }
-                                                },
-                                                {
-                                                  $lookup: {
-                                                    from: 'products',
-                                                    localField: 'cartData.items.productId',
-                                                    foreignField: '_id',
-                                                    as: 'products'
-                                                  }
-                                                },
-                                                {
-                                                  $project: {
-                                                    security: 1,
-                                                    lock: 1,
-                                                    cart: 1,
+                                          {
+                                            $lookup: {
+                                              from: 'carts',
+                                              localField: 'cart',
+                                              foreignField: '_id',
+                                              as: 'cartData'
+                                            }
+                                          },
+                                          {
+                                            $unwind: {
+                                              path: '$cartData',
+                                              preserveNullAndEmptyArrays: true
+                                            }
+                                          },
+                                          {
+                                            $lookup: {
+                                              from: 'products',
+                                              localField: 'cartData.items.productId',
+                                              foreignField: '_id',
+                                              as: 'products'
+                                            }
+                                          },
+                                          {
+                                            $project: {
+                                              security: 1,
+                                              lock: 1,
+                                              cart: 1,
 
-                                                    // User profile fields
-                                                    name: 1,
-                                                    avatar: 1,
-                                                    email: 1,
-                                                    phone: 1,
-                                                    gender: 1,
-                                                    dob: 1,
-                                                    bio: 1,
-                                                    isEmailVerified: 1,
-                                                    isPhoneVerified: 1,
-                                                    activeSessions: 1,
-                                                    lock: 1, 
-                                                    role: 1,
-                                                    theme: 1,
-                                                    language: 1,
-                                                    timezone: 1,
-                                                    currency: 1,
-                                                    cartItems: {
-                                                      $map: {
-                                                        input: '$cartData.items',
-                                                        as: 'item',
-                                                        in: {
-                                                          $mergeObjects: [
-                                                            '$$item',
+                                              // User profile fields
+                                              name: 1,
+                                              avatar: 1,
+                                              email: 1,
+                                              phone: 1,
+                                              gender: 1,
+                                              dob: 1,
+                                              bio: 1,
+                                              isEmailVerified: 1,
+                                              isPhoneVerified: 1,
+                                              activeSessions: 1,
+                                              lock: 1, 
+                                              role: 1,
+                                              theme: 1,
+                                              language: 1,
+                                              timezone: 1,
+                                              currency: 1,
+                                              cartItems: {
+                                                $map: {
+                                                  input: '$cartData.items',
+                                                  as: 'item',
+                                                  in: {
+                                                    $mergeObjects: [
+                                                      '$$item',
+                                                      {
+                                                        product: {
+                                                          $arrayElemAt: [
                                                             {
-                                                              product: {
-                                                                $arrayElemAt: [
-                                                                  {
-                                                                    $filter: {
-                                                                      input: '$products',
-                                                                      as: 'prod',
-                                                                      cond: { $eq: ['$$prod._id', '$$item.productId'] }
-                                                                    }
-                                                                  },
-                                                                  0
-                                                                ]
-                                                              },
-                                                              variants: {
-                                                                            $cond: {
-                                                                              if: '$$item.variantId',
-                                                                              then: {
-                                                                                $filter: {
-                                                                                  input: {
-                                                                                    $arrayElemAt: [
-                                                                                      {
-                                                                                        $filter: {
-                                                                                          input: '$products',
-                                                                                          as: 'prod',
-                                                                                          cond: { $eq: ['$$prod._id', '$$item.productId'] }
-                                                                                        }
-                                                                                      },
-                                                                                      0
-                                                                                    ]
-                                                                                  }.variants,
-                                                                                  as: 'variant',
-                                                                                  cond: { $eq: ['$$variant._id', '$$item.variantId'] }
-                                                                                }
-                                                                              },
-                                                                              else: []   // ✅ correct
-                                                                            }
-                                                                          }
-                                                            }
+                                                              $filter: {
+                                                                input: '$products',
+                                                                as: 'prod',
+                                                                cond: { $eq: ['$$prod._id', '$$item.productId'] }
+                                                              }
+                                                            },
+                                                            0
                                                           ]
-                                                        }
+                                                        },
+                                                        variants: {
+                                                                      $cond: {
+                                                                        if: '$$item.variantId',
+                                                                        then: {
+                                                                          $filter: {
+                                                                            input: {
+                                                                              $arrayElemAt: [
+                                                                                {
+                                                                                  $filter: {
+                                                                                    input: '$products',
+                                                                                    as: 'prod',
+                                                                                    cond: { $eq: ['$$prod._id', '$$item.productId'] }
+                                                                                  }
+                                                                                },
+                                                                                0
+                                                                              ]
+                                                                            }.variants,
+                                                                            as: 'variant',
+                                                                            cond: { $eq: ['$$variant._id', '$$item.variantId'] }
+                                                                          }
+                                                                        },
+                                                                        else: []   // ✅ correct
+                                                                      }
+                                                                    }
                                                       }
-                                                    }
+                                                    ]
                                                   }
                                                 }
-                                              ]);
+                                              }
+                                            }
+                                          }
+                                        ]);
 
 
     // const cart = await Cart.findById(user.cart).select("items totals currency lastUpdated");
@@ -319,7 +319,7 @@ export async function POST(request) {
       console.log(vendor)
       console.log(sessionId)
       console.log(newAccessTokenId)
-    await setSession({  vendorId: vendor.id,
+    await setSession({  vendorId: vendor._id,
                        sessionId: sessionId.toString(),
                          tokenId: newAccessTokenId,
                          payload: { userId: user._id, 
@@ -372,11 +372,7 @@ export async function POST(request) {
         }
 
         // Use updateOne to modify the user
-        await User.updateOne(
-          { _id: user._id },
-          pushAndPruneOps,
-          { session: dbSession }
-        );
+        await User.updateOne({ _id: user._id }, pushAndPruneOps, { session: dbSession } );
 
         // If pruning needed → do extra cleanup
         if (user.activeSessions.length + 1 > MAX_SESSIONS) {
@@ -384,28 +380,18 @@ export async function POST(request) {
           const sessionsToRemove = user.activeSessions.slice(0, excessSessions);
 
           if (sessionsToRemove.length) {
-            await Session.deleteMany(
-              { _id: { $in: sessionsToRemove } },
-              { session: dbSession }
-            );
-
-            await User.updateOne(
-              { _id: user._id },
-              { $pull: { activeSessions: { $in: sessionsToRemove } } },
-              { session: dbSession }
-            );
+            await Session.deleteMany({ _id: { $in: sessionsToRemove }}, { session: dbSession }  );
+            await User.updateOne( { _id: user._id }, { $pull: { activeSessions: { $in: sessionsToRemove } } }, { session: dbSession } );
           }
         }
 
         // 3. Record login history
-        await LoginHistoryModel.create([{
-          userId: user._id,
-          sessionId,
-          provider: `local-${identifierName}`,
-          ip: ipAddressCipherText,
-          userAgent,
-          ...(fingerprint && { fingerprint })
-        }], { session: dbSession });
+        await LoginHistoryModel.create([{    userId: user._id,
+                                          sessionId,
+                                           provider: `local-${identifierName}`,
+                                                 ip: ipAddressCipherText,
+                                          userAgent,
+                   ...(fingerprint && { fingerprint })   }], { session: dbSession });
       });
     } finally {
       await dbSession.endSession();
@@ -425,7 +411,6 @@ export async function POST(request) {
                                                       ...(user.phone  && {  phone: user.phone   }),
                                                                              role: user.role,
                                                                        isVerified: user.isEmailVerified || user.isPhoneVerified,
-                                                                           gender: user.gender,
                                                                   isEmailVerified: user.isEmailVerified,
                                                                   isPhoneVerified: user.isPhoneVerified,
                                                                             local: { 
