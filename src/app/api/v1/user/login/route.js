@@ -65,85 +65,103 @@ export async function POST(request) {
 
     // Get user document (non-lean for updates)
     const [user] = await User.aggregate([ { $match: { [identifierName]: identifier.trim() } },
-                                                {
-                                                  $lookup: {
-                                                    from: 'carts',
-                                                    localField: 'cart',
-                                                    foreignField: '_id',
-                                                    as: 'cartData'
-                                                  }
-                                                },
-                                                {
-                                                  $unwind: {
-                                                    path: '$cartData',
-                                                    preserveNullAndEmptyArrays: true
-                                                  }
-                                                },
-                                                {
-                                                  $lookup: {
-                                                    from: 'products',
-                                                    localField: 'cartData.items.productId',
-                                                    foreignField: '_id',
-                                                    as: 'products'
-                                                  }
-                                                },
-                                                {
-                                                  $project: {
-                                                    security: 1,
-                                                    lock: 1,
-                                                    cart: 1,
-                                                    cartItems: {
-                                                      $map: {
-                                                        input: '$cartData.items',
-                                                        as: 'item',
-                                                        in: {
-                                                          $mergeObjects: [
-                                                            '$$item',
+                                          {
+                                            $lookup: {
+                                              from: 'carts',
+                                              localField: 'cart',
+                                              foreignField: '_id',
+                                              as: 'cartData'
+                                            }
+                                          },
+                                          {
+                                            $unwind: {
+                                              path: '$cartData',
+                                              preserveNullAndEmptyArrays: true
+                                            }
+                                          },
+                                          {
+                                            $lookup: {
+                                              from: 'products',
+                                              localField: 'cartData.items.productId',
+                                              foreignField: '_id',
+                                              as: 'products'
+                                            }
+                                          },
+                                          {
+                                            $project: {
+                                              security: 1,
+                                              lock: 1,
+                                              cart: 1,
+
+                                              // User profile fields
+                                              name: 1,
+                                              avatar: 1,
+                                              email: 1,
+                                              phone: 1,
+                                              gender: 1,
+                                              dob: 1,
+                                              bio: 1,
+                                              isEmailVerified: 1,
+                                              isPhoneVerified: 1,
+                                              activeSessions: 1,
+                                              lock: 1, 
+                                              role: 1,
+                                              theme: 1,
+                                              language: 1,
+                                              timezone: 1,
+                                              currency: 1,
+                                              cartItems: {
+                                                $map: {
+                                                  input: '$cartData.items',
+                                                  as: 'item',
+                                                  in: {
+                                                    $mergeObjects: [
+                                                      '$$item',
+                                                      {
+                                                        product: {
+                                                          $arrayElemAt: [
                                                             {
-                                                              product: {
-                                                                $arrayElemAt: [
-                                                                  {
-                                                                    $filter: {
-                                                                      input: '$products',
-                                                                      as: 'prod',
-                                                                      cond: { $eq: ['$$prod._id', '$$item.productId'] }
-                                                                    }
-                                                                  },
-                                                                  0
-                                                                ]
-                                                              },
-                                                              variants: {
-                                                                $cond: {
-                                                                  if: '$$item.variantId',
-                                                                  then: {
-                                                                    $filter: {
-                                                                      input: {
-                                                                        $arrayElemAt: [
-                                                                          {
-                                                                            $filter: {
-                                                                              input: '$products',
-                                                                              as: 'prod',
-                                                                              cond: { $eq: ['$$prod._id', '$$item.productId'] }
-                                                                            }
-                                                                          },
-                                                                          0
-                                                                        ]
-                                                                      }.variants,
-                                                                      as: 'variant',
-                                                                      cond: { $eq: ['$$variant._id', '$$item.variantId'] }
-                                                                    }
-                                                                  },
-                                                                  then: []
-                                                                }
+                                                              $filter: {
+                                                                input: '$products',
+                                                                as: 'prod',
+                                                                cond: { $eq: ['$$prod._id', '$$item.productId'] }
                                                               }
-                                                            }
+                                                            },
+                                                            0
                                                           ]
-                                                        }
+                                                        },
+                                                        variants: {
+                                                                      $cond: {
+                                                                        if: '$$item.variantId',
+                                                                        then: {
+                                                                          $filter: {
+                                                                            input: {
+                                                                              $arrayElemAt: [
+                                                                                {
+                                                                                  $filter: {
+                                                                                    input: '$products',
+                                                                                    as: 'prod',
+                                                                                    cond: { $eq: ['$$prod._id', '$$item.productId'] }
+                                                                                  }
+                                                                                },
+                                                                                0
+                                                                              ]
+                                                                            }.variants,
+                                                                            as: 'variant',
+                                                                            cond: { $eq: ['$$variant._id', '$$item.variantId'] }
+                                                                          }
+                                                                        },
+                                                                        else: []   // ✅ correct
+                                                                      }
+                                                                    }
                                                       }
-                                                    }
+                                                    ]
                                                   }
                                                 }
-                                              ]);
+                                              }
+                                            }
+                                          }
+                                        ]);
 
 
     // const cart = await Cart.findById(user.cart).select("items totals currency lastUpdated");
@@ -282,6 +300,9 @@ export async function POST(request) {
     const hashedRefreshTokenId = crypto.createHmac('sha256', config.refreshTokenIdHashKey).update(newRefreshTokenId).digest('hex');
 
 
+      console.log(vendor)
+      console.log(sessionId)
+      console.log(newAccessTokenId)
     await setSession({  vendorId: vendor.id,
                        sessionId: sessionId.toString(),
                          tokenId: newAccessTokenId,
@@ -323,31 +344,54 @@ export async function POST(request) {
                                      userAgent
                                 }).save({ session: dbSession });
 
-        // 2. Update user sessions (prune if exceeding limit)
-        user.activeSessions = user.activeSessions || [];
-        user.activeSessions.push(sessionId);
+        // 2. Update user sessions (push + prune in one update)
+        const pushAndPruneOps = {
+          $push: { activeSessions: sessionId },
+          $set: {
+            "security.failedAttempts": 0,
+            lock: undefined,
+          }
+        };
 
-        if (user.activeSessions.length > MAX_SESSIONS) {
-          const excessSessions = user.activeSessions.length - MAX_SESSIONS;
-          const sessionsToRemove = user.activeSessions.splice(0, excessSessions);
-          const sessionIds = sessionsToRemove.map(s => s.sessionId);
-          await Session.deleteMany( { _id: { $in: sessionIds } }, { session: dbSession } );
+        if ((!user.timezone || user.timezone.trim() === '') && timezone) {
+          pushAndPruneOps.$set.timezone = timezone;
         }
 
-        // 3. Reset security flags        
-        if ((!user.timezone || user.timezone.trim() === '') && timezone) user.timezone = timezone;
-        user.security.failedAttempts = 0;
-        user.lock = undefined;
-        await user.save({ session: dbSession });
+        // Use updateOne to modify the user
+        await User.updateOne(
+          { _id: user._id },
+          pushAndPruneOps,
+          { session: dbSession }
+        );
 
-        // 4. Record login history
-        await new LoginHistoryModel({      userId: user._id,
-                                        sessionId,
-                                         provider: `local-${identifierName}`, // Fixed template literal
-                                               ip: ipAddressCipherText,
-                                        userAgent,
-                                      // fingerprint,
-                                    }).save({ session: dbSession });
+        // If pruning needed → do extra cleanup
+        if (user.activeSessions.length + 1 > MAX_SESSIONS) {
+          const excessSessions = user.activeSessions.length + 1 - MAX_SESSIONS;
+          const sessionsToRemove = user.activeSessions.slice(0, excessSessions);
+
+          if (sessionsToRemove.length) {
+            await Session.deleteMany(
+              { _id: { $in: sessionsToRemove } },
+              { session: dbSession }
+            );
+
+            await User.updateOne(
+              { _id: user._id },
+              { $pull: { activeSessions: { $in: sessionsToRemove } } },
+              { session: dbSession }
+            );
+          }
+        }
+
+        // 3. Record login history
+        await LoginHistoryModel.create([{
+          userId: user._id,
+          sessionId,
+          provider: `local-${identifierName}`,
+          ip: ipAddressCipherText,
+          userAgent,
+          ...(fingerprint && { fingerprint })
+        }], { session: dbSession });
       });
     }    
 
@@ -367,7 +411,6 @@ export async function POST(request) {
                                                       ...(user.phone  && {  phone: user.phone   }),
                                                                              role: user.role,
                                                                        isVerified: user.isEmailVerified || user.isPhoneVerified,
-                                                                           gender: user.gender,
                                                                   isEmailVerified: user.isEmailVerified,
                                                                   isPhoneVerified: user.isPhoneVerified,
                                                                             local: { 

@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import minutesToExpiresIn from '@/app/utils/shop-user/minutesToExpiresIn'
 import minutesToExpiryTimestamp from '@/app/utils/shop-user/minutesToExpiryTimestamp'
 import { getInfrastructure } from '@/services/vendor/getInfrastructure'
+import { validateSession } from '@/lib/redis/helpers/endUserSession'
 
 export async function getVendorShop(request) {
 
@@ -45,9 +46,8 @@ export async function authenticationStatus(request) {
   const   accessToken = tokenFromCookie || tokenFromHeader || null;
   const isUsingBearerToken = (tokenFromHeader && !tokenFromCookie);
 
-    const   referenceId = request.headers.get('x-vendor-identifier');
-    const       host = request.headers.get('host');
-
+  const referenceId = request.headers.get('x-vendor-identifier');
+  const        host = request.headers.get('host');
 
   if (!accessToken) return { success: false, error: "Invalid request: missing token or fingerprint" };
 
@@ -61,16 +61,14 @@ export async function authenticationStatus(request) {
 
     const accessSecret = await decrypt({ cipherText: vendor.secrets.accessTokenSecret, 
                                             options: { secret: process.env.END_USER_ACCESS_TOKEN_ENCRYPTION_KEY } });
-    
     try {
       const decoded = jwt.verify(accessToken, accessSecret);
+    let cachedSession;
+      try { 
+        cachedSession = await validateSession({ vendorId: vendor._id, sessionId: decoded.sub, tokenId: decoded.tokenId });
+        return { success: true, isTokenRefreshed: false, data: { ...decoded, ...cachedSession}, vendor };
+      } catch (err) { return { success: false, error: "Unauthorized", vendor };}
 
-
-
-
-
-
-      return { success: true, isTokenRefreshed: false, data: decoded, vendor };
     } catch (err) {
       if (isUsingBearerToken) return { success: false, error: "Unauthorized", vendor };
 
@@ -81,10 +79,11 @@ export async function authenticationStatus(request) {
         const      refreshExpire = Number(vendor.expirations?.refreshTokenExpireMinutes || 1440);
         const      refreshSecret = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret, 
                                                       options: { secret: process.env.END_USER_REFRESH_TOKEN_ENCRYPTION_KEY } });
-        const              dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri, 
-                                                      options: { secret: process.env.VENDOR_DB_URI_ENCRYPTION_KEY } });
 
-        const        dbName = vendor.dbInfo.dbName
+        // const              dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri, 
+        //                                               options: { secret: process.env.VENDOR_DB_URI_ENCRYPTION_KEY } });
+        // const        dbName = vendor.dbInfo.dbName
+        
         const            db = await dbConnect({ dbKey: dbName, dbUri });
 
         const        result = await handleRefreshToken({        db: db,

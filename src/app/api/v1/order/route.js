@@ -13,7 +13,6 @@ import securityHeaders from "../utils/securityHeaders";
 import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
-
 export const dynamic = 'force-dynamic';
 const TRANSACTION_OPTIONS = {       readConcern: { level: 'majority' },
                                    writeConcern: { w: 'majority', j: true },
