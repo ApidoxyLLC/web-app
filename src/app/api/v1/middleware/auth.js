@@ -131,8 +131,8 @@ export async function authenticationStatus(request) {
 export async function handleRefreshToken({ db, token, access_secret, refresh_secret, accessExpireMin, refreshExpireMin, fingerprint }) {
   try {
     const   decoded = jwt.verify(token, refresh_secret)
-    if (decoded.fingerprint !== fingerprint)
-        return { success: false, error: "Fingerprint mismatch" };
+    // if (decoded.fingerprint !== fingerprint)
+    //     return { success: false, error: "Fingerprint mismatch" };
     if(!decoded.session) {
       console.warn('Session not found or expired for session ID:', decoded.session);
       return { success: false, error: "Unauthorized" };
@@ -149,7 +149,7 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
                         phone: decoded.phone,
                          role: decoded.role,
                    isVerified: decoded.isVerified,
-                  fingerprint, };
+                  fingerprint };
 
     const accessToken = jwt.sign( { ...payload, 
                                       tokenId: accessTokenId },
@@ -164,7 +164,7 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
                                       { expiresIn: refreshExpireMin * 60 } );
 
     if (!decoded.tokenId) return { success: false, error: "Invalid refresh token" };
-    const session = await SessionModel.findOneAndUpdate({            _id: decoded.session,
+    const session = await SessionModel.findOneAndUpdate({            _id: decoded.sub,
                                                           refreshTokenId: decoded.tokenId,
                                                              fingerprint,
                                                       refreshTokenExpiry: { $gt: Date.now()  }    },

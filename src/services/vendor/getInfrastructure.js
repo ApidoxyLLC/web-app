@@ -34,7 +34,9 @@ export async function getInfrastructure({ referenceId, host }) {
     console.log("fetch by id ")
     console.log(vendor)
   }
+    
     else{ 
+      console.log(referenceId)
       vendor = await Vendor.findOne({ $or: [ referenceId ? {   referenceId                  } : null,
                                                     host ? { primaryDomain: host            } : null,
                                                     host ? {       domains: { $in: [host] } } : null,
@@ -63,7 +65,7 @@ export async function getInfrastructure({ referenceId, host }) {
                                              dbInfo: vendor.dbInfo,
                                          bucketInfo: vendor.bucketInfo,
                                             secrets: vendor.secrets,
-                                            primaryDomain: vendor.primaryDomain,
+                                      primaryDomain: vendor.primaryDomain,
                                             domains: vendor.domains,
                                         expirations: vendor.expirations,
                                   maxSessionAllowed: vendor.maxSessionAllowed },
@@ -83,7 +85,6 @@ export async function getInfrastructure({ referenceId, host }) {
                         ...(vendor.domains && { domains: vendor.domains }),
                         ...(vendor._id && { id: vendor._id }),
                         ...(vendor.secrets && { secrets: vendor.secrets }),
-
                     },
              dbUri,
             dbName: vendor.dbInfo.dbName };

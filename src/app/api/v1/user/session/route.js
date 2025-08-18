@@ -8,7 +8,8 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import config from "../../../../../../config";
 import { validateSession } from "@/lib/redis/helpers/endUserSession";
 import { getInfrastructure } from "@/services/vendor/getInfrastructure";
-import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
+// import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
+import { authenticationStatus } from "../../middleware/auth";
 
 export async function GET(request) {
   const ip = request.headers["x-forwarded-for"]?.split(",")[0]?.trim() || request.headers["x-real-ip"] || request.socket?.remoteAddress || "";
