@@ -178,8 +178,8 @@ export async function POST(request) {
         refreshTokenSecret: await encrypt({    data: crypto.randomBytes(64).toString('hex'),
                                             options: { secret: config.refreshTokenSecretEncryptionKey }   }),
 
-        nextAuthSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
-                                        options: { secret: config.nextAuthSecretEncryptionKey }           }),
+        // nextAuthSecret: await encrypt({    data: crypto.randomBytes(32).toString('base64'),
+        //                                 options: { secret: config.nextAuthSecretEncryptionKey }           }),
       },
       primaryDomain,
       domains: [primaryDomain],
@@ -187,8 +187,11 @@ export async function POST(request) {
         ...subscriptionData,
       }],
       transaction: { txId, sagaStatus: 'pending', lastTxUpdate: new Date() },
-      expirations: { emailVerificationExpireMinutes: config.emailVerificationDefaultExpireMinutes, 
-                     phoneVerificationExpireMinutes: config.phoneVerificationDefaultExpireMinutes },
+      // maxSessionAllowed: 3,
+      // expirations: { emailVerificationExpireMinutes: config.emailVerificationDefaultExpireMinutes, 
+      //                phoneVerificationExpireMinutes: config.phoneVerificationDefaultExpireMinutes, 
+      //                      accessTokenExpireMinutes: config.accessTokenDefaultExpireMinutes,
+      //                     refreshTokenExpireMinutes: config.refreshTokenDefaultExpireMinutes        },
     }
 
     console.log(vendorPayload)

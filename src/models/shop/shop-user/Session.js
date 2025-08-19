@@ -6,6 +6,7 @@ const shopSessionSchema = new mongoose.Schema({
     provider: { type: String, enum: ['local-phone', 'local-email', 'google', 'facebook', 'apple'], required: true},
     refreshTokenId: { type: String, select: false, required: true },
     refreshTokenExpiry: { type: Date, required: true }, // Removed inline index
+    lastRefreshedAt:{  type: Date, default: null },
     ip: { type: String, required: false },
     userAgent: { type: String, required: false },
     timezone: { type: String, required: false },

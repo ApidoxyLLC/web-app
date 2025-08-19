@@ -1,120 +1,234 @@
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb/db";
-import { userModel } from "@/models/shop/shop-user/ShopUser";
 import {  decrypt } from "@/lib/encryption/cryptoEncryption";
 import { sessionModel } from "@/models/shop/shop-user/Session";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
 import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
-import { RateLimiterMemory } from 'rate-limiter-flexible';
-import { getVendor } from "@/services/vendor/getVendor";
-// Security headers configuration
-const securityHeaders = {
-     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-        'X-Content-Type-Options': 'nosniff',
-               'X-Frame-Options': 'DENY',
-               'Referrer-Policy': 'strict-origin-when-cross-origin',
-       'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
-            'Permissions-Policy': 'geolocation=(), microphone=()',
-              'X-XSS-Protection': '1; mode=block',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
-    'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Resource-Policy': 'same-site'
-};
-
-const refreshLimiter = new RateLimiterMemory({
-  points: 5,              // 5 requests
-  duration: 60 * 5,       // per 5 minutes
-  blockDuration: 60 * 15  // block for 15 minutes if consumed
-});
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import config from "../../../../../../config";
+import securityHeaders from "../../utils/securityHeaders";
+import { getInfrastructure } from "@/services/vendor/getInfrastructure";
+import mongoose from "mongoose";
 
 export async function POST(request) {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-               request.headers.get('x-real-ip') || null;
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
     const fingerprint = request.headers.get('x-fingerprint') || null;
-    const identity = ip || fingerprint;
-    if (!identity) return NextResponse.json({ error: "Missing identity" }, { status: 400 });
 
-    try { await refreshLimiter.consume(identity) } 
-    catch (rateLimitError) { 
-      const retrySecs = Math.round(rateLimitError.msBeforeNext / 1000) || 60;
-      return NextResponse.json( { error: "Too many requests. Try again later." }, { status: 429, headers: {
-        ...securityHeaders,
-        'Retry-After': retrySecs.toString()
-      } } ) }
+    const referenceId = request.headers.get('x-vendor-identifier');
+    const        host = request.headers.get('host');
+    if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
+
+    const { allowed, retryAfter } = await applyRateLimit({ key: `${host}${ip}`  });
+    if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
 
     
+
     let refreshToken = null;
     const authHeader = request.headers.get("authorization");
+    const hasBearerToken = authHeader && authHeader.startsWith("Bearer ")
+    if (hasBearerToken) refreshToken = authHeader.split(" ")[1]; 
+    
+    else { const cookieStore = await cookies(); 
+                refreshToken = cookieStore.get("refresh_token")?.value; }
+    if (!refreshToken) return NextResponse.json( { error: "Refresh token required" }, { status: 400, headers: securityHeaders });
 
-    if (authHeader && authHeader.startsWith("Bearer ")) 
-        refreshToken = authHeader.split(" ")[1];
-    else {
-        const cookieStore = cookies();
-        refreshToken = cookieStore.get("refresh_token")?.value;
-    }
-
-    if (!refreshToken) 
-      return NextResponse.json( { error: "Refresh token required" }, { status: 400, headers: securityHeaders });
-
-    const vendorId = request.headers.get('x-vendor-identifier');
-    const     host = request.headers.get('host');
-    if (!vendorId && !host) 
-      return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400, headers: securityHeaders });
-
-  try {
-    const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
+    const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
     if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-
-    // ['secrets', 'timeLimitations', 'status'] 
-
-    // Decrypt token secrets
-    const AT_SECRET_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY;
-    const RT_SECRET_KEY = process.env.END_USER_REFRESH_TOKEN_SECRET_ENCRYPTION_KEY;    
-    if (!AT_SECRET_KEY || !RT_SECRET_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 });
-    const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.accessTokenSecret,
-                                                    options: { secret: AT_SECRET_KEY } });    
+    
     const REFRESH_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret,
-                                                    options: { secret: RT_SECRET_KEY } });
+                                                    options: { secret: config.refreshTokenSecretEncryptionKey } });
 
-    const    shop_db = await dbConnect({ dbKey: dbName, dbUri })
-    const  UserModel = userModel(shop_db);
-    const SessionModel = sessionModel(shop_db);
-
-    // Verify refresh token
     let payload;
-    try { payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);} 
-    catch (err) {
+    try { 
+      payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
+      if (!payload.sub || !payload.tokenId)return NextResponse.json({ error: "Invalid token payload" }, { status: 401, headers: securityHeaders });
+    } catch (err) {
         if (err.name === 'TokenExpiredError') return NextResponse.json({ error: "Refresh token expired" }, { status: 401, headers: securityHeaders })
             return NextResponse.json({ error: "Invalid refresh token" }, { status: 401, headers: securityHeaders });
     }
-    if (!payload.session) 
-        return NextResponse.json({ error: "Invalid token payload" }, { status: 401, headers: securityHeaders });
 
-    // Find session
-    const session = await SessionModel.findById(payload.session);
-    if (              !session || session.revoked       ||
-          (session.fingerprint != payload?.fingerprint) ||
-       (session.refreshTokenId != payload?.tokenId ))
-        return NextResponse.json({ error: "Invalid session" }, { status: 401, headers: securityHeaders });
 
-    // Token rotation: Generate new identifiers
-    const newAccessTokenId = crypto.randomBytes(16).toString('hex');
-    const newRefreshTokenId = crypto.randomBytes(16).toString('hex');
 
-    // Token configuration
-    const AT_EXPIRY = Number(vendor.expirations?.accessTokenExpireMinutes) || 15;
-    const RT_EXPIRY = Number(vendor.expirations?.refreshTokenExpireMinutes) || 1440;
 
-    // Get user data for updated claims
-    const user = await UserModel.findById(session.userId).select(
-      "name avatar email phone role theme language timezone currency"
-    ).lean();
 
+    const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.accessTokenSecret,
+                                                    options: { secret: config.accessTokenSecretEncryptionKey } });
+
+
+
+    console.log(payload)
+    console.log(refreshToken)
+    console.log(ACCESS_TOKEN_SECRET)
+
+    const shop_db = await dbConnect({ dbKey: dbName, dbUri })
+    const Session = sessionModel(shop_db);
+    const hashedRefreshTokenId = crypto.createHmac('sha256', config.refreshTokenIdHashKey).update(payload.tokenId).digest('hex');
+    // const hashedRefreshTokenId = crypto.createHmac('sha256', config.refreshTokenIdHashKey).update(payload.tokenId).digest('hex');
+    const [result] = await Session.aggregate([
+                                        // 1. Match the session
+                                        {
+                                          $match: {
+                                            _id: new mongoose.Types.ObjectId(payload.sub),
+                                            refreshTokenId: hashedRefreshTokenId,
+                                            // revoked: { $ne: true }
+                                          }
+                                        },
+
+                                        // 2. Lookup the user
+                                        {
+                                          $lookup: {
+                                            from: "users",
+                                            localField: "userId",
+                                            foreignField: "_id",
+                                            as: "user"
+                                          }
+                                        },
+                                        { $unwind: "$user" },
+
+                                        // 3. Lookup cart
+                                        {
+                                          $lookup: {
+                                            from: "carts",
+                                            localField: "user.cart",
+                                            foreignField: "_id",
+                                            as: "cartData"
+                                          }
+                                        },
+                                        { $unwind: { path: "$cartData", preserveNullAndEmptyArrays: true } },
+
+                                        // 4. Lookup products
+                                        {
+                                          $lookup: {
+                                            from: "products",
+                                            localField: "cartData.items.productId",
+                                            foreignField: "_id",
+                                            as: "products"
+                                          }
+                                        },
+
+                                        // 5. Project desired structure
+                                        {
+                                          $project: {
+                                            _id: 0,
+                                            session: {
+                                              _id: "$_id",
+                                              fingerprint: "$fingerprint",
+                                              userId: "$userId",
+                                              provider: "$provider",
+                                              refreshTokenId: "$refreshTokenId",
+                                              refreshTokenExpiry: "$refreshTokenExpiry",
+                                              ip: "$ip",
+                                              userAgent: "$userAgent",
+                                              timezone: "$timezone",
+                                              createdAt: "$createdAt",
+                                              revoked: "$revoked"
+                                            },
+                                            user: {
+                                              _id: "$user._id",
+                                              name: "$user.name",
+                                              avatar: "$user.avatar",
+                                              email: "$user.email",
+                                              phone: "$user.phone",
+                                              gender: "$user.gender",
+                                              dob: "$user.dob",
+                                              bio: "$user.bio",
+                                              isEmailVerified: "$user.isEmailVerified",
+                                              isPhoneVerified: "$user.isPhoneVerified",
+                                              activeSessions: "$user.activeSessions",
+                                              lock: "$user.lock",
+                                              role: "$user.role",
+                                              theme: "$user.theme",
+                                              language: "$user.language",
+                                              timezone: "$user.timezone",
+                                              currency: "$user.currency"
+                                            },
+                                            cart: {
+                                              $cond: {
+                                                if: { $ifNull: ["$cartData", false] },
+                                                then: {
+                                                  $map: {
+                                                    input: "$cartData.items",
+                                                    as: "item",
+                                                    in: {
+                                                      $mergeObjects: [
+                                                        "$$item",
+                                                        {
+                                                          product: {
+                                                            $arrayElemAt: [
+                                                              {
+                                                                $filter: {
+                                                                  input: "$products",
+                                                                  as: "prod",
+                                                                  cond: { $eq: ["$$prod._id", "$$item.productId"] }
+                                                                }
+                                                              },
+                                                              0
+                                                            ]
+                                                          },
+                                                          variants: {
+                                                            $cond: {
+                                                              if: "$$item.variantId",
+                                                              then: {
+                                                                $filter: {
+                                                                  input: {
+                                                                    $arrayElemAt: [
+                                                                      {
+                                                                        $filter: {
+                                                                          input: "$products",
+                                                                          as: "prod",
+                                                                          cond: { $eq: ["$$prod._id", "$$item.productId"] }
+                                                                        }
+                                                                      },
+                                                                      0
+                                                                    ]
+                                                                  }.variants,
+                                                                  as: "variant",
+                                                                  cond: { $eq: ["$$variant._id", "$$item.variantId"] }
+                                                                }
+                                                              },
+                                                              else: []
+                                                            }
+                                                          }
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                else: []
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]);
+
+    if (!result) return NextResponse.json({ error: "Session not found" }, { status: 401, headers: securityHeaders });
+    // console.log(result)
+    // return NextResponse.json({ message: "Sample rest return" }, { status: 401, headers: securityHeaders });                                        
+    const { user, session, cart } = result;
     if (!user || (payload.email !== user.email && payload.phone !== user.phone))
-      return NextResponse.json( { error: "User not found" },  { status: 404, headers: securityHeaders })
+        return NextResponse.json( { error: "User not found" },  { status: 404, headers: securityHeaders })
+
+    const       accessTokenIdLength = Number.isFinite(Number(vendor.secrets?.accessTokenIdLength ?? config.endUserAccessTokenIdLength))
+                                                    ? Number(vendor.secrets?.accessTokenIdLength ?? config.endUserAccessTokenIdLength)
+                                                    : 16;
+
+    const      refreshTokenIdLength = Number.isFinite(Number(vendor.secrets?.refreshTokenIdLength ?? config.endUserRefreshTokenIdLength))
+                                                    ? Number(vendor.secrets?.refreshTokenIdLength ?? config.endUserRefreshTokenIdLength)
+                                                    : 32;
+
+    const  accessTokenExpireMinutes = Number.isFinite(Number(vendor.expirations?.accessTokenExpireMinute ?? config.accessTokenDefaultExpireMinutes))
+                                                    ? Number(vendor.expirations?.accessTokenExpireMinute ?? config.accessTokenDefaultExpireMinutes)
+                                                    : 30;
+
+    const refreshTokenExpireMinutes = Number.isFinite(Number(vendor.expirations?.refreshTokenExpireMinutes ?? config.refreshTokenDefaultExpireMinutes ))
+                                                    ? Number(vendor.expirations?.refreshTokenExpireMinutes ?? config.refreshTokenDefaultExpireMinutes )
+                                                    : 1440;
+
+        const newAccessTokenId = crypto.randomBytes(accessTokenIdLength).toString('hex');
+    const newRefreshTokenId = crypto.randomBytes(refreshTokenIdLength).toString('hex');
 
     const newPayload = {    session: session._id,
                         fingerprint,
@@ -122,66 +236,91 @@ export async function POST(request) {
                               email: user.email,
                               phone: user.phone,
                                role: user.role,
-                         isVerified: user.isEmailVerified || user.isPhoneVerified };
+                         isVerified: user.isEmailVerified || user.isPhoneVerified,
+                             gender: user.gender,
+                    isEmailVerified: user.isEmailVerified,
+                    isPhoneVerified: user.isPhoneVerified,
+                              theme: user.theme,
+                           language: user.language,
+                           timezone: user.timezone,
+                           currency: user.currency,
+                               cart,         };
 
-    const  accessToken = jwt.sign( {...newPayload, tokenId: newAccessTokenId },
+    const  newAccessToken = jwt.sign( {...newPayload, tokenId: newAccessTokenId },
                                                          ACCESS_TOKEN_SECRET,
-                                  { expiresIn: minutesToExpiresIn(AT_EXPIRY) } );
+                                  { expiresIn: minutesToExpiresIn(accessTokenExpireMinutes) } );
     
-    const refreshToken = jwt.sign( {...newPayload, tokenId: newRefreshTokenId },
+    const newRefreshToken = jwt.sign( {...newPayload, tokenId: newRefreshTokenId },
                                                          REFRESH_TOKEN_SECRET,
-                                   { expiresIn: minutesToExpiresIn(RT_EXPIRY) } );
-    const accessTokenExpiry = minutesToExpiryTimestamp(AT_EXPIRY)
-    const refreshTokenExpiry = minutesToExpiryTimestamp(RT_EXPIRY)
+                                   { expiresIn: minutesToExpiresIn(refreshTokenExpireMinutes) } );
+    const accessTokenExpiry = minutesToExpiryTimestamp(accessTokenExpireMinutes)
+    const refreshTokenExpiry = minutesToExpiryTimestamp(refreshTokenExpireMinutes)
 
-    // Update session with new token identifiers
-    session.accessTokenId      = newAccessTokenId;
-    session.refreshTokenId     = newRefreshTokenId;
-    session.accessTokenExpiry  = accessTokenExpiry;
-    session.refreshTokenExpiry = refreshTokenExpiry;
-    session.lastRefreshed      = new Date();
-    await session.save();
+     await Session.findByIdAndUpdate( session._id,
+                                      {
+                                        refreshTokenId: newRefreshTokenId,
+                                        refreshTokenExpiry: refreshTokenExpiry,
+                                        lastRefreshed: new Date()
+                                      },
+                                      { new: true }
+                                    );
+
+
+
 
     // Prepare response
     const response = NextResponse.json( {              success: true,
-                                                   accessToken,
-                                                  refreshToken,
+                                                   accessToken: newAccessToken,
+                                                  refreshToken: newRefreshToken,
                                            accessTokenExpireAt: new Date(accessTokenExpiry).toISOString(),
                                           refreshTokenExpireAt: new Date(refreshTokenExpiry).toISOString(),
-                                                user: {    _id: user._id,
-                                                          name: user.name,
-                                                         email: user.email,
-                                                         phone: user.phone,
-                                                          role: user.role,
-                                                        avatar: user.avatar,
-                                                         local: { theme   : user.theme,
-                                                                  language: user.language,
-                                                                  timezone: user.timezone,
-                                                                  currency: user.currency   },
-                                                    } },
+                                                          user: {                                                      
+                                                                ...(user.name   && {   name: user.name    }),
+                                                                ...(user.email  && {  email: user.email   }),
+                                                                ...(user.avatar && { avatar: user.avatar  }),
+                                                                ...(user.user   && {   user: user.user    }),
+                                                                ...(user.gender && { gender: user.gender  }),
+                                                                ...(user.phone  && {  phone: user.phone   }),
+                                                                                      role: user.role,
+                                                                                isVerified: user.isEmailVerified || user.isPhoneVerified,
+                                                                            isEmailVerified: user.isEmailVerified,
+                                                                            isPhoneVerified: user.isPhoneVerified,
+                                                                                      local: { 
+                                                                                            ...(user.theme    && {    theme: user.theme    }),
+                                                                                            ...(user.language && { language: user.language }),
+                                                                                            ...(user.timezone && { timezone: user.timezone }),
+                                                                                            ...(user.currency && { currency: user.currency }),
+                                                                                              },
+                                                                                      cart
+                                                                                    } 
+                                        },
       { status: 200, headers: securityHeaders }
     );
 
     // Set HTTP-only cookies
-    response.cookies.set('access_token', accessToken, {
+    response.cookies.set('access_token', newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'Lax',
       path: '/',
-      maxAge: AT_EXPIRY * 60
+      domain: host,
+      maxAge: Math.floor((accessTokenExpiry - Date.now()) / 1000),
     });
 
-    response.cookies.set('refresh_token', refreshToken, {
+    response.cookies.set('refresh_token', newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'Lax',
       path: '/',
-      maxAge: RT_EXPIRY * 60
+      domain: host,
+      maxAge: Math.floor((refreshTokenExpiry - Date.now()) / 1000),
     });
-
     return response;
 
-  } catch (error) {
-    console.error(`Token refresh error: ${error.message}`);
-    return NextResponse.json( { error: "Token refresh failed" }, { status: 500, headers: securityHeaders } ) }
 }
+
+
+    // Get user data for updated claims
+    // const user = await UserModel.findById(session.userId).select(
+    //   "name avatar email phone role theme language timezone currency"
+    // ).lean();

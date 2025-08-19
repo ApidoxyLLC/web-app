@@ -8,6 +8,7 @@ import sendEmail from "@/services/mail/sendEmail";
 import sendSMS from "@/services/mail/sendSMS";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { getInfrastructure } from "@/services/vendor/getInfrastructure";
+import config from "../../../../../../config";
 
 export async function POST(request) {
   let body;
@@ -58,15 +59,23 @@ export async function POST(request) {
     const   otpSalt = await bcrypt.genSalt(12);
     const hashedOtp = await bcrypt.hash(otp, otpSalt)
 
+    const emailVerificationExpireMinutes = Number.isFinite(Number(data.expirations?.emailVerificationExpireMinutes ?? config.emailVerificationDefaultExpireMinutes))
+                                                         ? Number(data.expirations?.emailVerificationExpireMinutes ?? config.emailVerificationDefaultExpireMinutes)
+                                                         : 15;
+
+    const phoneVerificationExpireMinutes = Number.isFinite(Number(data.expirations?.phoneVerificationExpireMinutes ?? config.phoneVerificationDefaultExpireMinutes))
+                                                         ? Number(data.expirations?.phoneVerificationExpireMinutes ?? config.phoneVerificationDefaultExpireMinutes)
+                                                         : 4;
+
     const payload = {         name,
                           security: { ...(password && { password: await bcrypt.hash(password, salt) } ) },
                       verification: { ...(email && {
                                                 emailVerificationToken: token,
-                                          emailVerificationTokenExpiry: new Date(Date.now() + (data.expirations.emailVerificationExpireMinutes * 60 * 1000) ).getTime(),                                    
+                                          emailVerificationTokenExpiry: new Date(Date.now() + (emailVerificationExpireMinutes * 60 * 1000) ).getTime(),                                    
                                         }),
                                       ...((phone && !email) && { 
                                                   phoneVerificationOTP: hashedOtp,
-                                            phoneVerificationOTPExpiry: new Date(Date.now() + (data.expirations.phoneVerificationExpireMinutes * 60 * 1000)).getTime()
+                                            phoneVerificationOTPExpiry: new Date(Date.now() + (phoneVerificationExpireMinutes * 60 * 1000)).getTime()
                                         })
                                     },
                     ...(email  && {  email: email.trim().toLowerCase() }),

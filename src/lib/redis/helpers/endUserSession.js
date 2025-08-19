@@ -22,7 +22,7 @@ function getKeys({ vendorId, sessionId, userId }) {
 /**
  * Create/Update a session for a vendor user
  */
-export async function setSession({ vendorId, sessionId, tokenId, payload = {}, ttl }) {
+export async function setSession({ vendorId, sessionId, tokenId, payload = {}, ttl = config.accessTokenDefaultExpireMinutes  }) {
 
   
   // email, phone, role,
@@ -33,17 +33,20 @@ export async function setSession({ vendorId, sessionId, tokenId, payload = {}, t
   const hashedTokenId = hashTokenId(tokenId);
   const { sessionKey, userSessionsKey } = getKeys({ vendorId, sessionId, userId });
   const now = Date.now();
+
+  const ttlInSeconds = ttl * 60;
+
   const pipeline = sessionRedis.pipeline();
   
   // Store session with hashed tokenId
-  pipeline.setex(sessionKey, TTL, JSON.stringify({ ...payload,
+  pipeline.setex(sessionKey, ttlInSeconds, JSON.stringify({ ...payload,
                                                        userId,
                                                       tokenId: hashedTokenId,
                                                     createdAt: new Date().toISOString()      }));
 
   // Add sessionId to user's sorted set
   pipeline.zadd(userSessionsKey, now, sessionId);
-  pipeline.expire(userSessionsKey, TTL);
+  pipeline.expire(userSessionsKey, ttlInSeconds);
   pipeline.zcard(userSessionsKey);
 
   const results = await pipeline.exec();
@@ -69,6 +72,10 @@ export async function setSession({ vendorId, sessionId, tokenId, payload = {}, t
  * Validate session
  */
 export async function validateSession({ vendorId, sessionId, tokenId }) {
+  console.log(vendorId)
+  console.log(sessionId)
+  console.log(tokenId)
+
   if (!vendorId || !sessionId || !tokenId) return null;
 
   const { sessionKey } = getKeys({ vendorId, sessionId });

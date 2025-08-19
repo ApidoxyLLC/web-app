@@ -39,9 +39,7 @@ export async function getVendorShop(request) {
 
 export async function authenticationStatus(request) {
   const   fingerprint = request.headers.get('x-fingerprint') || null;
-
   const cookieStore = await cookies();
-
 
   const tokenFromCookie = cookieStore.get('access_token')?.value;
   const tokenFromHeader = request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
@@ -60,22 +58,19 @@ export async function authenticationStatus(request) {
       const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
       if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-
-
-
-    // const vendorFetchResult = await getVendorShop(request);
-    // if (!vendorFetchResult.success) return { success: false, error: "Missing host" };
-    // const       vendor = vendorFetchResult.data;
-
     const accessSecret = await decrypt({ cipherText: vendor.secrets.accessTokenSecret, 
                                             options: { secret: config.accessTokenSecretEncryptionKey } });
     const db = await dbConnect({ dbKey: dbName, dbUri });
+
+    console.log(vendor)
     try {
       const decoded = jwt.verify(accessToken, accessSecret);
     let cachedSession;
       try { 
-        cachedSession = await validateSession({ vendorId: vendor._id, sessionId: decoded.sub, tokenId: decoded.tokenId });
-        return { success: true, isTokenRefreshed: false,  data: { ...decoded, ...cachedSession}, vendor, hasBearer: isUsingBearerToken, db };
+        cachedSession = await validateSession({ vendorId: vendor.id, sessionId: decoded.sub, tokenId: decoded.tokenId });
+        if(!cachedSession) return { success: false, error: "Unauthorized", vendor, hasBearer: isUsingBearerToken, db  }
+        return { success: true, isTokenRefreshed: false, 
+                    data: { ...decoded, ...cachedSession}, vendor, hasBearer: isUsingBearerToken, db };
       } catch (err) { return { success: false, error: "Unauthorized", vendor, hasBearer: isUsingBearerToken, db  };}
 
     } catch (err) {
@@ -88,12 +83,6 @@ export async function authenticationStatus(request) {
         const      refreshExpire = Number(vendor.expirations?.refreshTokenExpireMinutes || 1440);
         const      refreshSecret = await decrypt({ cipherText: vendor.secrets.refreshTokenSecret, 
                                                       options: { secret: config.refreshTokenSecretEncryptionKey } });
-
-        // const              dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri, 
-        //                                               options: { secret: process.env.VENDOR_DB_URI_ENCRYPTION_KEY } });
-        // const        dbName = vendor.dbInfo.dbName
-        
-
 
         const        result = await handleRefreshToken({        db: db,
                                                              token: refreshToken,
@@ -153,20 +142,22 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
     const  accessTokenId = crypto.randomBytes(16).toString('hex');
     const refreshTokenId = crypto.randomBytes(16).toString('hex');
 
-    const payload = { session: decoded.session,              
+    const payload = {     sub: decoded.sub,              
                          name: decoded.name,
                         email: decoded.email,
                         phone: decoded.phone,
                          role: decoded.role,
                    isVerified: decoded.isVerified,
-                  fingerprint };
+                  ...(fingerprint && { fingerprint }),
+                };
 
     const accessToken = jwt.sign( { ...payload, 
                                       tokenId: accessTokenId },
                                       access_secret,
                                       { expiresIn: accessExpireMin * 60 } );
     
-    const refreshToken = jwt.sign( { ...payload, 
+    const refreshToken = jwt.sign( {        sub: decoded.sub,
+                                ...(fingerprint && { fingerprint }),
                                         tokenId: refreshTokenId },
                                       refresh_secret,
 
@@ -175,8 +166,8 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
 
     if (!decoded.tokenId) return { success: false, error: "Invalid refresh token" };
     const session = await SessionModel.findOneAndUpdate({            _id: decoded.sub,
-                                                          refreshTokenId: decoded.tokenId,
-                                                             fingerprint,
+                                                          // refreshTokenId: decoded.tokenId,
+                                                            //  fingerprint,
                                                       refreshTokenExpiry: { $gt: Date.now()  }    },
 
                                                                   { $set: {  accessTokenId,

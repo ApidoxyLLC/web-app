@@ -17,8 +17,8 @@ export async function GET(request) {
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
   if (!allowed) return NextResponse.json({ error: "Too many requests. Please try again later." },{ status: 429, headers: { "Retry-After": retryAfter.toString() } });
 
-  const vendorId = request.headers.get("x-vendor-identifier");
-  const host = request.headers.get("host");
+  const   vendorId = request.headers.get("x-vendor-identifier");
+  const       host = request.headers.get("host");
   const authHeader = request.headers.get("authorization");
 
 
@@ -40,6 +40,8 @@ export async function GET(request) {
     //                                               options: { secret: config.accessTokenSecretEncryptionKey } });
 
     const { success: authenticated, vendor, data, isTokenRefreshed, token } = await authenticationStatus(request);
+    // console.log(authenticated)
+
     const user = data || null;
 
         // return { success: true, isTokenRefreshed: false, data: { ...decoded, ...cachedSession}, vendor };

@@ -55,9 +55,13 @@ const config = {
   emailVerificationDefaultExpireMinutes: Number(process.env.END_USER_EMAIL_VERIFICATION_EXPIRE_MINUTES || '10'),
   phoneVerificationDefaultExpireMinutes: Number(process.env.END_USER_PHONE_VERIFICATION_EXPIRE_MINUTES || '4'),
   phoneOtpDigits: Number(process.env.PHONE_OTP_DIGITS || '6'),
+  endUserMaxSessions: Number(process.env.END_USER_DEFAULT_MAX_SESSIONS || '3'),
 
   endUserEmailTokenExpireMinuts: Number(process.env.END_USER_EMAIL_TOKEN_EXPIRE_MINUTES || '30'),
   endUserPhoneTokenExpireMinuts: Number(process.env.END_USER_PHONE_OTP_EXPIRE_MINUTES || '30'),
+
+  endUserAccessTokenIdLength: Number(process.env.END_USER_ACCESS_TOKEN_ID_DEFAULT_LENGTH || '16'),
+  endUserRefreshTokenIdLength: Number(process.env.END_USER_REFRESH_TOKEN_ID_DEFAULT_LENGTH || '32'),
 
   // endUserForgetPasswordTokenExpireMinutes: Number(process.env.END_USER_FORGET_PASSWORD_TOKEN_EXPIRE_MINUTES || '4'), 
   

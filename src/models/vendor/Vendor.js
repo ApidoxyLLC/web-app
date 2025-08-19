@@ -19,7 +19,9 @@ const bucketInfoSchema = new mongoose.Schema({
 const secretKeySchema = new mongoose.Schema({
   accessTokenSecret: { type: String, required: true },
   refreshTokenSecret: { type: String, required: true },
-  nextAuthSecret: { type: String, required: true },
+  accessTokenIdLength: { type: Number, default: undefined },
+  refreshTokenIdLength: { type: Number, default: undefined  },
+  // nextAuthSecret: { type: String, required: false, default: undefined  },
 }, { timestamps: false, _id: false })
 
 const expirationSchema = new mongoose.Schema({
@@ -352,11 +354,11 @@ const vendorSchema = new mongoose.Schema({
   location: { type: String, required: true },
   country: { type: String, required: true },
   industry: { type: String, required: true },
-  email: { type: String, trim: true },
+  email: { type: String, trim: true }, 
   phone: { type: String, trim: true },
   logo: { type: imageSchema },
   staffs: { type: [staffSchema], default: undefined },
-  maxSessionAllowed: { type: Number, default: () => config.defaultMaxSessions, select: false },
+  maxSessionAllowed: { type: Number, default: undefined },
   dbInfo: { type: dbInfoSchema, default: null, select: false },
   bucketInfo: { type: bucketInfoSchema, default: null, select: false },
   secrets: { type: secretKeySchema, default: null, select: false },
