@@ -29,40 +29,39 @@ const apiResponse = (data, status = 200, headers = {}) => {
 export async function GET(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
-  
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString(), } });
+
   // Get client IP for rate limiting
-  const headerList =await headers();
+  const headerList = await headers();
 
   // Get vendor identification
   const vendorId = headerList.get('x-vendor-identifier');
   const host = headerList.get('host');
-  console.log(vendorId, host)
-  
+
   if (!vendorId && !host)
-    return apiResponse( { error: "Missing vendor identifier or host" }, 400 );
+    return apiResponse({ error: "Missing vendor identifier or host" }, 400);
 
   // Parse query parameters
   const { searchParams } = new URL(request.url);
-  const           page = parseInt(searchParams.get('page') || '1', 10);
-  const          limit = parseInt(searchParams.get('limit') || '20', 10);
-  const         sortBy = searchParams.get('sortBy') || 'createdAt';
-  const      sortOrder = searchParams.get('sortOrder') || 'desc';
-  const       category = searchParams.get('category');
-  const       minPrice = parseFloat(searchParams.get('minPrice'));
-  const       maxPrice = parseFloat(searchParams.get('maxPrice'));
-  const    searchQuery = searchParams.get('q') || '';
-  const         status = searchParams.get('status') || 'active';
-  const           type = searchParams.get('type');
-  const    hasVariants = searchParams.get('hasVariants');
-  const     isFeatured = searchParams.get('isFeatured');
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  const limit = parseInt(searchParams.get('limit') || '20', 10);
+  const sortBy = searchParams.get('sortBy') || 'createdAt';
+  const sortOrder = searchParams.get('sortOrder') || 'desc';
+  const category = searchParams.get('category');
+  const minPrice = parseFloat(searchParams.get('minPrice'));
+  const maxPrice = parseFloat(searchParams.get('maxPrice'));
+  const searchQuery = searchParams.get('q') || '';
+  const status = searchParams.get('status') || 'active';
+  const type = searchParams.get('type');
+  const hasVariants = searchParams.get('hasVariants');
+  const isFeatured = searchParams.get('isFeatured');
   const approvalStatus = searchParams.get('approvalStatus');
 
   // Validate parameters
-  if (isNaN(page) || page < 1) 
+  if (isNaN(page) || page < 1)
     return apiResponse({ error: "Invalid page number" }, 400);
-  
-  if (isNaN(limit) || limit < 1 || limit > 100) 
+
+  if (isNaN(limit) || limit < 1 || limit > 100)
     return apiResponse({ error: "Limit must be between 1 and 100" }, 400);
 
   try {
@@ -70,13 +69,14 @@ export async function GET(request) {
     const vendor_db = await vendorDbConnect()
     const Vendor = vendorModel(vendor_db);
     const vendor = await Vendor.findOne({ referenceId: vendorId })
-                                .select("dbInfo bucketInfo secrets expirations primaryDomain domains")
-                                .lean()
-    console.log(vendor)
+      .select("dbInfo bucketInfo secrets expirations primaryDomain domains")
+      .lean()
 
-    const dbUri = await decrypt({  cipherText: vendor.dbInfo.dbUri,
-                                        options: { secret: config.vendorDbUriEncryptionKey } 
-                                      });
+
+    const dbUri = await decrypt({
+      cipherText: vendor.dbInfo.dbUri,
+      options: { secret: config.vendorDbUriEncryptionKey }
+    });
 
     const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
 
@@ -84,19 +84,19 @@ export async function GET(request) {
 
     // Build query
     const query = {};
-    
+
     // Status filter
     if (status) query.status = status;
-    
+
     // Type filter
     if (type) query.type = type;
-    
+
     // Approval status filter
     if (approvalStatus) query.approvalStatus = approvalStatus;
-    
+
     // Variants filter
     if (hasVariants) query.hasVariants = hasVariants === 'true';
-    
+
     // Featured filter
     if (isFeatured) query.isFeatured = isFeatured === 'true';
 
@@ -113,11 +113,11 @@ export async function GET(request) {
     }
 
     // Search query
-    if (searchQuery) { 
-      query.$or = [ { title: { $regex: searchQuery, $options: 'i' } },
-                    { description: { $regex: searchQuery, $options: 'i' } },
-                    { tags: { $in: [new RegExp(searchQuery, 'i')] } },
-                    { 'variants.sku': { $regex: searchQuery, $options: 'i' } }  ];
+    if (searchQuery) {
+      query.$or = [{ title: { $regex: searchQuery, $options: 'i' } },
+      { description: { $regex: searchQuery, $options: 'i' } },
+      { tags: { $in: [new RegExp(searchQuery, 'i')] } },
+      { 'variants.sku': { $regex: searchQuery, $options: 'i' } }];
     }
 
     // Sorting
@@ -140,7 +140,7 @@ export async function GET(request) {
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      
+
       ProductModel.countDocuments(query)
     ]);
 
@@ -148,7 +148,7 @@ export async function GET(request) {
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPreviousPage = page > 1;
-    console.log(products)
+
     // Transform products for response
     const transformedProducts = products.map(product => ({
       id: product._id,
@@ -214,59 +214,61 @@ export async function GET(request) {
 export async function POST(request) {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
+  if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString(), } });
 
   // const fingerprint = request.headers.get('x-fingerprint') || null;
 
   let body;
   console.log(body)
-  try { body = await request.json() } 
-  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders });}
+  try { body = await request.json() }
+  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders }); }
   console.log(body)
   // Validate input with Zod
   const parsed = productDTOSchema.safeParse(body);
   if (!parsed.success)
-    return NextResponse.json({  success: false, error: "Data validation failed", details: parsed.error.flatten()}, { status: 422, headers: securityHeaders });
-  
+    return NextResponse.json({ success: false, error: "Data validation failed", details: parsed.error.flatten() }, { status: 422, headers: securityHeaders });
+
   const { authenticated, error, data } = await getAuthenticatedUser(request);
-    if(!authenticated) 
-        return NextResponse.json({ error: "...not authorized" }, { status: 401 });
+  if (!authenticated)
+    return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
   const { shop: shopId } = parsed.data;
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
   // const   auth_db = await authDbConnect();
   const vendor_db = await vendorDbConnect();
-  const    Vendor = vendorModel(vendor_db)
+  const Vendor = vendorModel(vendor_db)
   const Image = imageModel(vendor_db);
-  
+
   // const      Shop = shopModel(auth_db);
 
   const vendor = await Vendor.findOne({ referenceId: shopId })
-                             .select( "+_id +ownerId +dbInfo +secrets +expirations")
-                             .lean();
+    .select("+_id +ownerId +dbInfo +secrets +expirations")
+    .lean();
 
-  if (!vendor) 
+  if (!vendor)
     return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404, headers: securityHeaders });
 
   console.log(data)
   console.log(vendor)
-  if (vendor.ownerId.toString() != data.userId.toString()) 
+  if (vendor.ownerId.toString() != data.userId.toString())
     return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403, headers: securityHeaders });
 
-  const dbUri = await decrypt({   cipherText: vendor.dbInfo.dbUri, 
-                                     options: { secret: config.vendorDbUriEncryptionKey } });
+  const dbUri = await decrypt({
+    cipherText: vendor.dbInfo.dbUri,
+    options: { secret: config.vendorDbUriEncryptionKey }
+  });
 
   const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
   const Product = productModel(shop_db);
 
 
   try {
-    const { 
-      title, description, tags, gallery, isPhysical, weight, weightUnit, 
+    const {
+      title, description, tags, gallery, isPhysical, weight, weightUnit,
       category,
-      price, compareAtPrice, costPerItem, profit,  margin, 
-      sellWithOutStock, sku, barcode, 
+      price, compareAtPrice, costPerItem, profit, margin,
+      sellWithOutStock, sku, barcode,
       isFreeShiping, variants
 
     } = parsed.data;
@@ -275,40 +277,40 @@ export async function POST(request) {
 
 
 
-      // const slugExist = await Product.exists({ slug: title.toString().toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/--+/g, '-')  });
-      // if (slugExist)
-      //   return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
+    // const slugExist = await Product.exists({ slug: title.toString().toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/--+/g, '-')  });
+    // if (slugExist)
+    //   return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
 
     // Validate categories exist
-    
+
     if (category && category !== 'all') {
-  const Category = categoryModel(shop_db);
-  const categoryExists = await Category.exists({ _id: category });
-  if (!categoryExists)
-    return NextResponse.json({ success: false, error: "Category not found" }, { status: 404, headers: securityHeaders });
-}
+      const Category = categoryModel(shop_db);
+      const categoryExists = await Category.exists({ _id: category });
+      if (!categoryExists)
+        return NextResponse.json({ success: false, error: "Category not found" }, { status: 404, headers: securityHeaders });
+    }
 
     const newProduct = new Product({
-                                    title,
-                                    description,
-                                    tags,
-                                    gallery,
-                                    productFormat: isPhysical ? 'physical' : 'digital',
-                                    weight,
-                                    weightUnit,
-                                    ...(category && category.trim() !== '' && { category }),
-                                    price: {
-                                            base: price,
-                                            compareAt: compareAtPrice,
-                                            cost: costPerItem,
-                                            profit: profit,
-                                            margin: margin,
-                                          },
-                                    sellWithOutStock,
-                                    inventory: { sku, barcode },
-                                    hasFreeShipment: isFreeShiping,
-                                    variants,
-                                  });
+      title,
+      description,
+      tags,
+      gallery,
+      productFormat: isPhysical ? 'physical' : 'digital',
+      weight,
+      weightUnit,
+      ...(category && category.trim() !== '' && { category }),
+      price: {
+        base: price,
+        compareAt: compareAtPrice,
+        cost: costPerItem,
+        profit: profit,
+        margin: margin,
+      },
+      sellWithOutStock,
+      inventory: { sku, barcode },
+      hasFreeShipment: isFreeShiping,
+      variants,
+    });
 
     const savedProduct = await newProduct.save();
 
@@ -331,7 +333,8 @@ export async function POST(request) {
       ? "A product with similar attributes already exists"
       : err.message || "Something went wrong";
 
-    return NextResponse.json( { success: false, error: errorMsg }, { status: 400, headers: securityHeaders }); } 
+    return NextResponse.json({ success: false, error: errorMsg }, { status: 400, headers: securityHeaders });
+  }
   // finally {
   //   session.endSession();
   // }
@@ -450,37 +453,37 @@ export async function PATCH(request) {
 }
 
 
-  /** 
-   * fake Authentication for test purpose only 
-   * *******************************************
-   * *****REMOVE THIS BLOCK IN PRODUCTION***** *
-   * *******************************************
-   * *              ***
-   * *              ***
-   * *            *******
-   * *             *****
-   * *              *** 
-   * *               *           
-   * */
+/**
+ * fake Authentication for test purpose only
+ * *******************************************
+ * *****REMOVE THIS BLOCK IN PRODUCTION***** *
+ * *******************************************
+ * *              ***
+ * *              ***
+ * *            *******
+ * *             *****
+ * *              ***
+ * *               *
+ * */
 
-  // const authDb = await authDbConnect()
-  // const User = userModel(authDb);
-  // const user = await User.findOne({ referenceId: "cmda6hrqs0000vwlll4qhy7vw" })
-  //                        .select('referenceId _id name email phone role isEmailVerified')
-  // const data = { sessionId: "686f81d0f3fc7099705e44d7",
-  //          userReferenceId: user.referenceId,
-  //                   userId: user._id,
-  //                     name: user.name,
-  //                    email: user.email,
-  //                    phone: user.phone,
-  //                     role: user.role,
-  //               isVerified: user.isEmailVerified || user.isPhoneVerified,
-  //               }
-  
-  /** 
-   * fake Authentication for test purpose only 
-   * *******************************************
-   * *********FAKE AUTHENTICATION END********* *
-   * *******************************************
-  **/
+// const authDb = await authDbConnect()
+// const User = userModel(authDb);
+// const user = await User.findOne({ referenceId: "cmda6hrqs0000vwlll4qhy7vw" })
+//                        .select('referenceId _id name email phone role isEmailVerified')
+// const data = { sessionId: "686f81d0f3fc7099705e44d7",
+//          userReferenceId: user.referenceId,
+//                   userId: user._id,
+//                     name: user.name,
+//                    email: user.email,
+//                    phone: user.phone,
+//                     role: user.role,
+//               isVerified: user.isEmailVerified || user.isPhoneVerified,
+//               }
+
+/**
+ * fake Authentication for test purpose only 
+ * *******************************************
+ * *********FAKE AUTHENTICATION END********* *
+ * *******************************************
+**/
 
