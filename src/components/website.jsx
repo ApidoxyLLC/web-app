@@ -86,7 +86,7 @@ export default function Website() {
         setFormData(prev => ({...prev, logo:uploadedUrl}))
         } catch (err) {
         console.error("Upload failed", err);
-        alert("Image upload failed");
+        toast.error("Image upload failed");
       }
     }else{
       console.log("err")

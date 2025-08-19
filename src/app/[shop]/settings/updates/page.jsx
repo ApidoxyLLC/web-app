@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import useFetch from "@/hooks/useFetch";
 import { useParams } from "next/navigation";
 import { LoaderIcon } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { shop } = useParams();
@@ -79,15 +80,15 @@ export default function Dashboard() {
       const result = await res.json();
 
       if (res.ok) {
-        alert("Notification settings updated successfully");
+        toast.success("Notification settings updated successfully");
         setEdit(false);
         setBtn(false);
       } else {
-        alert(result?.error || "Something went wrong");
+        toast.error(result?.error || "Something went wrong");
       }
     } catch (error) {
       console.error("API Error:", error);
-      alert("Failed to update notification settings");
+      toast.error("Failed to update notification settings");
     } finally {
       setloadingState(false);
     }

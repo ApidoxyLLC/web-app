@@ -20,9 +20,40 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { FaFacebookF } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+import one from "../../public/images/11.png"
+import two from "../../public/images/22.png"
+import three from "../../public/images/33.png"
+import four from "../../public/images/44.png"
+import five from "../../public/images/55.png"
+import six from "../../public/images/66.png"
+import seven from "../../public/images/77.png"
+import Image from "next/image";
+
 export function LoginForm({ className, ...props }) {
+  
   const fingerprint = useFingerprint();
   const router = useRouter()
+  const [showPass, setShowPass] = useState(false)
+  
+  const [api, setApi] = useState();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
+  const images = [
+      { id: 1, url: one},
+      { id: 2, url: two },
+      { id: 3, url: three },
+      { id: 4, url: four },
+      { id: 5, url: five },
+      { id: 6, url: six },
+      { id: 7, url: seven },
+    ];
   async function createUser(e) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -78,6 +109,16 @@ export function LoginForm({ className, ...props }) {
       }
     }
   }
+  useEffect(() => {
+      if (!api) {
+        return;
+      }
+      setCount(api.scrollSnapList().length);
+      setCurrent(api.selectedScrollSnap() + 1);
+      api.on("select", () => {
+        setCurrent(api.selectedScrollSnap() + 1);
+      });
+    }, [api]);
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -111,25 +152,39 @@ export function LoginForm({ className, ...props }) {
                 </ControlGroup>
               </div>
               <div className="gap-3">
-                <div className="flex items-center">
-                  <ControlGroup className="w-full">
-                    <ControlGroupItem>
-                      <InputBase>
-                        <InputBaseAdornment>Password</InputBaseAdornment>
-                      </InputBase>
-                    </ControlGroupItem>
-                    <ControlGroupItem className="flex-1">
-                      <InputBase>
-                        <PasswordInputInput
-                          name="password"
-                          placeholder="Password"
-                        />
-                        <PasswordInputAdornmentToggle />
-                      </InputBase>
-                    </ControlGroupItem>
-                  </ControlGroup>
-                </div>
-              </div>
+  <div className="flex items-center">
+    <ControlGroup className="w-full">
+      <ControlGroupItem>
+        <InputBase>
+          <InputBaseAdornment>Password</InputBaseAdornment>
+        </InputBase>
+      </ControlGroupItem>
+      <ControlGroupItem className="flex-1 relative">
+        <InputBase>
+          <InputBaseControl>
+            <InputBaseInput
+              name="password"
+              placeholder="Enter Your Password"
+              type={showPass ? "text" : "password"}
+            />
+          </InputBaseControl>
+          <button
+            type="button"
+            onClick={() => setShowPass((prev) => !prev)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          >
+            {showPass ? (
+              
+              <EyeIcon className="h-5 w-5" />
+            ) : (
+              <EyeOffIcon className="h-5 w-5" />
+            )}
+          </button>
+        </InputBase>
+      </ControlGroupItem>
+    </ControlGroup>
+  </div>
+</div>
               <Button type="submit" className="w-full">
                 Login
               </Button>
@@ -174,11 +229,38 @@ export function LoginForm({ className, ...props }) {
             </div>
           </form>
           <div className="bg-muted relative hidden md:block">
-            <img
-              src="/placeholder.svg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
+            <div className="relative mx-auto w-full">
+              <Carousel setApi={setApi} className="w-full">
+                <CarouselContent>
+                  {images.map((item) => (
+                    <CarouselItem key={item.id}>
+                      <Card className="py-0">
+                        <CardContent className="flex aspect-video items-center justify-center p-0">
+                          <Image
+                            src={item.url}
+                            alt={`Slide ${item.id}`}
+                            className="w-full h-full object-cover rounded-lg rounded-bl-none rounded-tl-none"
+                          />
+                        </CardContent>
+                      </Card>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+            
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
+                {Array.from({ length: count }).map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => api?.scrollTo(index)}
+                    className={cn("h-3 w-3 rounded-full border-2", {
+                      "border-primary bg-primary": current === index + 1,
+                      "border-white bg-white/60": current !== index + 1,
+                    })}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

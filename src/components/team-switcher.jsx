@@ -91,18 +91,7 @@ export function TeamSwitcher( {teams} ) {
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 p-2" asChild>
-              <Link href="../shops#create">
-                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                  <Plus className="size-4" />
-                </div>
-                <div className="font-medium text-muted-foreground">
-                  Create a new shop
-                </div>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2" asChild>
-              <Link href="../shops">
+              <Link href="/">
                 <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                   <ChevronLeft className="size-4" />
                 </div>

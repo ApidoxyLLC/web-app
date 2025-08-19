@@ -379,13 +379,13 @@ export default function DeliverySettings() {
       } else if (deliveryOptions === "upazilla") {
         setUpazilasList(prev => prev.filter(upz => upz._id !== chargeId));
       }
-      alert("Delivery charge deleted successfully");
+      toast.success("Delivery charge deleted successfully");
     } else {
-      alert(data.error || "Failed to delete");
+      toast.error(data.error || "Failed to delete");
     }
   } catch (err) {
     console.error(err);
-    alert("Something went wrong");
+    toast.error("Something went wrong");
   }
 };
 

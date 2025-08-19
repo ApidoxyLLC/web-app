@@ -2,11 +2,6 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  PasswordInputAdornmentToggle,
-  PasswordInputInput,
-} from "@/components/ui/password-input";
-
 import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";
 import {
   InputBase,
@@ -27,14 +22,36 @@ import {
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Label } from "./ui/label";
 import useFingerprint from "@/hooks/useFingerprint";
-import {  useState } from "react";
+import {  useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import one from "../../public/images/1.png"
+import two from "../../public/images/2.png"
+import three from "../../public/images/3.png"
+import four from "../../public/images/4.png"
+import five from "../../public/images/5.png"
+import six from "../../public/images/6.png"
+import seven from "../../public/images/7.png"
+import Image from "next/image";
+
 export function SignUp({ className, ...props }) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [otp,setOtp] = useState('')
   const [number,setNumber] = useState('')
   const fingerprint = useFingerprint();
+  const [showPass, setShowPass] = useState(false)
+  
+const [api, setApi] = useState();
+const [current, setCurrent] = useState(0);
+const [count, setCount] = useState(0);
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -90,6 +107,26 @@ export function SignUp({ className, ...props }) {
       toast.error("Registration Failed");
     }
   };
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap() + 1);
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap() + 1);
+    });
+  }, [api]);
+   const images = [
+    { id: 1, url: one},
+    { id: 2, url: two },
+    { id: 3, url: three },
+    { id: 4, url: four },
+    { id: 5, url: five },
+    { id: 6, url: six },
+    { id: 7, url: seven },
+  ];
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
@@ -177,25 +214,40 @@ export function SignUp({ className, ...props }) {
                 </ControlGroup>
               </div>
               <div className="gap-3">
-                <div className="flex items-center">
-                  <ControlGroup className="w-full">
-                    <ControlGroupItem>
-                      <InputBase>
-                        <InputBaseAdornment>Password</InputBaseAdornment>
-                      </InputBase>
-                    </ControlGroupItem>
-                    <ControlGroupItem className="flex-1">
-                      <InputBase>
-                        <PasswordInputInput
-                          name="password"
-                          placeholder="Enter Your Password"
-                        />
-                        <PasswordInputAdornmentToggle />
-                      </InputBase>
-                    </ControlGroupItem>
-                  </ControlGroup>
-                </div>
-              </div>
+  <div className="flex items-center">
+    <ControlGroup className="w-full">
+      <ControlGroupItem>
+        <InputBase>
+          <InputBaseAdornment>Password</InputBaseAdornment>
+        </InputBase>
+      </ControlGroupItem>
+      <ControlGroupItem className="flex-1 relative">
+        <InputBase>
+          <InputBaseControl>
+            <InputBaseInput
+              name="password"
+              placeholder="Enter Your Password"
+              type={showPass ? "text" : "password"}
+            />
+          </InputBaseControl>
+          <button
+            type="button"
+            onClick={() => setShowPass((prev) => !prev)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          >
+            {showPass ? (
+              
+              <EyeIcon className="h-5 w-5" />
+            ) : (
+              <EyeOffIcon className="h-5 w-5" />
+            )}
+          </button>
+        </InputBase>
+      </ControlGroupItem>
+    </ControlGroup>
+  </div>
+</div>
+
               <Button  type="submit" className="w-full">
                 Sign Up
               </Button>
@@ -240,11 +292,41 @@ export function SignUp({ className, ...props }) {
             </div>
           </div>
           <div className="bg-muted relative hidden md:block">
-            <img
-              src="/placeholder.svg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
+                <div className="relative mx-auto w-full">
+  <Carousel setApi={setApi} className="w-full">
+    <CarouselContent>
+      {images.map((item) => (
+        <CarouselItem key={item.id}>
+          <Card className="py-0">
+            <CardContent className="flex aspect-video items-center justify-center p-0">
+              <Image
+                src={item.url}
+                alt={`Slide ${item.id}`}
+                className="w-full h-full object-cover rounded-lg rounded-bl-none rounded-tl-none"
+              />
+            </CardContent>
+          </Card>
+        </CarouselItem>
+      ))}
+    </CarouselContent>
+  </Carousel>
+
+  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
+    {Array.from({ length: count }).map((_, index) => (
+      <button
+        key={index}
+        onClick={() => api?.scrollTo(index)}
+        className={cn("h-3 w-3 rounded-full border-2", {
+          "border-primary bg-primary": current === index + 1,
+          "border-white bg-white/60": current !== index + 1,
+        })}
+      />
+    ))}
+  </div>
+</div>
+
+  
+
           </div>
         </CardContent>
       </Card>

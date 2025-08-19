@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CircleCheck, CircleHelp } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const YEARLY_DISCOUNT = 20;
 
@@ -35,7 +36,7 @@ const Pricing = () => {
       const data = await res.json();
       if (!res.ok) {
         console.error("Error:", data);
-        alert(data.message || "Something went wrong");
+        toast.error(data.message || "Something went wrong");
         return;
       }
 
@@ -43,7 +44,7 @@ const Pricing = () => {
       window.location.href = data.redirectURL;
     } catch (err) {
       console.error("Payment Error:", err);
-      alert("Payment initiation failed!");
+      toast.error("Payment initiation failed!");
     } 
   };
   if (loading) {

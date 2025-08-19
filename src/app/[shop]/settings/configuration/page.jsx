@@ -78,16 +78,16 @@ export default function StoreSettings() {
         toast.success("Shop updated successfully!");
       } else {
         console.error(data);
-        alert(data.error || "Update failed");
+        toast.error(data.error || "Update failed");
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      toast.error("Something went wrong");
     }
   };
   const updateLanguage = async () => {
     if (!language) {
-      alert("Please select a language");
+      toast.error("Please select a language");
       return;
     }
     setLoadingState(true);
@@ -105,13 +105,13 @@ export default function StoreSettings() {
 
       const data = await res.json();
       if (res.ok) {
-        alert(data.message);
+        toast.success("Language updated successfully");
       } else {
-        alert(data.error || "Failed to update language");
+        toast.error(data.error || "Failed to update language");
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      toast.error("Something went wrong");
     } finally {
       setLoadingState(false);
     }
@@ -372,7 +372,7 @@ export default function StoreSettings() {
                   setImage(uploadedUrl)
                   } catch (err) {
                   console.error("Upload failed", err);
-                  alert("Image upload failed");
+                  toast.error("Image upload failed");
                 }
               }else{
                 console.log("err")

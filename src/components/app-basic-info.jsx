@@ -30,6 +30,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@radix-ui/react-popover";
+import { toast } from "sonner";
 // import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 const AppBasicInfo = () => {
   const handleSubmit = async (e) => {
@@ -65,11 +66,11 @@ const AppBasicInfo = () => {
       })
       console.log(res)
       if(res.ok){
-        alert("shop created")
+        toast.success("shop created")
         console.log(res)
       }
       else{
-        alert("err")
+        toast.error("err")
       }
     }catch(err){
       console.log(err)
