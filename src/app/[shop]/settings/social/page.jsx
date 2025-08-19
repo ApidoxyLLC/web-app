@@ -16,7 +16,7 @@ import { LoaderIcon } from "lucide-react";
 
 export default function BusinessInfoForm() {
   const { shop } = useParams();
-  const { data, loading } = useFetch(`/${shop}`); // only for fetching
+  const { data, loading } = useFetch(`/${shop}`);
   const socialLinks = data?.socialLinks || [];
 
   const socialLinksJson = [
@@ -34,7 +34,7 @@ export default function BusinessInfoForm() {
   const [formData, setFormData] = useState(
     socialLinksJson.reduce((acc, link) => ({ ...acc, [link.name]: "" }), {})
   );
-  const [updating, setUpdating] = useState(false); // only for button
+  const [updating, setUpdating] = useState(false); 
 
   useEffect(() => {
     if (socialLinks.length > 0) {
