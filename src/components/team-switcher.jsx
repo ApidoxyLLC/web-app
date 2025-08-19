@@ -29,7 +29,7 @@ export function TeamSwitcher( {teams} ) {
   const {shop} = useParams()
   const {data} = useFetch(`/${shop}`)
   const shops = useFetch(`/shops`)
-  const imageUrl = `http://localhost:3000/api/v1/image/${shop}/${data?.configuration?.logo?.imageName}`;
+  const imageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${shop}/${data?.configuration?.logo?.imageName}`;
   if (!activeTeam) {
     return null;
   }
@@ -80,7 +80,7 @@ export function TeamSwitcher( {teams} ) {
                   className="gap-2 p-2"
                 >
                   <Avatar className="h-10 w-10">
-                  <AvatarImage src={`http://localhost:3000/api/v1/image/${team.id}/${team?.logo?.imageName}`}/>
+                  <AvatarImage src={`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${team.id}/${team?.logo?.imageName}`}/>
                   <AvatarFallback>
                     {team?.businessName?.charAt(0).toUpperCase()}
                   </AvatarFallback>

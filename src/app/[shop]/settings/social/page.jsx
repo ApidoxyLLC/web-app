@@ -34,10 +34,8 @@ export default function BusinessInfoForm() {
   const [formData, setFormData] = useState(
     socialLinksJson.reduce((acc, link) => ({ ...acc, [link.name]: "" }), {})
   );
-
   const [updating, setUpdating] = useState(false); // only for button
 
-  // Load API data into formData
   useEffect(() => {
     if (socialLinks.length > 0) {
       const updatedData = {};
@@ -59,7 +57,7 @@ export default function BusinessInfoForm() {
   const handleSubmit = async () => {
   setUpdating(true);
   try {
-    const payload = { shop, ...formData }; // spread formData so it becomes flat
+    const payload = { shop, ...formData }; 
 
     const res = await fetch(`/api/v1/settings/social-links`, {
       method: "POST",

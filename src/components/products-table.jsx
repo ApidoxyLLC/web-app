@@ -456,7 +456,7 @@ async function handleDelete(productId) {
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No results.
+                      No products.
                     </TableCell>
                   </TableRow>
                 )}

@@ -33,7 +33,7 @@ export default function StoreSettings() {
   const {configuration} = data
 
   const [language, setLanguage] = useState("");
-  const [loadingState, setLoadingState] = useState(false);  
+  const [loadingState, setLoadingState] = useState(false);
   const [formData, setFormData] = useState({
     shop,
     businessName: "",
@@ -43,10 +43,12 @@ export default function StoreSettings() {
     country: "",
     address: "",
   });
+  console.log(formData)
   const [pic,setPic] = useState(null)
   const [image, setImage] = useState(null)
   useEffect(()=>{
     setFormData({
+      shop,
       businessName: configuration?.businessName,
       email: configuration?.contact?.email,
       phone: configuration?.contact?.phone,
@@ -131,7 +133,7 @@ export default function StoreSettings() {
       throw new Error(data.error || "Image upload failed");
     }
 
-    const imageUrl = `http://localhost:3000/api/v1/image/${shop}/${data.data.fileName}`;
+    const imageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${shop}/${data.data.fileName}`;
     setPic(imageUrl);
 
   return data?.data?.fileName;

@@ -20,8 +20,9 @@ import { Button } from "@/components/ui/button";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import useFetch from "@/hooks/useFetch";
 
-export default function CreatShop() {
+export default function CreatShop({refetch}) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const handleSubmit = async (e) => {
@@ -43,6 +44,7 @@ export default function CreatShop() {
         body: JSON.stringify(formData),
       });
       if (res.ok) {
+        refetch()
         toast.success("Shop created");
         setOpen(false)
         router.push(`/`);

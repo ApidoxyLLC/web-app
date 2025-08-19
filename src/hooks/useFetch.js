@@ -4,7 +4,6 @@ const useFetch = (url) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
     const fetchData = useCallback(async () => {
         if (!url) {
             setError("Please set URL for fetch on data");
@@ -14,7 +13,7 @@ const useFetch = (url) => {
 
         try {
             setLoading(true);
-            const res = await fetch(`http://localhost:3000/api/v1${url}`);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1${url}`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
             setData(data.data);
