@@ -26,7 +26,7 @@ export async function GET(request) {
 
         if (status === 'success') {
             try {
-                const fakeRequest = new Request('http://localhost', {
+                const fakeRequest = new Request(`${process.env.BASE_URL}`, {
                     method: 'POST',
                     body: JSON.stringify({ paymentID }),
                     headers: { 'Content-Type': 'application/json' },

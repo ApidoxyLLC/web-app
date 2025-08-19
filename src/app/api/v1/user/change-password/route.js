@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
-// import { hashPassword } from '@/lib/crypto/password';
 import { authenticationStatus } from '../../middleware/auth';
 import { changePasswordDTOSchema } from './changePasswordDTOSchema';
-
+import { dbConnect } from '@/lib/mongodb/db';
+import { userModel } from '@/models/shop/shop-user/ShopUser';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request) {
     // Rate limiting
@@ -29,6 +30,7 @@ export async function POST(request) {
         );
     }
 
+    // Validate request body
     const parsed = changePasswordDTOSchema.safeParse(body);
     if (!parsed.success) {
         return NextResponse.json(
@@ -39,22 +41,28 @@ export async function POST(request) {
 
     const { currentPassword, newPassword } = parsed.data;
 
-    const authResult = await authenticationStatus(request);
-
-    if (!authResult.success) {
-        return NextResponse.json(
-            { error: authResult.error || "Unauthorized" },
-            { status: 401 }
-        );
-    }
-
-    const { data: authData, vendor } = authResult;
-    const userId = authData.userId || authData.sub; 
-
     try {
-        const db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri: vendor.dbInfo.dbUri });
-        const User = db.model('User');
+        // Authentication with improved error handling
+        const authResult = await authenticationStatus(request);
+        if (!authResult.success) {
+            console.error('Authentication failed:', authResult.error);
+            return NextResponse.json(
+                {
+                    error: authResult.error.includes('Decryption failed') ?
+                        'Authentication system error' : authResult.error
+                },
+                { status: 401 }
+            );
+        }
 
+        const { data: authData, vendor } = authResult;
+        const userId = authData.userId || authData.sub;
+
+        // Database connection
+        const db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri: vendor.dbInfo.dbUri });
+        const User = userModel(db);
+
+        // Find user
         const user = await User.findById(userId);
         if (!user) {
             return NextResponse.json(
@@ -63,7 +71,15 @@ export async function POST(request) {
             );
         }
 
-        const isPasswordValid = await user.comparePassword(currentPassword);
+        // Verify current password
+        if (!user.security?.password) {
+            return NextResponse.json(
+                { error: "Password not set for this account" },
+                { status: 400 }
+            );
+        }
+
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.security.password);
         if (!isPasswordValid) {
             return NextResponse.json(
                 { error: "Current password is incorrect" },
@@ -71,39 +87,40 @@ export async function POST(request) {
             );
         }
 
-        // user.password = await hashPassword(newPassword);
+        // Hash new password
+        const SALT_ROUNDS = parseInt(process.env.END_USER_BCRYPT_SALT_ROUNDS || "10", 10);
+        const salt = await bcrypt.genSalt(SALT_ROUNDS);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update user
+        user.security = {
+            ...user.security,
+            password: hashedPassword,
+            passwordUpdatedAt: new Date(),
+            sessionVersion: (user.security.sessionVersion || 0) + 1
+        };
+
         await user.save();
 
-        await invalidateAllSessions({
-            userId: user._id,
-            vendorId: vendor._id,
-            db 
-        });
-
         return NextResponse.json(
-            { message: "Password changed successfully" },
+            { success: true, message: "Password changed successfully" },
             { status: 200 }
         );
 
     } catch (err) {
         console.error("Change password error:", err);
+
+        // Specific handling for decryption errors
+        if (err.message.includes('Decryption failed')) {
+            return NextResponse.json(
+                { error: "Authentication system error. Please try again later." },
+                { status: 500 }
+            );
+        }
+
         return NextResponse.json(
             { error: err.message || "Failed to change password" },
             { status: 500 }
         );
-    }
-}
-
-async function invalidateAllSessions({ userId, vendorId, db }) {
-    try {
-        // Example implementation - adjust based on your session storage
-        const Session = db.model('Session');
-        await Session.updateMany(
-            { userId, vendorId, active: true },
-            { $set: { active: false } }
-        );
-    } catch (err) {
-        console.error("Failed to invalidate sessions:", err);
-        // Fail silently as this is non-critical
     }
 }

@@ -32,11 +32,12 @@ export async function GET(request) {
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
   
   // Get client IP for rate limiting
-  const headerList = headers();
+  const headerList =await headers();
 
   // Get vendor identification
   const vendorId = headerList.get('x-vendor-identifier');
   const host = headerList.get('host');
+  console.log(vendorId, host)
   
   if (!vendorId && !host)
     return apiResponse( { error: "Missing vendor identifier or host" }, 400 );
@@ -71,7 +72,7 @@ export async function GET(request) {
     const vendor = await Vendor.findOne({ referenceId: vendorId })
                                 .select("dbInfo bucketInfo secrets expirations primaryDomain domains")
                                 .lean()
-
+    console.log(vendor)
 
     const dbUri = await decrypt({  cipherText: vendor.dbInfo.dbUri,
                                         options: { secret: config.vendorDbUriEncryptionKey } 
@@ -147,7 +148,7 @@ export async function GET(request) {
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPreviousPage = page > 1;
-
+    console.log(products)
     // Transform products for response
     const transformedProducts = products.map(product => ({
       id: product._id,
@@ -183,6 +184,9 @@ export async function GET(request) {
       createdAt: product.createdAt,
       updatedAt: product.updatedAt
     }));
+
+    console.log("transformedProducts************")
+    console.log(transformedProducts)
 
     return apiResponse({
       success: true,
