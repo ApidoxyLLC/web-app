@@ -215,6 +215,7 @@ export function LoginForm({ className, ...props }) {
                   variant="outline"
                   type="button"
                   className="w-full"
+                  disabled
                 >
                   <FaFacebookF />
                   <span className="sr-only">Login with Facebook</span>

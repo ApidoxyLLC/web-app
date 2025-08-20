@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [open, setOpen] = useState(true);
   const [suggestions, setSuggestions] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loadingState, setLoadingState] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null); 
 
   const shop = useParams();
@@ -33,7 +33,7 @@ export default function Dashboard() {
         return;
       }
 
-      setLoading(true);
+      setLoadingState(true);
 
       try {
         const query = value.includes("@")
@@ -53,7 +53,7 @@ export default function Dashboard() {
         setSuggestions([]);
       }
 
-      setLoading(false);
+      setLoadingState(false);
     }, 400);
 
     return () => clearTimeout(delayDebounce);
@@ -61,13 +61,13 @@ export default function Dashboard() {
 
 
 
-  const { data } = useFetch(`/${shopId}/staffs`);
+  const { data, loading } = useFetch(`/${shopId}/staffs`);
   useEffect(() => {
     if (data) {
-      setUsers((prev) => [...prev, ...data]);
+      setUsers((prev) => [...data]);
     }
   }, [data]);
-
+console.log(data)
   const handleAddUserClick = () => {
     setIsAdding(true);
     setOpen(true);
@@ -173,7 +173,7 @@ export default function Dashboard() {
             />
             {value && (
               <div className="absolute z-10 mt-1 w-full bg-primary-foreground rounded-md shadow-lg max-h-60 overflow-y-auto text-sm">
-                {loading ? (
+                {loadingState ? (
                   <div className="px-3 py-2 text-muted-foreground">Loading...</div>
                 ) : filteredSuggestions?.length > 0 ? (
                   filteredSuggestions.map((s) => (
@@ -207,8 +207,16 @@ export default function Dashboard() {
       {loadingUsers && (
         <div className="text-center py-4 text-muted-foreground">Loading users...</div>
       )}
-      {console.log(users)}
-      {users?.map((user, index) => (
+      {loading && <div className="">
+      {[...Array(2)].map((_, idx) => (
+        <div
+          key={idx}
+          className="h-[80px] mt-3 animate-pulse rounded-xl bg-muted/50 dark:bg-muted"
+        />
+      ))}
+    </div>}
+      {users.length  === 0 && loading === false ? <div>
+        Please add user</div>: users?.map((user, index) => (
         <div
           key={user.referenceId || index}
           className="bg-muted rounded-md px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between"
@@ -237,6 +245,7 @@ export default function Dashboard() {
           </div>
         </div>
       ))}
+    
     </Card>
   );
 }

@@ -6,6 +6,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 
 export function NavProjects({
@@ -17,10 +18,15 @@ export function NavProjects({
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <Link href={item.url}>
+              {item.name === "Logout" ?
+              <div className="cursor-pointer" onClick={() => signOut({ callbackUrl: "/signup" })}>
                 <item.icon />
                 <span>{item.name}</span>
-              </Link>
+              </div> : <Link href={item.url}>
+                <item.icon />
+                <span>{item.name}</span>
+              </Link>}
+              
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}
