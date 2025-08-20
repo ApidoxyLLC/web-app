@@ -39,7 +39,8 @@ export async function POST(request) {
 
     const db = await dbConnect({ dbKey: dbName, dbUri });
     console.log(db)
-
+    const Session = sessionModel(db);
+    const User = userModel(db);
     let cachedSession;
     let accessTokenData;
     try {
@@ -55,12 +56,37 @@ export async function POST(request) {
       if (!cachedSession || !safeCompare(cachedSession.tokenId, hashedAccessTokenId)) {
         return clearTokensAndRespond({ success: false, message: "Unauthorized" }, 400);
       }
+      
+      const session = await Session.findById(accessTokenData.sub);
+
+      if (session) {
+        const dbSession = await db.startSession();
+        try {
+          await dbSession.withTransaction(async () => {
+            const deletedSession = await Session.deleteOne({
+              _id: session._id,
+            }).session(dbSession);
+
+            if (deletedSession.deletedCount === 1 && session.userId) {
+              await User.updateOne(
+                { _id: session.userId },
+                { $pull: { activeSessions: session._id } }, 
+                { session: dbSession }
+              );
+
+            }
+          });
+        } finally {
+          await dbSession.endSession();
+        }
+      }
+
 
       return clearTokensAndRespond({ success: true, message: "Successfully logged out" }, 200);
 
     } catch (error) {
       if (isUsingBearerToken)
-        return clearTokensAndRespond({ success: false, message: "isUsingBearerToken" }, 400);
+        return clearTokensAndRespond({ success: false, message: "Unauthorized" }, 400);
 
       if (error.name === 'TokenExpiredError' && refreshToken) {
         const refreshSecret = await decrypt({
@@ -77,8 +103,7 @@ export async function POST(request) {
 
         const { sub: sessionId, tokenId: refreshTokenId } = decodedRefreshToken;
 
-        const Session = sessionModel(db);
-        const User = userModel(db);
+        
         const session = await Session.findOne({
           _id: sessionId,
           refreshTokenExpiry: { $gt: Date.now() },
@@ -98,9 +123,10 @@ export async function POST(request) {
             if (deletedSession.deletedCount == 1 && session.userId) {
               await User.updateOne(
                 { _id: session.userId },
-                { $pull: { activeSessions: { sessionId: session._id } } },
+                { $pull: { activeSessions: session._id } }, 
                 { session: dbSession }
               );
+
             }
           });
         } catch {
