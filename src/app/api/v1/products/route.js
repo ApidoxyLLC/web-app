@@ -101,9 +101,9 @@ export async function GET(request) {
     if (isFeatured) query.isFeatured = isFeatured === 'true';
 
     // Category filter
-    if (category) {
-      query.categories = { $in: [new mongoose.Types.ObjectId(category)] };
-    }
+    // if (category) {
+    //   query.categories = { $in: [new mongoose.Types.ObjectId(category)] };
+    // }
 
     // Price range filter
     if (!isNaN(minPrice) || !isNaN(maxPrice)) {
@@ -133,7 +133,7 @@ export async function GET(request) {
     // Execute query with pagination
     const [products, total] = await Promise.all([
       ProductModel.find(query)
-        .populate('categories', 'name slug')
+        .populate('category', 'name slug')
         .populate('brand', 'name logo')
         .populate('vendor', 'name')
         .sort(sortOptions)
