@@ -39,8 +39,11 @@ export async function GET(request) {
     // const ACCESS_TOKEN_SECRET = await decrypt({cipherText: vendor.secrets.accessTokenSecret, 
     //                                               options: { secret: config.accessTokenSecretEncryptionKey } });
 
-    const { success: authenticated, vendor, data, isTokenRefreshed, token } = await authenticationStatus(request);
-    // console.log(authenticated)
+    const { success: authenticated, vendor, data, isTokenRefreshed, token, db } = await authenticationStatus(request);
+    console.log(authenticated)
+    console.log(data)
+    console.log(vendor)
+    if(!authenticated) return NextResponse.json({ error: "Unauthorized..." }, { status: 400 });
 
     const user = data || null;
 

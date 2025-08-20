@@ -525,17 +525,17 @@ export const authOptions = {
 
             try {
                 const newTokens = await tokenRefresh({ token })
-                console.log("OLD TOKEN .......")
-                console.log(token)
+                // console.log("OLD TOKEN .......")
+                // console.log(token)
 
 
-                console.log("new TOKEN .......")
+                // console.log("new TOKEN .......")
                 console.log(newTokens)
                 if (!newTokens) {
-                    console.log("TOKEN REFRESH FAILED .......")
+                    // console.log("TOKEN REFRESH FAILED .......")
                     return null
                 }
-                console.log("TOKEN REFRESH SUCCESS .......")
+                // console.log("TOKEN REFRESH SUCCESS .......")
                 return {
                     ...token,
                     accessToken: newTokens.accessToken,
