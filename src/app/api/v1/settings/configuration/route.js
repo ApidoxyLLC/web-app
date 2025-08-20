@@ -16,6 +16,7 @@ export async function POST(request) {
     // Validate input first
     let body;
     try { body = await request.json(); 
+        console.log(body)
         const parsed = configurationDTOSchema.safeParse(body);
         if (!parsed.success) 
             return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 422 } );

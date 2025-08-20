@@ -12,6 +12,7 @@ export default async function sendEmail({receiverEmail, emailType, senderEmail, 
 
             const path = emailType === 'VERIFY' ? 'verifyemail' : 'resetpassword';
             const link = `${process.env.BASE_URL}/${path}?token=${token}`;
+            console.log("lllllllllllllllllll",link)
 
             const mailOptions = {
             from: `<${senderEmail}>`,

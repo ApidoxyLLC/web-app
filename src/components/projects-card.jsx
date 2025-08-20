@@ -51,8 +51,7 @@ export function ProjectsCard() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loadingState, setLoadingState] = useState(false);
-  const { data, loading } = useFetch("/shops")
-  console.log(data)
+  const { data, loading, refetch } = useFetch("/shops")
   useEffect(() => {
     if (submenuRef.current) {
       setSubmenuHeight(showSecuritySub ? submenuRef.current.scrollHeight : 0);
@@ -127,7 +126,7 @@ export function ProjectsCard() {
             <PopoverTrigger asChild>
               <div className="cursor-pointer">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={`http://localhost:3000/api/v1/image/${data.id}/${data?.logo?.imageName}`}/>
+                  <AvatarImage src={`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${data.id}/${data?.logo?.imageName}`}/>
                   <AvatarFallback>
                     {userData?.data?.user?.name?.charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -339,7 +338,7 @@ export function ProjectsCard() {
             </Card>
           </Link>
         ))}
-        <CreatShop ></CreatShop>
+        <CreatShop refetch ={refetch} ></CreatShop>
       </div>
     </div>
   );

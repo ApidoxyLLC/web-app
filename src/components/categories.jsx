@@ -131,7 +131,7 @@ export default function Categories() {
       throw new Error(data.error || "Image upload failed");
     }
 
-    const imageUrl = `http://localhost:3000/api/v1/image/${shopId}/${data.data.fileName}`;
+    const imageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${shopId}/${data.data.fileName}`;
     setPic(imageUrl);
 
   return data?.data?.fileName;
@@ -143,7 +143,7 @@ export default function Categories() {
       .filter((item) => item.parent === parentId)
       .map((item) => {
         console.log(item)
-        console.log(`http://localhost:3000/api/v1/image/${shopId}/${item.image.imageName}`)
+        console.log(`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${shopId}/${item.image.imageName}`)
         if (visited.has(item.id)) return null;
         visited.add(item.id);
         const children = buildTree(items, item.id, new Set(visited));
@@ -152,7 +152,7 @@ export default function Categories() {
           ...item,
           name: (
             <div className="flex items-center gap-2 group">
-              {item.image && <img src={`http://localhost:3000/api/v1/image/${shopId}/${item.image.imageName}`} alt={item.title} className="h-6 w-6 rounded" />}
+              {item.image && <img src={`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${shopId}/${item.image.imageName}`} alt={item.title} className="h-6 w-6 rounded" />}
               <span>{item.title}</span>
               {children.length > 0 && (
                 <Badge className="text-sm h-6 bg-primary-foreground italic px-2 py-0">
@@ -207,7 +207,7 @@ export default function Categories() {
           className="h-[100px] mt-3 animate-pulse rounded-xl bg-muted/50 dark:bg-muted"
         />
       ))}
-    </div> : itemsTree.length === 0 ? <div className='pt-3 font-base'>No categori added. Please creat a categori</div> : <div className="border rounded-lg ">
+    </div> : itemsTree.length === 0 ? <div className='pt-3 font-base'>No category added. Please create a category</div> : <div className="border rounded-lg ">
         <TreeView
           data={itemsTree}
           defaultLeafIcon={<PlusCircle />}
@@ -226,28 +226,26 @@ export default function Categories() {
               </DialogDescription>
             </DialogHeader>
           </div>
-          <div className="grid gap-6 p-6">
+          <div className="grid gap-6 p-6 ">
             <PicturePreviewInput
-              width={120}
+              width={160}
               height={120}
               label="Upload Category Image"
               picture={pic ? pic : null}
               onChange={async (file) => {
-    if (file instanceof File) {
-      try {
-        const uploadedUrl = await uploadImage(file);
-        console.log(uploadedUrl)
-        setNewCategory(prev => ({...prev,image:uploadedUrl}))
-        } catch (err) {
-        console.error("Upload failed", err);
-        toast.error("Image upload failed");
-      }
-    }else{
-      console.log("err")
-      setPic(null); 
-    }}}
-
-
+                if (file instanceof File) {
+                  try {
+                    const uploadedUrl = await uploadImage(file);
+                    console.log(uploadedUrl)
+                    setNewCategory(prev => ({...prev,image:uploadedUrl}))
+                    } catch (err) {
+                    console.error("Upload failed", err);
+                    toast.error("Image upload failed");
+                  }
+                }else{
+                  console.log("err")
+                  setPic(null); 
+                }}}
             />
 
             <ControlGroup className="w-full">

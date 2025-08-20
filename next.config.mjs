@@ -10,7 +10,7 @@ const nextConfig = {
         ];
     },
     images: {
-    domains: ["i.ibb.co",'i.pinimg.com',"localhost"],
+    domains: ["localhost"],
     remotePatterns: [
       {
         protocol: 'http',

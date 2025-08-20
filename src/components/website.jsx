@@ -35,7 +35,7 @@ export default function Website() {
       throw new Error(data.error || "Image upload failed");
     }
 
-    const imageUrl = `http://localhost:3000/api/v1/image/${shop}/${data.data.fileName}`;
+    const imageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${shop}/${data.data.fileName}`;
     setPic(imageUrl);
 
   return data?.data?.fileName;

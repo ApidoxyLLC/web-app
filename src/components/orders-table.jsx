@@ -151,8 +151,8 @@ const columns = [
     cell: ({ row }) => (
       <ul className="space-y-1">
         {row.original.items.map((item, idx) => (
-          <li key={idx} className="text-xs">
-            {item.title} × {item.quantity} = ৳{item.subtotal}
+          <li key={idx} className="">
+            {item.quantity}x {item.title} 
           </li>
         ))}
       </ul>
@@ -162,7 +162,7 @@ const columns = [
     id: "total",
     header: "Total (BDT)",
     cell: ({ row }) => (
-      <div className="text-right font-medium">
+      <div className="text-left font-medium">
         ৳{row.original.totals.grandTotal}
       </div>
     ),
@@ -171,7 +171,7 @@ const columns = [
     id: "discount",
     header: "Discount",
     cell: ({ row }) => (
-      <div className="text-right text-sm text-muted-foreground">
+      <div className="text-left text-sm text-muted-foreground">
         -৳{row.original.totals.discount}
       </div>
     ),
@@ -189,7 +189,7 @@ const columns = [
     cell: ({ row }) => {
       const shipping = row.original.shipping
       return (
-        <div className="text-xs">
+        <div className="">
           {shipping.address.street}, {shipping.address.city},{" "}
           {shipping.address.country}
         </div>
@@ -200,7 +200,6 @@ const columns = [
     id: "payment",
     header: "Payment",
     cell: ({ row }) => {
-      console.log("rowwwwwww",row)
       const { method, status } = row.original.payment
       return (
         <div className="flex flex-col text-xs">
@@ -271,7 +270,7 @@ export function OrdersTable(
   )
 
   const {shop} = useParams()
-  const {data,loading,error}= useFetch(`/${shop}/orders`)
+  const {data, loading, error}= useFetch(`/${shop}/orders`)
   console.log("ddddd",data)
   const dataIds = React.useMemo(
     () => data?.map(({ id }) => id) || [],
@@ -417,7 +416,7 @@ const table = useReactTable({
     ) : (
       <TableRow>
         <TableCell colSpan={columns.length} className="h-24 text-center">
-          No results.
+          No orders.
         </TableCell>
       </TableRow>
     )}

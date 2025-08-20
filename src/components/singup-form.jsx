@@ -278,7 +278,8 @@ const [count, setCount] = useState(0);
                 onClick={() => signIn("facebook")}
                 variant="outline"
                 type="button"
-                className="w-full"
+                className="w-full cursor-not-allowed"
+                disabled
               >
                 <FaFacebookF />
                 <span className="sr-only">Login with Facebook</span>

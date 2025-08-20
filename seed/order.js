@@ -217,7 +217,7 @@ const dummyOrders = [
 
 
 
-const dbURI = 'mongodb+srv://sowrov:Yy6jBHQufFx3vpbG@apidoxy.f4yxayv.mongodb.net/undefined_6880859d9325ef7878974f1b_db?retryWrites=true&w=majority&appName=apidoxy'
+const dbURI = 'mongodb+srv://sowrov:Yy6jBHQufFx3vpbG@apidoxy.f4yxayv.mongodb.net/s_68a4519bb40637386ecb5cae?retryWrites=true&w=majority&appName=apidoxy'
 const insertDummyOrders = async () => {
   try {
     await mongoose.connect(dbURI);

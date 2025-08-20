@@ -295,6 +295,7 @@ export async function POST(request) {
     
     // if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
+<<<<<<< HEAD
     const payload = {         
                       ...(fingerprint && { fingerprint }),
                              name: user.name,
@@ -302,14 +303,22 @@ export async function POST(request) {
                             phone: user.phone,
                            avatar: user.avatar,
                              role: user.role,
+=======
+    const payload = { ...(fingerprint   && { fingerprint }),
+                      ...(user.name     && {     name: user.name     }),
+                      ...(user.email    && {    email: user.email    }),
+                      ...(user.phone    && {    phone: user.phone    }),
+                      ...(user.avatar   && {   avatar: user.avatar   }),
+                      ...(user.role     && {     role: user.role     }),
+                      ...(user.gender   && {   gender: user.gender   }),
+                      ...(user.theme    && {    theme: user.theme    }),
+                      ...(user.language && { language: user.language }),
+                      ...(user.timezone && { timezone: user.timezone }),
+                      ...(user.currency && { currency: user.currency }),
+>>>>>>> 2245b6d3d13f49d6bbf63ecad003c628c9d678d7
                        isVerified: user.isEmailVerified || user.isPhoneVerified,
-                           gender: user.gender,
                   isEmailVerified: user.isEmailVerified,
                   isPhoneVerified: user.isPhoneVerified,
-                            theme: user.theme,
-                         language: user.language,
-                         timezone: user.timezone,
-                         currency: user.currency,
                              cart: user.cart,
                       };
 
