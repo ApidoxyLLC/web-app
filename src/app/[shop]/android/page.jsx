@@ -1,4 +1,4 @@
-import Android from "@/components/android"
+import Android from "@/components/android";
 import AndroidBuild from "@/components/android-build"
 
 

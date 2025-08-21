@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 // import androidDockerYaml from '../../../../../lib/docker-yaml';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import axios from 'axios';
-import {androidModel} from '@/models/android/Android';
+import { androidModel } from '@/models/android/Android';
 
 export async function POST(req) {
     const vendor_db = await vendorDbConnect();
