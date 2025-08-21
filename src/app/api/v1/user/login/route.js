@@ -289,9 +289,14 @@ export async function POST(request) {
     const newRefreshTokenId = crypto.randomBytes(16).toString('hex');
     const MAX_SESSIONS = vendor.maxSessionAllowed || Number(process.env.END_USER_DEFAULT_MAX_SESSIONS) || 5;
 
-    // Token configuration
-    const AT_EXPIRY = Number(vendor.expirations?.accessTokenExpireMinutes) || 15;
-    const RT_EXPIRY = Number(vendor.expirations?.refreshTokenExpireMinutes) || 1440;
+    // const accessTokenExpireMinutes = Number.isFinite(Number(vendor.expirations?.accessTokenExpireMinutes ?? config.accessTokenDefaultExpireMinutes))
+    //                                                       ? Number(vendor.expirations?.accessTokenExpireMinutes ?? config.accessTokenDefaultExpireMinutes)
+    //                                                       : 15;
+    const accessTokenExpireMinutes = 1440
+
+    const refreshTokenExpireMinutes = Number.isFinite(Number(data.expirations?.refreshTokenExpireMinutes ?? config.refreshTokenDefaultExpireMinutes))
+                                                          ? Number(data.expirations?.refreshTokenExpireMinutes ?? config.refreshTokenDefaultExpireMinutes)
+                                                          : 1440;
     
     // if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
     
@@ -316,14 +321,14 @@ export async function POST(request) {
                                     ...payload, 
                                        tokenId: newAccessTokenId },
                                     ACCESS_TOKEN_SECRET,
-                                  { expiresIn: minutesToExpiresIn(AT_EXPIRY) } );
+                                  { expiresIn: minutesToExpiresIn(accessTokenExpireMinutes) } );
     
     const refreshToken = jwt.sign( { 
                                     //  ...payload, 
                                             sub: sessionId.toString(),
                                         tokenId: newRefreshTokenId },
                                     REFRESH_TOKEN_SECRET,
-                                  { expiresIn: minutesToExpiresIn(RT_EXPIRY) }
+                                  { expiresIn: minutesToExpiresIn(refreshTokenExpireMinutes) }
                                 );
 
     const    ipAddressCipherText = await encrypt({ data: ip,
@@ -350,8 +355,8 @@ export async function POST(request) {
     //                                                             );
     //                                                           }
 
-    const  accessTokenExpiry = minutesToExpiryTimestamp(AT_EXPIRY)
-    const refreshTokenExpiry = minutesToExpiryTimestamp(RT_EXPIRY)
+    const  accessTokenExpiry = minutesToExpiryTimestamp(accessTokenExpireMinutes)
+    const refreshTokenExpiry = minutesToExpiryTimestamp(refreshTokenExpireMinutes)
 
 
     const dbSession = await shop_db.startSession();
