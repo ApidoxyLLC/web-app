@@ -13,6 +13,7 @@ import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import { deleteImage } from '@/services/image/blackblaze';
 
 const MAX_CATEGORY_DEPTH = parseInt(process.env.MAX_CATEGORY_DEPTH || '5', 10);
+export const dynamic = "force-dynamic"; 
 
 export async function POST(request) {
   let body;
@@ -142,3 +143,104 @@ export async function POST(request) {
   }, { status: 500, headers: securityHeaders });
   }
 }
+
+
+export async function GET(request) {
+  const ip =
+    request.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+    request.headers["x-real-ip"] ||
+    request.socket?.remoteAddress ||
+    "";
+
+  const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": retryAfter.toString(), ...securityHeaders } }
+    );
+  }
+
+  try {
+    const headerList = await headers();
+    const vendorId = headerList.get("x-vendor-identifier");
+    const host = headerList.get("host");
+
+    if (!vendorId && !host) {
+      return NextResponse.json(
+        { error: "Missing vendor identifier or host" },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
+    const searchQuery = searchParams.get("q") || "";
+    const status = searchParams.get("status"); 
+
+    if (isNaN(page) || page < 1)
+      return NextResponse.json({ error: "Invalid page number" }, { status: 400, headers: securityHeaders });
+
+    if (isNaN(limit) || limit < 1 || limit > 100)
+      return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400, headers: securityHeaders });
+
+    const vendor_db = await vendorDbConnect();
+    const Vendor = vendorModel(vendor_db);
+    const vendor = await Vendor.findOne({ referenceId: vendorId }).lean();
+    if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404, headers: securityHeaders });
+
+    const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri, options: { secret: config.vendorDbUriEncryptionKey } });
+    const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+    const Category = categoryModel(shop_db);
+
+    const query = {};
+    if (status) query.isActive = status === "active";
+    if (searchQuery) query.title = { $regex: searchQuery, $options: "i" };
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
+
+    const [categories, total] = await Promise.all([
+      Category.find(query)
+        .sort(sortOptions)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Category.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: categories,
+        pagination: {
+          total,
+          totalPages,
+          currentPage: page,
+          hasNextPage,
+          hasPreviousPage,
+          nextPage: hasNextPage ? page + 1 : null,
+          previousPage: hasPreviousPage ? page - 1 : null,
+        },
+      },
+      { status: 200, headers: securityHeaders }
+    );
+  } catch (error) {
+    console.error("Categories API Error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch categories", details: process.env.NODE_ENV !== "production" ? error.message : undefined },
+      { status: 500, headers: securityHeaders }
+    );
+  }
+}
+
+
+
+
+

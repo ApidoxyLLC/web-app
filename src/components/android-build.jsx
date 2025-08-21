@@ -37,8 +37,7 @@ export default function AndroidBuild({apps}) {
                 <div className="w-full border rounded-md overflow-hidden">
                     <Table>
                         <TableBody>
-                        {apps.map((app) => (
-                            
+                        {apps.map((app) => ( 
                             <TableRow key={app.id} className="odd:bg-muted/50">
                                 {console.log(app.icon)}
                                 <TableCell className="flex gap-4 items-center">

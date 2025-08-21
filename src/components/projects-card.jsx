@@ -52,6 +52,7 @@ export function ProjectsCard() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loadingState, setLoadingState] = useState(false);
   const { data, loading, refetch } = useFetch("/shops")
+  console.log(data)
   useEffect(() => {
     if (submenuRef.current) {
       setSubmenuHeight(showSecuritySub ? submenuRef.current.scrollHeight : 0);
@@ -304,12 +305,12 @@ export function ProjectsCard() {
       <div className="*:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-3 grid grid-cols-1 gap-6 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card lg:px-6 py-6  auto-rows-fr">
         
          {data?.map((shop)=> (
-          <Link key={shop?.businessName} href={`${shop?.id}/dashboard`} >
+          <Link key={shop?.id} href={`${shop?.id}/dashboard`} >
             <Card className="@container/card cursor-pointer hover:bg-muted/100">
             <CardHeader className="relative">
               <div className="flex items-center gap-2">
                 <Avatar className="h-12 w-12 bg-muted/100 rounded-sm">
-                  <AvatarImage src="https://placehold.co/400/png?text=H" alt="Project Icon" />
+                  <AvatarImage src={`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/image/${shop?.id}/${shop.logo.imageName}`} alt="Project Icon" />
                   <AvatarFallback>{shop?.businessName?.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <CardTitle className="@[250px]/card:text-xl text-xl font-semibold tabular-nums">

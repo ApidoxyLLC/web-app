@@ -72,7 +72,7 @@ const userSchema = new mongoose.Schema({
   isEmailVerified: { type: Boolean, default: false },
   isPhoneVerified: { type: Boolean, default: false },
      verification: { type: verificationSchema, default: () => ({}), select: false },
-         security: { type: securitySchema,     default: () => ({}), select: false },
+         security: { type: securitySchema,     default: () => ({}),  8: false },
           consent: { type: consentSchema,      default: () => ({}), select: false },
            status: { type: statusSchema,       default: () => ({}), select: false },
              lock: { type: lockSchema,         default: () => ({}), select: false },

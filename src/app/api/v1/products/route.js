@@ -79,6 +79,7 @@ export async function GET(request) {
     });
 
     const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+    const Category = categoryModel(shop_db);
 
     const ProductModel = productModel(shop_db);
 
@@ -133,9 +134,9 @@ export async function GET(request) {
     // Execute query with pagination
     const [products, total] = await Promise.all([
       ProductModel.find(query)
-        .populate('categories', 'name slug')
-        .populate('brand', 'name logo')
-        .populate('vendor', 'name')
+        .populate({ path: 'category', model: Category, select: 'title slug' })
+        // .populate('brand', 'name logo')
+        // .populate('vendor', 'name')
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
@@ -152,38 +153,43 @@ export async function GET(request) {
     // Transform products for response
     const transformedProducts = products.map(product => ({
       id: product._id,
-      // productId: product.productId,
       title: product.title,
-      slug: product.slug,
       description: product.description,
       price: {
-        base: product.price.base,
-        currency: product.price.currency,
-        discount: product.price.discount,
-        compareAt: product.price.compareAt
+        base: product.price?.base,
+        currency: product.price?.currency,
+        discount: product.price?.discount,
+        compareAt: product.price?.compareAt,
+        cost: product.price?.cost,
+        profit: product.price?.profit,
+        margin: product.price?.margin,
       },
       thumbnail: product.thumbnail,
-      gallery: product.gallery,
+      gallery: product.gallery || [],
+      otherMediaContents: product.otherMediaContents || [],
       status: product.status,
-      type: product.type,
       approvalStatus: product.approvalStatus,
       isFeatured: product.isFeatured,
       hasVariants: product.hasVariants,
-      categories: product.categories,
-      brand: product.brand,
-      tags: product.tags,
+      category: product.category, // single category ObjectId
+      tags: product.tags || [],
       variants: product.variants?.map(variant => ({
         id: variant._id,
-        title: variant.title,
+        options: variant.options,
         price: variant.price || product.price,
         sku: variant.sku,
         inventory: variant.inventory,
-        options: variant.options
-      })),
-      ratings: product.ratings,
+      })) || [],
+      inventory: product.inventory || {},
+      ratings: product.ratings || { average: 0, count: 0 },
+      weight: product.weight,
+      weightUnit: product.weightUnit,
+      hasFreeShipment: product.hasFreeShipment,
+      sellWithOutStock: product.sellWithOutStock,
       createdAt: product.createdAt,
-      updatedAt: product.updatedAt
+      updatedAt: product.updatedAt,
     }));
+
 
     console.log("transformedProducts************")
     console.log(transformedProducts)

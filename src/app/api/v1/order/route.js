@@ -52,20 +52,20 @@ export async function POST(request) {
     try {
         const     dbUri = await decrypt({ cipherText: shop.dbInfo.uri, options: { secret: DB_URI_ENCRYPTION_KEY } });
         const     dbKey = `${shop.dbInfo.prefix}${shop._id}`;
-        const vendor_db = await dbConnect({ dbKey, dbUri });
+        const shop_db = await dbConnect({ dbKey, dbUri });
 
-        const                 CartModel = cartModel(vendor_db);
-        const                OrderModel = orderModel(vendor_db);
-        const              ProductModel = productModel(vendor_db);
-        const     InventoryHistoryModel = inventoryHistoryModel(vendor_db);
-        const InventoryReservationModel = inventoryReservationModel(vendor_db);        
+        const                 CartModel = cartModel(shop_db);
+        const                OrderModel = orderModel(shop_db);
+        const              ProductModel = productModel(shop_db);
+        const     InventoryHistoryModel = inventoryHistoryModel(shop_db);
+        const InventoryReservationModel = inventoryReservationModel(shop_db);        
 
         let savedOrder;
         let retryCount = 0;
         let lastError;
 
         while (retryCount < MAX_TRANSACTION_RETRIES) {
-            const   session = await vendor_db.startSession();
+            const   session = await shop_db.startSession();
             try {
                 await session.withTransaction(async () => {
                     // Step 1: Fetch cart with enriched product data
@@ -303,6 +303,7 @@ export async function POST(request) {
         return NextResponse.json( { error: "Order processing failed. Please try again." }, { status: 500 });
     }
 }
+
 
 
 
