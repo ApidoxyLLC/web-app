@@ -9,6 +9,7 @@ import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import { isValidObjectId } from "mongoose";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { getInfrastructure } from "@/services/vendor/getInfrastructure";
+import { FaProductHunt } from "react-icons/fa";
 
 
 export const dynamic = 'force-dynamic';
@@ -16,11 +17,11 @@ export const dynamic = 'force-dynamic';
 export async function GET(request, { params }) {
 
 
-  const       ip = request.headers["x-forwarded-for"]?.split(",")[0]?.trim() || request.headers["x-real-ip"] || request.socket?.remoteAddress || "";
-  const vendorId = request.headers.get("x-vendor-identifier");
-  const     host = request.headers.get("host");
+  const          ip = request.headers["x-forwarded-for"]?.split(",")[0]?.trim() || request.headers["x-real-ip"] || request.socket?.remoteAddress || "";
+  const referenceId = request.headers.get("x-vendor-identifier");
+  const        host = request.headers.get("host");
 
-  if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
+  if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
 
   const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
   if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -28,74 +29,29 @@ export async function GET(request, { params }) {
   const { allowed, retryAfter } = await applyRateLimit({ key: `${vendor.id}:${ip}` });
   if (!allowed) return NextResponse.json({ error: "Too many requests. Please try again later." },{ status: 429, headers: { "Retry-After": retryAfter.toString() } });
   
-    // console.log(identifier)
-  // console.log(isValidObjectId(identifier))
-
-  // return NextResponse.json( { message: "Sample Response " }, { status: 200 });
-
-  // Get client IP for rate limiting
-  // const headerList = headers();
-  // const ip = headerList.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-  //            headerList.get('x-real-ip') || 'unknown_ip';
-
-  // Rate limiting
-  // try { await limiter.check(ip, 30); }
-  // catch { return NextResponse.json( { error: "Too many requests" }, { status: 429, headers: { 'Retry-After': '60' } } );}
-
-  // Get vendor identification
-  // const vendorId = headerList.get('x-vendor-identifier');
-  // const host = headerList.get('host');
-  
-  // if (!vendorId && !host) 
-  //   return NextResponse.json( { error: "Missing vendor identifier or host" }, { status: 400 } );
-  
-
-    const { identifier } = await params;
-
-
-  // Validate product ID
-  if (!productId || !mongoose.Types.ObjectId.isValid(productId)) 
-    return NextResponse.json( { error: "Invalid product ID" }, { status: 400 });
-  
-
+  const { identifier } = await params;
+  console.log(vendor)
   try {
-    // Connect to auth database
-    // const auth_db = await authDbConnect();
-    // const ShopModel = shopModel(auth_db);
-
-    // const shop = await ShopModel.findOne({ $or: [{ vendorId }, { domains: { $elemMatch: { domain: host } } }] }).select('+dbInfo.uri +dbInfo.prefix').lean();
-    
-    // if (!shop)
-    //   return NextResponse.json({ error: "Shop not found" }, { status: 404 })
-
-    // Decrypt DB URI
-    // const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-    // if (!DB_URI_ENCRYPTION_KEY) 
-    //   return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
-    
-    // const dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
-    //                                  options: { secret: DB_URI_ENCRYPTION_KEY }  });
-
-    // // Connect to vendor DB
-    // const   shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
-    const    vendor_db = await dbConnect({ dbKey: dbName, dbUri });
-    const ProductModel = productModel(vendor_db);
+    const    shop = await dbConnect({ dbKey: dbName, dbUri });
+    const ProductModel = productModel(shop);
 
     // Get product with full details
     let product 
-    if (isValidObjectId(identifier))
-       product = await ProductModel.findById(productId)
-                                      .populate('categories', 'name slug')
-                                      .populate('brand', 'name logo slug')
-                                      .populate('vendor', 'name businessName')
-                                      .lean();
-    else 
+    if (isValidObjectId(identifier)){
+        product = await ProductModel.findById(identifier)
+                                    .select("slug title description tags gallery otherMediaContents price thumbnail options details category hasVariants isAvailable warranty status approvalStatus productFormat weight weightUnit hasFreeShipment sellWithOutStock digitalAssets brand shipping ratings isFeatured variants inventory reviews reservations publishedAt metadata")
+                                    .lean();
 
-    if (!product) 
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    if (vendorId && product.vendor.toString() !== vendorId) 
-      return NextResponse.json({ error: "Unauthorized access to product" }, { status: 403 } );
-    
+      }
+    else {
+        product = await ProductModel.findOne({ slug: identifier })
+                                    .select("slug title description tags gallery otherMediaContents price thumbnail options details category hasVariants isAvailable warranty status approvalStatus productFormat weight weightUnit hasFreeShipment sellWithOutStock digitalAssets brand shipping ratings isFeatured variants inventory reviews reservations publishedAt metadata")
+                                    .lean();
+      }
+
+
+    if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
+
 
     // Transform product for response
     const transformedProduct = {
@@ -104,17 +60,15 @@ export async function GET(request, { params }) {
       title: product.title,
       slug: product.slug,
       description: product.description,
-      type: product.type,
+      // type: product.type,
       status: product.status,
       approvalStatus: product.approvalStatus,
       isFeatured: product.isFeatured,
       hasVariants: product.hasVariants,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
       publishedAt: product.publishedAt,
       thumbnail: product.thumbnail,
       gallery: product.gallery,
-      otherMedia: product.otherMedia,
+      otherMediaContents: product.otherMediaContents,
       price: {
         base: product.price.base,
         currency: product.price.currency,
@@ -124,9 +78,9 @@ export async function GET(request, { params }) {
         minPrice: product.price.minPrice,
         maxPrice: product.price.maxPrice
       },
-      categories: product.categories,
+      category: product.category,
       brand: product.brand,
-      vendor: product.vendor,
+      // vendor: product.vendor,
       tags: product.tags,
       options: product.options,
       details: product.details,
@@ -146,13 +100,15 @@ export async function GET(request, { params }) {
         taxable: variant.taxable,
         requiresShipping: variant.requiresShipping
       })),
-      digitalAssets: product.digitalAssets?.map(asset => ({
-        name: asset.name,
-        url: asset.url,
-        mimeType: asset.mimeType,
-        accessLimit: asset.accessLimit,
-        expiry: asset.expiry
-      })),
+
+      ...((product.productFormat && product.productFormat == 'digital') && 
+          {
+              digitalAssets: product.digitalAssets?.map(asset => ({ name: asset.name,
+                                                                     url: asset.url,
+                                                                mimeType: asset.mimeType,
+                                                             accessLimit: asset.accessLimit,
+                                                                  expiry: asset.expiry        }))
+          }),
       productUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/products/${product.slug}`
     };
 

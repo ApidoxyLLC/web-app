@@ -131,6 +131,7 @@ const productSchema = new mongoose.Schema({
                           description: String,
                          canonicalUrl: String  },
 }, { timestamps: true, collection: 'products' });
+
 export const productModel = (db) => db.models.Product || db.model('Product', productSchema);
 
 
