@@ -22,9 +22,7 @@ function getKeys({ vendorId, sessionId, userId }) {
 /**
  * Create/Update a session for a vendor user
  */
-export async function setSession({ vendorId, sessionId, tokenId, payload = {}, ttl = config.accessTokenDefaultExpireMinutes  }) {
-
-  
+export async function setSession({ vendorId, sessionId, tokenId, ttlMinutes = config.accessTokenDefaultExpireMinutes,   payload = {},   }) {
   // email, phone, role,
   const { userId } = payload;
   if (!vendorId || !sessionId || !tokenId || !userId)  throw new Error('Missing required session data');
@@ -34,7 +32,7 @@ export async function setSession({ vendorId, sessionId, tokenId, payload = {}, t
   const { sessionKey, userSessionsKey } = getKeys({ vendorId, sessionId, userId });
   const now = Date.now();
 
-  const ttlInSeconds = ttl * 60;
+  const ttlInSeconds = ttlMinutes * 60;
 
   const pipeline = sessionRedis.pipeline();
   

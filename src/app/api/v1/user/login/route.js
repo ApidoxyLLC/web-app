@@ -341,6 +341,7 @@ export async function POST(request) {
     await setSession({  vendorId: vendor.id,
                        sessionId: sessionId.toString(),
                          tokenId: newAccessTokenId,
+                      ttlMinutes: accessTokenExpireMinutes,
                          payload: { userId: user._id, 
                                       role: user.role, 
                                      email: user.email,
