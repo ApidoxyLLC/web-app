@@ -93,8 +93,7 @@ const warrantySchema = new mongoose.Schema({
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({
-         //   productId: { type: String, default: () => cuid(), unique: true },
-               //  slug: { type: String, required: true, unique: true },
+                slug: { type: String, unique: true, sparse: true },
                title: { type: String, required: true, trim: true },
          description: String, 
                 tags: [{ type: String }],
@@ -104,11 +103,10 @@ const productSchema = new mongoose.Schema({
            thumbnail: { type: String, required: false },
              options: { type: [String], enum:["size", "color", "material"] },
              details: { type: detailSchema, default: undefined },
-          // categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category'}],
             category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: undefined },
          hasVariants: { type: Boolean, default: false },
          isAvailable: { type: Boolean, default: undefined },
-            // warranty: { type: warrantySchema,  default: undefined },
+            warranty: { type: warrantySchema,  default: undefined },
               status: { type: String, default: 'draft',  enum: ['active', 'draft', 'archived', 'discontinued'] },
       approvalStatus: { type: String, default: 'pending', enum: ['pending', 'approved', 'rejected'] },
        productFormat: { type: String, enum: ['physical', 'digital'],  default: 'physical' },
@@ -132,13 +130,12 @@ const productSchema = new mongoose.Schema({
             metadata: {         title: String,
                           description: String,
                          canonicalUrl: String  },
-}, 
-{ timestamps: true, collection: 'products' });
-
+}, { timestamps: true, collection: 'products' });
 export const productModel = (db) => db.models.Product || db.model('Product', productSchema);
 
 
 
+          // categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category'}],
 
 // title 
 // description

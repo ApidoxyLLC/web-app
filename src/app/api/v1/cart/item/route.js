@@ -48,21 +48,20 @@
       return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten() }, { status: 422, headers: securityHeaders });
     }
 
-    const { success: authenticated, shop, data: user, isTokenRefreshed, token } = await authenticationStatus(request);
-
+    const { success: authenticated, shop, data: user, isTokenRefreshed, token, db } = await authenticationStatus(request);
     if (!authenticated || (authenticated && !user?._id))  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // 🟢 RATE LIMIT CHECK
-    try {
-      const authKey = `auth:${ip}:${fingerprint}`;
-      const guestKey = `guest:${fingerprint || ip}`;
-      if (authenticated) 
-        await authLimiter.consume(authKey); // Key must be unique per user/device
-      else 
-        await guestLimiter.consume(guestKey); // Use fingerprint or fallback to IP    
-    } catch (rateLimiterRes) {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429,headers: {...securityHeaders,'Retry-After': rateLimiterRes.msBeforeNext / 1000,},});
-    }
+    // try {
+    //   const authKey = `auth:${ip}:${fingerprint}`;
+    //   const guestKey = `guest:${fingerprint || ip}`;
+    //   if (authenticated) 
+    //     await authLimiter.consume(authKey); // Key must be unique per user/device
+    //   else 
+    //     await guestLimiter.consume(guestKey); // Use fingerprint or fallback to IP    
+    // } catch (rateLimiterRes) {
+    //   return NextResponse.json({ error: 'Too many requests' }, { status: 429,headers: {...securityHeaders,'Retry-After': rateLimiterRes.msBeforeNext / 1000,},});
+    // }
 
     // ✅ Connect to Vendor DB
     const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;

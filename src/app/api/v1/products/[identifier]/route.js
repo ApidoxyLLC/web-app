@@ -6,28 +6,52 @@ import { dbConnect } from "@/lib/mongodb/db";
 import { shopModel } from "@/models/auth/Shop";
 import { productModel } from "@/models/shop/product/Product";
 import { decrypt } from "@/lib/encryption/cryptoEncryption";
+import { isValidObjectId } from "mongoose";
+import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
+import { getInfrastructure } from "@/services/vendor/getInfrastructure";
+
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request, { params }) {
-  const { slug: productId } = params;
+
+
+  const       ip = request.headers["x-forwarded-for"]?.split(",")[0]?.trim() || request.headers["x-real-ip"] || request.socket?.remoteAddress || "";
+  const vendorId = request.headers.get("x-vendor-identifier");
+  const     host = request.headers.get("host");
+
+  if (!vendorId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400 });
+
+  const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+  if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+
+  const { allowed, retryAfter } = await applyRateLimit({ key: `${vendor.id}:${ip}` });
+  if (!allowed) return NextResponse.json({ error: "Too many requests. Please try again later." },{ status: 429, headers: { "Retry-After": retryAfter.toString() } });
+  
+    // console.log(identifier)
+  // console.log(isValidObjectId(identifier))
+
+  // return NextResponse.json( { message: "Sample Response " }, { status: 200 });
 
   // Get client IP for rate limiting
-  const headerList = headers();
-  const ip = headerList.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-             headerList.get('x-real-ip') || 'unknown_ip';
+  // const headerList = headers();
+  // const ip = headerList.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+  //            headerList.get('x-real-ip') || 'unknown_ip';
 
   // Rate limiting
   // try { await limiter.check(ip, 30); }
   // catch { return NextResponse.json( { error: "Too many requests" }, { status: 429, headers: { 'Retry-After': '60' } } );}
 
   // Get vendor identification
-  const vendorId = headerList.get('x-vendor-identifier');
-  const host = headerList.get('host');
+  // const vendorId = headerList.get('x-vendor-identifier');
+  // const host = headerList.get('host');
   
-  if (!vendorId && !host) 
-    return NextResponse.json( { error: "Missing vendor identifier or host" }, { status: 400 } );
+  // if (!vendorId && !host) 
+  //   return NextResponse.json( { error: "Missing vendor identifier or host" }, { status: 400 } );
   
+
+    const { identifier } = await params;
+
 
   // Validate product ID
   if (!productId || !mongoose.Types.ObjectId.isValid(productId)) 
@@ -36,34 +60,36 @@ export async function GET(request, { params }) {
 
   try {
     // Connect to auth database
-    const auth_db = await authDbConnect();
-    const ShopModel = shopModel(auth_db);
+    // const auth_db = await authDbConnect();
+    // const ShopModel = shopModel(auth_db);
 
-    const shop = await ShopModel.findOne({ $or: [{ vendorId }, { domains: { $elemMatch: { domain: host } } }] }).select('+dbInfo.uri +dbInfo.prefix').lean();
+    // const shop = await ShopModel.findOne({ $or: [{ vendorId }, { domains: { $elemMatch: { domain: host } } }] }).select('+dbInfo.uri +dbInfo.prefix').lean();
     
-    if (!shop)
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 })
+    // if (!shop)
+    //   return NextResponse.json({ error: "Shop not found" }, { status: 404 })
 
     // Decrypt DB URI
-    const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-    if (!DB_URI_ENCRYPTION_KEY) 
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    // const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
+    // if (!DB_URI_ENCRYPTION_KEY) 
+    //   return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
     
-    
-    const dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
-                                     options: { secret: DB_URI_ENCRYPTION_KEY }  });
+    // const dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
+    //                                  options: { secret: DB_URI_ENCRYPTION_KEY }  });
 
-    // Connect to vendor DB
-    const   shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
-    const    vendor_db = await dbConnect({ dbKey: shopDbName, dbUri });
+    // // Connect to vendor DB
+    // const   shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
+    const    vendor_db = await dbConnect({ dbKey: dbName, dbUri });
     const ProductModel = productModel(vendor_db);
 
     // Get product with full details
-    const product = await ProductModel.findById(productId)
+    let product 
+    if (isValidObjectId(identifier))
+       product = await ProductModel.findById(productId)
                                       .populate('categories', 'name slug')
                                       .populate('brand', 'name logo slug')
                                       .populate('vendor', 'name businessName')
                                       .lean();
+    else 
 
     if (!product) 
       return NextResponse.json({ error: "Product not found" }, { status: 404 });

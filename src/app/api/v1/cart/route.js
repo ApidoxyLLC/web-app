@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { dbConnect } from "@/lib/mongodb/db";
 import { cartModel } from "@/models/shop/product/Cart";
 import { productModel } from "@/models/shop/product/Product";
-import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import securityHeaders from "../utils/securityHeaders";
 import { authenticationStatus } from "../middleware/auth";
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 
 
 export async function GET(request) {
@@ -21,60 +19,52 @@ export async function GET(request) {
   
   if (!vendorId && !host) 
     return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400, headers: securityHeaders });
+      const { success: authenticated, vendor, data, db } = await authenticationStatus(request);
+      console.log(authenticated)
+      console.log(data)
+      console.log(vendor)
+      if(!authenticated) return NextResponse.json({ error: "Unauthorized..." }, { status: 400 });
 
 
-  const { success: authenticated, shop, data: user, isTokenRefreshed, token } = await authenticationStatus(request);
-
-  // Connect to Vendor DB
-  const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-  if (!DB_URI_ENCRYPTION_KEY) {
-    console.log("Missing VENDOR_DB_URI_ENCRYPTION_KEY");
-    return NextResponse.json({ success: false, error: "Missing encryption key" }, { status: 500, headers: securityHeaders });
-  }
-
-  const     dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
-                                       options: { secret: DB_URI_ENCRYPTION_KEY } });
-  const     dbKey = `${shop.dbInfo.prefix}${shop._id}`;
-  const vendor_db = await dbConnect({ dbKey, dbUri });
-  const CartModel = cartModel(vendor_db);
+  const CartModel = cartModel(db);
 
   let cart;
-  if (authenticated && user?._id) {
+  if (authenticated && data?.userId) {
     // Search by userId for authenticated users
-    cart = await CartModel.findOne({ userId: user._id })
-                          .select(  "+cartId "                  +
-                                    "+userId"                   +
-                                    "+items"                    +
-                                    "+isGuest"                  +
-                                    "+fingerprint"              +
-                                    "+ip"                       +
-                                    "+userAgent"                +
-                                    "+expiresAt"                +
-                                    "+totals"                   +  
-                                    "+totals.subtotal"          +
-                                    "+totals.discount"          +
-                                    "+totals.tax"               +
-                                    "+totals.deliveryCharge"    +
-                                    "+totals.grandTotal" 
+    cart = await CartModel.findOne({ userId: data?.userId })
+                          .select(  "cartId "                  +
+                                    "userId"                   +
+                                    "items"                    +
+                                    "isGuest"                  +
+                                    "fingerprint"              +
+                                    "ip"                       +
+                                    "userAgent"                +
+                                    "expiresAt"                +
+                                    "totals"                   +  
+                                    "totals.subtotal"          +
+                                    "totals.discount"          +
+                                    "totals.tax"               +
+                                    "totals.deliveryCharge"    +
+                                    "totals.grandTotal" 
                                 )
                           .lean()
   } else if (fingerprint) {
     // Search by fingerprint for guest users
     cart = await CartModel.findOne({ userId: { $exists: false }, fingerprint })
-                          .select(  "+cartId "                  +
-                                    "+userId"                   +
-                                    "+items"                    +
-                                    "+isGuest"                  +
-                                    "+fingerprint"              +
-                                    "+ip"                       +
-                                    "+userAgent"                +
-                                    "+expiresAt"                +
-                                    "+totals"                   +  
-                                    "+totals.subtotal"          +
-                                    "+totals.discount"          +
-                                    "+totals.tax"               +
-                                    "+totals.deliveryCharge"    +
-                                    "+totals.grandTotal" 
+                          .select(  "cartId "                  +
+                                    "userId"                   +
+                                    "items"                    +
+                                    "isGuest"                  +
+                                    "fingerprint"              +
+                                    "ip"                       +
+                                    "userAgent"                +
+                                    "expiresAt"                +
+                                    "totals"                   +  
+                                    "totals.subtotal"          +
+                                    "totals.discount"          +
+                                    "totals.tax"               +
+                                    "totals.deliveryCharge"    +
+                                    "totals.grandTotal" 
                                 )
                           .lean()
   }
@@ -86,7 +76,7 @@ export async function GET(request) {
 const productIdsInCart = cart.items.map(item => item.productId).filter(Boolean);
 
 // 🟡 2. Fetch productId from Product collection
-const ProductModel = productModel(vendor_db); // Ensure this exists if not already
+const ProductModel = productModel(db); // Ensure this exists if not already
 const products = await ProductModel.find({ _id: { $in: productIdsInCart } })
                                    .select('_id productId')
                                    .lean();

@@ -76,15 +76,15 @@ export async function getInfrastructure({ referenceId, host }) {
                                 options: { secret: config.vendorDbUriEncryptionKey }, });
 
   return {    data: {
-                        ...(vendor.email && { email: vendor.email }),
-                        ...(vendor.phone && { phone: vendor.phone }),
-                        ...(vendor.dbInfo && { dbInfo: vendor.dbInfo }),
-                        ...(vendor.secrets && { secrets: vendor.secrets }),
-                        ...(vendor.expirations && { expirations: vendor.expirations }),
+                        ...(vendor.email             && {             email: vendor.email             }),
+                        ...(vendor.phone             && {             phone: vendor.phone             }),
+                        ...(vendor.dbInfo            && {            dbInfo: vendor.dbInfo            }),
+                        ...(vendor.secrets           && {           secrets: vendor.secrets           }),
+                        ...(vendor.expirations       && {       expirations: vendor.expirations       }),
                         ...(vendor.maxSessionAllowed && { maxSessionAllowed: vendor.maxSessionAllowed }),
-                        ...(vendor.domains && { domains: vendor.domains }),
-                        ...(vendor._id && { id: vendor._id }),
-                        ...(vendor.secrets && { secrets: vendor.secrets }),
+                        ...(vendor.domains           && {           domains: vendor.domains           }),
+                        ...(vendor._id               && {                id: vendor._id               }),
+                        ...(vendor.secrets           && {           secrets: vendor.secrets           }),
                     },
              dbUri,
             dbName: vendor.dbInfo.dbName };
