@@ -45,7 +45,7 @@ const dummyCart = {
 
 const dbUri = ""
 
-const insertCard = async () => {
+const insertCart = async () => {
     try{
         await mongoose.connect(dbUri)
         const Cart = new cartModel(dummyCart)
@@ -56,4 +56,4 @@ const insertCard = async () => {
         console.error("Error:", err);
     }
 }
-insertCard()
+insertCart()
