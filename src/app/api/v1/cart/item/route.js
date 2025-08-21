@@ -10,7 +10,7 @@ import { inventoryReservationModel } from "@/models/shop/product/InventoryReserv
 import cuid from "@bugsnag/cuid";
 import mongoose from "mongoose";
 import config from "../../../../../../config";
-
+import { userModel } from "@/models/shop/shop-user/ShopUser"
 
 export async function PATCH(request) {
   let body;
@@ -66,10 +66,10 @@ export async function PATCH(request) {
   });
 
   // const dbKey = `${vendor.dbInfo.prefix}${vendor._id}`;
-  const vendor_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
+  const shop_db = await dbConnect({ dbKey: vendor.dbInfo.dbName, dbUri });
 
-  const ProductModel = productModel(vendor_db);
-  const CartModel = cartModel(vendor_db);
+  const ProductModel = productModel(shop_db);
+  const CartModel = cartModel(shop_db);
 
   const { productId, variantId, quantity, action } = parsed.data;
   console.log(productId, variantId, quantity, action)
@@ -102,7 +102,7 @@ export async function PATCH(request) {
     variant = null;
   }
 
-  const InventoryReservationModel = inventoryReservationModel(vendor_db)
+  const InventoryReservationModel = inventoryReservationModel(shop_db)
   const reservations = await InventoryReservationModel.find({ productId: product._id, variantId: variant._id, status: 'reserved', expiry: { $gt: Date.now() } })
     .lean();
   const totalReservedQuentity = reservations.reduce((sum, r) => sum + (r.quantity || 0), 0)
@@ -121,9 +121,9 @@ export async function PATCH(request) {
 
   // 🛒 5. Find or Create Cart
   let cart;
-  if (authenticated && user?._id) {
+  if (authenticated && user?.userId) {
     // Authenticated: search by userId
-    cart = await CartModel.findOne({ userId: user._id });
+    cart = await CartModel.findOne({ userId: user.userId });
   }
   // else if (!authenticated && fingerprint) {
   //   // Guest: search by fingerprint only
@@ -134,7 +134,7 @@ export async function PATCH(request) {
   if (!cart) {
     // 🆕 Create new guest cart only if none found
     cart = new CartModel({
-      userId: authenticated ? user._id : undefined,
+      userId: authenticated ? user.userId : undefined,
       // fingerprint,
       // isGuest: !authenticated,
       items: [],
@@ -155,7 +155,7 @@ export async function PATCH(request) {
     const newQty = existingItem.quantity + delta;
 
     if (newQty <= 0) {
-      cart.items.splice(itemIndex, 1); // 🟥 Remove item
+      cart.items.splice(itemIndex, 1);
     } else {
       if (newQty > stock)
         return NextResponse.json({ error: "Not enough stock available" }, { status: 422, headers: securityHeaders });
@@ -188,6 +188,16 @@ export async function PATCH(request) {
   //                                                 (cart.totals.deliveryCharge  || 0);
   const savedCart = await cart.save();
 
+  if (authenticated && user?.userId) {
+    console.log("kjsdksjdajsds")
+    const UserModel = userModel(shop_db);
+    const updatedUser = await UserModel.updateOne(
+      { _id: user.userId },
+      { $set: { cart: savedCart._id } }
+    );
+    console.log("User updated with cart:", updatedUser);
+
+  }
 
 
   const CART_RESERVATION_TTL_MINUTES = parseInt(process.env.END_USER_CART_RESERVATION_TTL_MINUTES || '15', 10)
