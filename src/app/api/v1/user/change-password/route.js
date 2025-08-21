@@ -52,31 +52,16 @@ export async function POST(request) {
 
     try {
         // authenticate user
-        const authResult = await authenticationStatus(request);
-        console.log("authResult***************")
-        console.log(authResult)
-        if (!authResult.success) {
-            return NextResponse.json(
-                { error: authResult.error || "Unauthorized" },
-                { status: 401 }
-            );
-        }
+        const { success: authenticated, vendor, data: authData, isTokenRefreshed, token, db } = await authenticationStatus(request);
+        if (!authenticated) return NextResponse.json({ error: authResult.error || "Unauthorized" }, { status: 401 });
 
-        const { data: authData, vendor } = authResult;
         console.log(authData, vendor)
-        const userId = authData.userId || authData.sub;
+        const userId = authData.userId
 
-        const { dbUri, dbName } = await getInfrastructure({ referenceId, host });
-        if (!dbUri || !dbName) {
-            return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-        }
-
-        const shop_db = await dbConnect({ dbKey: dbName, dbUri });
-        const User = userModel(shop_db);
-        console.log(User)
+        const User = userModel(db);
         const user = await User.findById(userId)
-            .select('+security.password')
-            .lean();
+                               .select('+security.password')
+                               .lean();
         console.log(user);
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
