@@ -294,8 +294,8 @@ export async function POST(request) {
     //                                                       : 15;
     const accessTokenExpireMinutes = 1440
 
-    const refreshTokenExpireMinutes = Number.isFinite(Number(data.expirations?.refreshTokenExpireMinutes ?? config.refreshTokenDefaultExpireMinutes))
-                                                          ? Number(data.expirations?.refreshTokenExpireMinutes ?? config.refreshTokenDefaultExpireMinutes)
+    const refreshTokenExpireMinutes = Number.isFinite(Number(vendor.expirations?.refreshTokenExpireMinutes ?? config.refreshTokenDefaultExpireMinutes))
+                                                          ? Number(vendor.expirations?.refreshTokenExpireMinutes ?? config.refreshTokenDefaultExpireMinutes)
                                                           : 1440;
     
     // if (!AT_ENCRYPT_KEY || !RT_ENCRYPT_KEY || !IP_ENCRYPT_KEY) return NextResponse.json( { error: "Server configuration error" }, { status: 500 } );
