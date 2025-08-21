@@ -100,13 +100,13 @@ export async function POST(request) {
             );
         }
 
-        const commonPasswords = ["password", "12345678", "qwerty123"];
-        if (commonPasswords.includes(newPassword.toLowerCase())) {
-            return NextResponse.json(
-                { error: "Common password provided, change the password" },
-                { status: 422 }
-            );
-        }
+        // const commonPasswords = ["password", "12345678", "qwerty123"];
+        // if (commonPasswords.includes(newPassword.toLowerCase())) {
+        //     return NextResponse.json(
+        //         { error: "Common password provided, change the password" },
+        //         { status: 422 }
+        //     );
+        // }
 
         const SALT_ROUNDS = parseInt(
             process.env.END_USER_BCRYPT_SALT_ROUNDS || "10",

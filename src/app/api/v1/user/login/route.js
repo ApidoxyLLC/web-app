@@ -324,7 +324,6 @@ export async function POST(request) {
                                   { expiresIn: minutesToExpiresIn(accessTokenExpireMinutes) } );
     
     const refreshToken = jwt.sign( { 
-                                    //  ...payload, 
                                             sub: sessionId.toString(),
                                         tokenId: newRefreshTokenId },
                                     REFRESH_TOKEN_SECRET,

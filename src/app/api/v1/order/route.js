@@ -22,43 +22,37 @@ const RETRY_DELAY_MS = 100;
 
 
 export async function POST(request) {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
-    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-    if (!allowed) return NextResponse.json( { error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
-      
     let body;
     try { body = await request.json() }
     catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });}
 
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || '';
+    const { allowed, retryAfter } = await applyRateLimit({ key: ip });
+    if (!allowed) return NextResponse.json( { error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } } );
+
     const parsed = orderDTOSchema.safeParse(body);
-    if (!parsed.success)
-        return NextResponse.json( { error: "Validation failed", details: parsed.error.flatten() }, { status: 422 } )
+    if (!parsed.success) return NextResponse.json( { error: "Validation failed", details: parsed.error.flatten() }, { status: 422 } )
     const { shippingMethod, shippingAddress, paymentMethod } = parsed.data;
 
-    // const { success: authenticated, shop, data: user, isTokenRefreshed, token } = await authenticationStatus(request);
-    // if (!authenticated || !user?._id) 
-    //     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const { success: authenticated, shop, data, isTokenRefreshed, token } = await authenticationStatus(request);
+    const { success: authenticated, shop, data, isTokenRefreshed, token, db } = await authenticationStatus(request);
     const user = data || null;
 
-    if (!authenticated || !user?._id)
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!authenticated || !user?.userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // Connect to Vendor DB
-    const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-    if (!DB_URI_ENCRYPTION_KEY)
-        return NextResponse.json({ error: "Missing encryption key" }, { status: 500 });
+    // const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
+    // if (!DB_URI_ENCRYPTION_KEY)
+    //     return NextResponse.json({ error: "Missing encryption key" }, { status: 500 });
 
     try {
-        const     dbUri = await decrypt({ cipherText: shop.dbInfo.uri, options: { secret: DB_URI_ENCRYPTION_KEY } });
-        const     dbKey = `${shop.dbInfo.prefix}${shop._id}`;
-        const shop_db = await dbConnect({ dbKey, dbUri });
+        // const     dbUri = await decrypt({ cipherText: shop.dbInfo.uri, options: { secret: DB_URI_ENCRYPTION_KEY } });
+        // const     dbKey = `${shop.dbInfo.prefix}${shop._id}`;
+        // const shop_db = await dbConnect({ dbKey, dbUri });
 
-        const                 CartModel = cartModel(shop_db);
-        const                OrderModel = orderModel(shop_db);
-        const              ProductModel = productModel(shop_db);
-        const     InventoryHistoryModel = inventoryHistoryModel(shop_db);
-        const InventoryReservationModel = inventoryReservationModel(shop_db);        
+        const                 CartModel = cartModel(db);
+        const                OrderModel = orderModel(db);
+        const              ProductModel = productModel(db);
+        const     InventoryHistoryModel = inventoryHistoryModel(db);
+        const InventoryReservationModel = inventoryReservationModel(db);        
 
         let savedOrder;
         let retryCount = 0;
@@ -72,12 +66,10 @@ export async function POST(request) {
                     const [cart] = await CartModel.aggregate([
                                     { $match: { userId: user._id } },
                                     { $unwind: '$items' },
-                                    { $lookup: {
-                                                        from: 'products',
-                                                localField: 'items.productId',
-                                                foreignField: '_id',
-                                                        as: 'product'
-                                            }
+                                    { $lookup: {         from: 'products',
+                                                   localField: 'items.productId',
+                                                 foreignField: '_id',
+                                                           as: 'product'            }
                                     },
                                     { $unwind: '$product' },
                                     { $addFields: {
@@ -108,23 +100,23 @@ export async function POST(request) {
                                                     'items.product': '$product',
                                                     'items.variant': '$matchedVariant',
                                             'items.price.basePrice': '$effectivePrice',
-                                                'items.inventory': '$effectiveInventory'
+                                                  'items.inventory': '$effectiveInventory'
                                             }
                                     },
                                     { $project: { product: 0, matchedVariant: 0, effectivePrice: 0, effectiveInventory: 0 } },
                                     { $group: {
                                                     _id: '$_id',
-                                                cartId: { $first: '$cartId' },
-                                                userId: { $first: '$userId' },
+                                                 cartId: { $first: '$cartId' },
+                                                 userId: { $first: '$userId' },
                                                 isGuest: { $first: '$isGuest' },
                                             fingerprint: { $first: '$fingerprint' },
-                                                    ip: { $first: '$ip' },
-                                            userAgent: { $first: '$userAgent' },
-                                            currency: { $first: '$currency' },
-                                            expiresAt: { $first: '$expiresAt' },
+                                                     ip: { $first: '$ip' },
+                                              userAgent: { $first: '$userAgent' },
+                                               currency: { $first: '$currency' },
+                                              expiresAt: { $first: '$expiresAt' },
                                             lastUpdated: { $first: '$lastUpdated' },
-                                                totals: { $first: '$totals' },
-                                                items: { $push: '$items' }
+                                                 totals: { $first: '$totals' },
+                                                  items: { $push: '$items' }
                                         }
                                     },
                                     { $limit: 1 }
