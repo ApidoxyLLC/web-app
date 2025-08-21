@@ -36,17 +36,8 @@ export async function POST(request) {
 
     const { success: authenticated, shop, data, isTokenRefreshed, token, db } = await authenticationStatus(request);
     const user = data || null;
-
     if (!authenticated || !user?.userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // Connect to Vendor DB
-    // const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
-    // if (!DB_URI_ENCRYPTION_KEY)
-    //     return NextResponse.json({ error: "Missing encryption key" }, { status: 500 });
-
     try {
-        // const     dbUri = await decrypt({ cipherText: shop.dbInfo.uri, options: { secret: DB_URI_ENCRYPTION_KEY } });
-        // const     dbKey = `${shop.dbInfo.prefix}${shop._id}`;
-        // const shop_db = await dbConnect({ dbKey, dbUri });
 
         const                 CartModel = cartModel(db);
         const                OrderModel = orderModel(db);
