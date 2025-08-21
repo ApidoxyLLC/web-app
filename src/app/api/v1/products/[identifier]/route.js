@@ -9,7 +9,6 @@ import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import { isValidObjectId } from "mongoose";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { getInfrastructure } from "@/services/vendor/getInfrastructure";
-import { FaProductHunt } from "react-icons/fa";
 
 
 export const dynamic = 'force-dynamic';
@@ -56,11 +55,9 @@ export async function GET(request, { params }) {
     // Transform product for response
     const transformedProduct = {
       id: product._id,
-      // productId: product.productId,
       title: product.title,
       slug: product.slug,
       description: product.description,
-      // type: product.type,
       status: product.status,
       approvalStatus: product.approvalStatus,
       isFeatured: product.isFeatured,
@@ -100,7 +97,6 @@ export async function GET(request, { params }) {
         taxable: variant.taxable,
         requiresShipping: variant.requiresShipping
       })),
-
       ...((product.productFormat && product.productFormat == 'digital') && 
           {
               digitalAssets: product.digitalAssets?.map(asset => ({ name: asset.name,
