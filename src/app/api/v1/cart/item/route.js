@@ -132,7 +132,6 @@ export async function PATCH(request) {
   // }
 
   if (!cart) {
-    // 🆕 Create new guest cart only if none found
     cart = new CartModel({
       userId: authenticated ? user.userId : undefined,
       // fingerprint,
@@ -174,6 +173,7 @@ export async function PATCH(request) {
         quantity: delta,
         price,
         subtotal: delta * price.basePrice,
+        userId: authenticated ? user.userId : undefined,
       });
     } else {
       return NextResponse.json({ error: "Item not found in cart" }, { status: 404, headers: securityHeaders });

@@ -69,7 +69,7 @@ const cartSchema = new mongoose.Schema({
          cartId: { type: String, default: ()=> cuid() },
          userId: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopUser', default: undefined },
           items: { type: [cartItemSchema], default:[] },
-      sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', default: undefined },
+      // sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', default: undefined },
       //   isGuest: { type: Boolean, default: true },
    //  fingerprint: { type: String, default: undefined, select: false },
    //           ip: { type: String, default: undefined, select: false },
