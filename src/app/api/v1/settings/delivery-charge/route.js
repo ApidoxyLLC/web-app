@@ -14,58 +14,98 @@ export async function POST(request) {
     // CHANGE: Used destructuring to improve readability
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
     if (!allowed) return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString() } });
-    
-    try { body = await request.json();
-         const parsed = deliveryChargeDTOSchema.safeParse(body);
+
+    try {
+        body = await request.json();
+        const parsed = deliveryChargeDTOSchema.safeParse(body);
         if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 422 });
 
         // Authentication
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        if (!authenticated) return NextResponse.json( { error: authError || "Not authorized" }, { status: 401 } );   
+        if (!authenticated) return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
 
-        const { shop: vendorReferenceId , chargeBasedOn, regionName, charge, partner } = parsed.data
+        const { shop: vendorReferenceId, isDefault, isRefundable,
+            chargeBasedOn, regionName, charge, partner } = parsed.data;
 
         const vendor_db = await vendorDbConnect();
-        const    Vendor = vendorModel(vendor_db);
-        const    vendor = await Vendor.findOne({ referenceId: vendorReferenceId }).select('_id deliveryCharges ownerId');
-        if (!vendor)  return NextResponse.json( { success: false, error: "Request can't proceed " }, { status: 404 });
+        const Vendor = vendorModel(vendor_db);
+        const vendor = await Vendor.findOne({ referenceId: vendorReferenceId }).select('_id deliveryCharges ownerId');
+        if (!vendor) return NextResponse.json({ success: false, error: "Request can't proceed " }, { status: 404 });
 
         if (!hasAddDeliveryChargePermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
-        
-        // -------------------------------
-        // Check for Duplicate Delivery Charge
-        // -------------------------------
-        // Duplicate Check (Improved Logic)
-        const normalizedRegion = regionName.toLowerCase();
-        const duplicateCharge = vendor.deliveryCharges?.find(existingCharge => { const sameRegionType = existingCharge.chargeBasedOn === chargeBasedOn;
-                                                                                const sameRegionName = existingCharge.regionName.toLowerCase() === normalizedRegion;
-                                                                                if (!sameRegionType || !sameRegionName) return false;
-                                                                                if (existingCharge.partner && partner) return existingCharge.partner === partner;
-                                                                                return !existingCharge.partner && !partner;                                             });
 
-        if (duplicateCharge) return NextResponse.json({ success: false, error: "Delivery charge already exists for this region and partner", existingCharge: duplicateCharge}, { status: 409 });
+        // // -------------------------------
+        // // Check for Duplicate Delivery Charge
+        // // -------------------------------
+        // // Duplicate Check (Improved Logic)
+        // const normalizedRegion = regionName.toLowerCase();
+        // const duplicateCharge = vendor.deliveryCharges?.find(existingCharge => {
+        //     const sameRegionType = existingCharge.chargeBasedOn === chargeBasedOn;
+        //     const sameRegionName = existingCharge.regionName.toLowerCase() === normalizedRegion;
+        //     if (!sameRegionType || !sameRegionName) return false;
+        //     if (existingCharge.partner && partner) return existingCharge.partner === partner;
+        //     return !existingCharge.partner && !partner;
+        // });
+
+        // if (duplicateCharge) return NextResponse.json({ success: false, error: "Delivery charge already exists for this region and partner", existingCharge: duplicateCharge }, { status: 409 });
 
         // -------------------------------
         // Create New Delivery Charge
         // -------------------------------
-        const newDeliveryCharge = { chargeBasedOn, regionName, charge, partner: partner || undefined };
+        const newDeliveryCharge = {
+            isDefault,
+            isRefundable,
+            charge: charge,
+            partner: partner || undefined,
+        };
+
+        if (!isDefault) {
+            newDeliveryCharge.chargeBasedOn = chargeBasedOn;
+            newDeliveryCharge.regionName = regionName;
+        }
+
+        let duplicateCharge;
+
+        if (isDefault) {
+            duplicateCharge = vendor.deliveryCharges?.find(c => c.isDefault);
+        } else {
+            const normalizedRegion = regionName.toLowerCase();
+            duplicateCharge = vendor.deliveryCharges?.find(existingCharge => {
+                if (existingCharge.isDefault) return false;
+                const sameRegionType = existingCharge.chargeBasedOn === chargeBasedOn;
+                const sameRegionName = existingCharge.regionName.toLowerCase() === normalizedRegion;
+                if (!sameRegionType || !sameRegionName) return false;
+                if (existingCharge.partner && partner) return existingCharge.partner === partner;
+                return !existingCharge.partner && !partner;
+            });
+        }
+
+        if (duplicateCharge) {
+            return NextResponse.json({
+                success: false,
+                error: isDefault
+                    ? "Default delivery charge already exists"
+                    : "Delivery charge already exists for this region and partner",
+                existingCharge: duplicateCharge
+            }, { status: 409 });
+        }
+
 
         // -------------------------------
         // Update Vendor Document
         // -------------------------------
-        const updatedVendor = await Vendor.findByIdAndUpdate(    vendor._id,
-                                                                { $push: { deliveryCharges: newDeliveryCharge },
-                                                                   $set: { updatedAt: new Date() } },
-                                                                { new: true,  projection: { deliveryCharges: 1 }  }
-                                                            );
-
+        const updatedVendor = await Vendor.findByIdAndUpdate(
+            vendor._id,
+            { $push: { deliveryCharges: newDeliveryCharge }, $set: { updatedAt: new Date() } },
+            { new: true, projection: { deliveryCharges: 1 } }
+        );
         // -------------------------------
         // Response
         // -------------------------------
-        return NextResponse.json( {  success: true, message: "Delivery charge added successfully", vendor: updatedVendor.deliveryCharges }, { status: 200, headers: securityHeaders });
+        return NextResponse.json({ success: true, message: "Delivery charge added successfully", vendor: updatedVendor.deliveryCharges }, { status: 200, headers: securityHeaders });
 
     } catch (error) {
         console.error("Error adding delivery charge:", error);
-        return NextResponse.json( { success: false,  error: "Internal server error"  }, { status: 500, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500, headers: securityHeaders });
     }
 }

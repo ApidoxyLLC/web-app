@@ -79,6 +79,8 @@ const deliveryPartnerSchema = new mongoose.Schema({
 }, { timestamps: false, _id: false })
 
 const deliveryChargeSchema = new mongoose.Schema({
+  isDefault: { type: Boolean, default: false },
+  isRefundable: { type: Boolean, default: false },
   chargeBasedOn: { type: String, enum: ['zone', 'upazilla', 'district'], default: 'district' },
   regionName: { type: String },
   charge: { type: Number, default: 0 },
