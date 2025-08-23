@@ -62,7 +62,7 @@ export async function POST(request) {
         const user = await User.findById(userId)
                                .select('+security.password')
                                .lean();
-        console.log(user);
+        // console.log(user);
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
@@ -84,14 +84,6 @@ export async function POST(request) {
                 { status: 401 }
             );
         }
-
-        // const commonPasswords = ["password", "12345678", "qwerty123"];
-        // if (commonPasswords.includes(newPassword.toLowerCase())) {
-        //     return NextResponse.json(
-        //         { error: "Common password provided, change the password" },
-        //         { status: 422 }
-        //     );
-        // }
 
         const SALT_ROUNDS = parseInt(
             process.env.END_USER_BCRYPT_SALT_ROUNDS || "10",

@@ -33,19 +33,7 @@ import cuid from "@bugsnag/cuid";
 //         metadata: { type: metaInfoSchema, default: undefined }
 // }, { _id: false });
 
-const itemPriceSchema = new mongoose.Schema({
-          basePrice: { type: Number, required: [true, 'Original price is required'], min: [0, 'Price cannot be negative'] },
-           currency: { type: String, enum: ["USD", "BDT"]} 
-}, { _id: false });
 
-const cartItemSchema = new mongoose.Schema({
-    productId: { type: mongoose.Schema.Types.ObjectId },
-    variantId: { type: mongoose.Schema.Types.ObjectId },
-     quantity: { type: Number, default: 1, min: [1, 'Quantity must be at least 1'], validate: { validator: Number.isInteger, message: 'Quantity must be an integer' } }, 
-        price: { type: itemPriceSchema },
-     subtotal: { type: Number, default: 0}, 
-     added_at: { type: Date, default: Date.now }
-}, { _id: false });
 
 
 
@@ -65,16 +53,26 @@ const cartItemSchema = new mongoose.Schema({
 // }, 
 // { timestamps: true, _id: true });
 
+
+const itemPriceSchema = new mongoose.Schema({
+          basePrice: { type: Number, required: [true, 'Original price is required'], min: [0, 'Price cannot be negative'] },
+           currency: { type: String, enum: ["USD", "BDT"]} 
+}, { _id: false });
+
+const cartItemSchema = new mongoose.Schema({
+    productId: { type: mongoose.Schema.Types.ObjectId },
+    variantId: { type: mongoose.Schema.Types.ObjectId },
+    isSelected: { type: Boolean, default: true },
+     quantity: { type: Number, default: 1, min: [1, 'Quantity must be at least 1'], validate: { validator: Number.isInteger, message: 'Quantity must be an integer' } }, 
+        price: { type: itemPriceSchema },
+        total: { type: Number, default: 0}, 
+     added_at: { type: Date, default: Date.now }
+}, { _id: false });
+
+
 const cartSchema = new mongoose.Schema({
-         cartId: { type: String, default: ()=> cuid() },
-         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopUser', default: undefined },
+         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopUser' },
           items: { type: [cartItemSchema], default:[] },
-      // sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', default: undefined },
-      //   isGuest: { type: Boolean, default: true },
-   //  fingerprint: { type: String, default: undefined, select: false },
-   //           ip: { type: String, default: undefined, select: false },
-   //    userAgent: { type: String, default: undefined, select: false },
-      // expiresAt: { type: Date,   default: undefined, select: false },
          totals: {   subtotal: { type: Number, default:0 },
                      discount: { type: Number, default:0 },
                           tax: { type: Number, default:0 },

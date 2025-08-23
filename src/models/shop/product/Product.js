@@ -25,20 +25,8 @@ const attributeSchema = new mongoose.Schema({
 
 // Improved variant schema
 const variantSchema = new mongoose.Schema({
-        //  variantId: { type: String, default: () => cuid(), unique: true },
-        //      title: { type: String, required: true }, 
            options: { type: [String], default: undefined },
              price: { type: priceSchema, default: undefined },
-  //      priceVaries: { type: Boolean, default: undefined },
-  //           weight: Number,
-  //              sku: { type: String, sparse: true },
-  //          barcode: String,
-  //      isAvailable: { type: Boolean, default: undefined },
-  // requiresShipping: { type: Boolean, default: undefined  },
-  //          taxable: { type: Boolean, default: true },
-  //        inventory: { type: inventorySchema }, 
-  //           images: [{ type: String }],
-  //         position: Number,
 }, { _id: true });
 
 const detailSchema = new mongoose.Schema({
