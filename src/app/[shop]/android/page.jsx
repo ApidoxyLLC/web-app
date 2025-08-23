@@ -1,11 +1,8 @@
+"use client"
 import Android from "@/components/android";
 import AndroidBuild from "@/components/android-build"
+import { useEffect, useState } from "react";
 
-
-export const metadata = {
-  title: 'Android | Website & Apps',
-  description: '...',
-}
 export default function Dashboard() {
   const [showOverlay, setShowOverlay] = useState(false);
 

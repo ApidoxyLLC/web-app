@@ -12,7 +12,6 @@ import {
   SelectLabel,
   SelectValue,
 } from "@/components/ui/select";
-
 import {
   ControlGroup,
   ControlGroupItem,
@@ -34,6 +33,7 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
+
 const markets = {
   bd: {
     name: "Bangladesh",
@@ -160,9 +160,9 @@ const markets = {
 };
 
 export default function DeliverySettings() {
-  const [refundable, setRefundable] = useState(true);
+  const [refundable, setRefundable] = useState(false);
   const [selectedCourier, setSelectedCourier] = useState(null);
-  const [deliveryOptions, setDelivaryOptions] = useState("districts");
+  const [deliveryOptions, setDelivaryOptions] = useState("");
   const [zoneInput, setZoneInput] = useState({ name: "", charge: "" });
   const [zonesList, setZonesList] = useState([]);
   const [districtInput, setDistrictInput] = useState({ name: "", charge: "" });
@@ -171,11 +171,11 @@ export default function DeliverySettings() {
   const [upazilasList, setUpazilasList] = useState([]);
   const [country, setCountry] = useState(markets.bd);
   const [courierForm, setCourierForm] = useState({}); 
-  const [savedCourierData, setSavedCourierData] = useState({}); 
+  const [savedCourierData, setSavedCourierData] = useState({});
+  const [isDefault, setIsDefault] = useState(null)
   const { shop } = useParams();
-
   const { data, refetch } = useFetch(`/${shop}/delivery-partner`);
-  console.log(zonesList)
+
   React.useEffect(() => {
     if (data) {
       setSavedCourierData(data);
@@ -263,13 +263,15 @@ export default function DeliverySettings() {
   };
   const handleSaveDeliveryCharge = async () => {
   const payload = {
-    shop: shop, 
-    chargeBasedOn:
+    shop: shop,
+    isDefault : isDefault ? true : false,
+    isRefundable: refundable,
+    chargeBasedOn: deliveryOptions ? 
       deliveryOptions === "zones"
         ? "zone"
         : deliveryOptions === "upazilla"
         ? "upazilla"
-        : "district",
+        : "district" : undefined,
     regionName:
       deliveryOptions === "zones"
         ? zoneInput.name
@@ -285,7 +287,7 @@ export default function DeliverySettings() {
     ),
     partner: selectedCourier || undefined,
   };
-
+  console.log(payload)
   try {
     const res = await fetch(`/api/v1/settings/delivery-charge`, {
       method: "POST",
@@ -312,7 +314,7 @@ export default function DeliverySettings() {
     toast.error(err.message);
   }
   };
-  const fetchDeliveryData = useCallback(async () => {
+  const fetchDeliveryData = useCallback ( async () => {
     try {
       const res = await fetch(`/api/v1/${shop}`); 
       if (!res.ok) throw new Error("Failed to fetch delivery charges");
@@ -353,10 +355,11 @@ export default function DeliverySettings() {
       console.error("Error fetching delivery charges:", err);
     }
   }, []);
+  
   useEffect(() => {
     fetchDeliveryData();
   }, [fetchDeliveryData]);
-  
+
   const handleDeleteCharge = async (chargeId) => {
   if (!window.confirm("Are you sure you want to delete this delivery charge?")) return;
 
@@ -387,7 +390,7 @@ export default function DeliverySettings() {
     console.error(err);
     toast.error("Something went wrong");
   }
-};
+  };
 
   return (
     <div className=" w-full mx-auto p-6 space-y-6 bg-muted/100">
@@ -430,17 +433,16 @@ export default function DeliverySettings() {
           </Label>
           <ControlGroup className="w-full h-10">
               <ControlGroupItem>
-                <InputBase><InputBaseAdornment>Charge</InputBaseAdornment></InputBase>
+                <InputBase>
+                  <InputBaseAdornment>Charge</InputBaseAdornment>
+                </InputBase>
               </ControlGroupItem>
               <ControlGroupItem className="flex-1">
                 <InputBase>
                   <InputBaseControl>
                     <InputBaseInput
                       placeholder="Delivery charge"
-                      // onChange={(e) => setNewCategory(prev => ({
-                      //   ...prev,
-                      //   title: e.target.value,
-                      // }))}
+                      onChange={(e) => setIsDefault(e.target.value)}
                     />
                   </InputBaseControl>
                 </InputBase>
@@ -453,7 +455,7 @@ export default function DeliverySettings() {
                 Delivery Charge not refundable?
               </Label>
               <Switch
-                checked={!refundable}
+                checked={refundable}
                 onCheckedChange={() => setRefundable(!refundable)}
               />
             </div>
@@ -467,9 +469,8 @@ export default function DeliverySettings() {
 
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-md font-semibold">Delivery option:</p>
+              <p className="text-md font-semibold">Specific Delivery option:</p>
             </div>
-
             <div className="flex items-center gap-2 flex-wrap">
               <div>
                 {country.points.map((point) => (
@@ -487,7 +488,8 @@ export default function DeliverySettings() {
               </div>
             </div>
           </div>
-          <p className="text-sm ">Specific Delivery Charges:</p>
+          {deliveryOptions && 
+          <p className="text-sm ">Specific Delivery Charges:</p>}
           {deliveryOptions == "zones" && (
             <div className="flex flex-col gap-6">
               <div className="flex flex-col md:flex-row gap-6">
