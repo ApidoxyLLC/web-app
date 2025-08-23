@@ -148,12 +148,10 @@ export async function DELETE(request, { params }) {
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
   if (!allowed) return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": retryAfter.toString() } } );
   
-
   try {
     const { success: authenticated, vendor, data: user, db } = await authenticationStatus(request);
     if (!authenticated || (authenticated && !user?.userId))  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
-
     const Cart = cartModel(db);
     const Product = productModel(db);
     const { variantId } = body;
