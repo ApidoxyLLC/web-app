@@ -33,9 +33,7 @@ export async function getInfrastructure({ referenceId, host }) {
                          .lean();
     console.log("fetch by id ")
     console.log(vendor)
-  }
-    
-    else{ 
+  } else{ 
       console.log(referenceId)
       vendor = await Vendor.findOne({ $or: [ referenceId ? {   referenceId                  } : null,
                                                     host ? { primaryDomain: host            } : null,
