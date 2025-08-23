@@ -2,10 +2,6 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  PasswordInputAdornmentToggle,
-  PasswordInputInput,
-} from "@/components/ui/password-input";
 
 import { ControlGroup, ControlGroupItem } from "@/components/ui/control-group";
 import {
@@ -61,11 +57,9 @@ export function LoginForm({ className, ...props }) {
     const password = formData.get("password")?.toString() ?? "";
     if(!email){
           return toast.error("Email/Phone is required");
-    
         }
     if(!password){
           return toast.error("Password is required");
-    
         }
     const result = await signIn("login", {
       redirect: false,
@@ -77,36 +71,11 @@ export function LoginForm({ className, ...props }) {
     });
 
     if (result?.error) {
-      // Handle error
       toast.error(` Login failed`);
       console.log("Login failed", result.error);
     } else {
-      // Redirect to a protected route
       router.push("/")
       toast.success("Login sucessful");
-    }
-
-    async function requestToCreateProduct() {
-      try {
-        const response = await fetch("/api/v1/shops", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: "Sample data",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-
-        const data = await response.json();
-        console.log("Got Data", data);
-      } catch (error) {
-        console.error("Error:", error);
-      }
     }
   }
   useEffect(() => {

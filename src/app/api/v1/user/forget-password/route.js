@@ -40,10 +40,19 @@ export async function POST(request) {
   
   if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
   
+  console.log(referenceId)
+
   try {
     const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
+
+
+
+
     if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
 
+
+  //       console.log(vendor)
+  // return NextResponse.json({ message: "Test request " }, { status: 200 })
     const shop_db  = await dbConnect({ dbKey: dbName, dbUri });
     const User = userModel(shop_db);
     
@@ -58,6 +67,7 @@ export async function POST(request) {
     const resetTokenExpiry = type === "phone"
                             ? Date.now() + config.endUserPhoneTokenExpireMinuts * 60 * 1000
                             : Date.now() + config.endUserEmailTokenExpireMinuts * 60 * 1000
+
 
     // console.log(parsed.data)
     // console.log(resetToken)

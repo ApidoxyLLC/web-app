@@ -828,7 +828,7 @@ export default function DeliverySettings() {
               </div>
             </div>
           )}
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-2" onClick={handleSaveDeliveryCharge}>
             <Button>Save Delivery Charges</Button>
           </div>
         </CardContent>
