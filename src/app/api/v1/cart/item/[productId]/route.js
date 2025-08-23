@@ -161,23 +161,12 @@ export async function DELETE(request, { params }) {
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-<<<<<<< HEAD
-  if (!allowed) return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": retryAfter.toString() } } );
   
+  if (!allowed) return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": retryAfter.toString() } } );
   try {
     const { success: authenticated, vendor, data: user, db } = await authenticationStatus(request);
     if (!authenticated || (authenticated && !user?.userId))  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
-=======
-  if (!allowed) return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": retryAfter.toString() } });
-
-
-  try {
-    const { success: authenticated, vendor, data: user, db } = await authenticationStatus(request);
-    if (!authenticated || (authenticated && !user?.userId)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-
->>>>>>> b64405253c1cdf49e9d874841dd6e2cdff44c461
     const Cart = cartModel(db);
     const Product = productModel(db);
     const { variantId } = body;

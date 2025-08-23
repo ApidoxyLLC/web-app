@@ -27,6 +27,8 @@ export async function getInfrastructure({ referenceId, host }) {
   const Vendor = await vendorModel(vendor_db);
 
   let vendor;
+
+  
   if (cached.id) {
     vendor = await Vendor.findById(cached.id)
                          .select("_id ownerId email phone referenceId dbInfo bucketInfo primaryDomain domains secrets expirations maxSessionAllowed")
