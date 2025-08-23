@@ -195,9 +195,9 @@ export async function DELETE(request, { params }) {
     // const grandTotal = ((subtotal - cart.totals.discount) + cart.totals.tax + cart.totals.deliveryCharge);
 
     const updatedCart = await Cart.findOneAndUpdate({               _id: cart._id, 
-                                                      'items.productId': new mongoose.Types.ObjectId(productId),
-                                    ...(variantId ? { 'items.variantId': new mongoose.Types.ObjectId(variantId) } 
-                                                  : { 'items.variantId': { $exists: false } })
+                                    //                   'items.productId': new mongoose.Types.ObjectId(productId),
+                                    // ...(variantId ? { 'items.variantId': new mongoose.Types.ObjectId(variantId) } 
+                                    //               : { 'items.variantId': { $exists: false } })
                                                     },
                                                     [ {
                                                         $set: {
@@ -209,9 +209,8 @@ export async function DELETE(request, { params }) {
                                                                 $not: {
                                                                   $and: [
                                                                     { $eq: ["$$item.productId", new mongoose.Types.ObjectId(productId) ] },
-                                                                    variantId
-                                                                      ? { $eq: ["$$item.variantId", new mongoose.Types.ObjectId(variantId)] }
-                                                                      : { $eq: ["$$item.variantId", null] }
+                                                                    variantId && { $eq: ["$$item.variantId", new mongoose.Types.ObjectId(variantId)] }
+
                                                                   ]
                                                                 }
                                                               }
