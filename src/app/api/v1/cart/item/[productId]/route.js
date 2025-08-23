@@ -59,9 +59,16 @@ export async function PATCH(request, { params }) {
     if (action === '-' || action === 'dec') newUpdatedQuantity = Math.max(0, item.quantity - quantity);
 
 
-    const productBasePrice = product.hasVariants && variantId
-      ? product.variants.find(v => v._id.toString() === variantId.toString())?.price.base
-      : product.price.base;
+    let productBasePrice = product.price.base; 
+    if (product.hasVariants && variantId) {
+      const variant = product.variants.find(v => v._id.toString() === variantId.toString());
+      if (variant) {
+        if (variant.price?.base && variant.price.base > 0) {
+          productBasePrice = variant.price.base;
+        }
+      }
+    }
+
 
     const otherCartItems = cart.items.filter(it => {
       if (!it.isSelected) return false;
