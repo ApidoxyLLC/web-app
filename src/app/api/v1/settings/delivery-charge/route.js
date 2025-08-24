@@ -24,8 +24,7 @@ export async function POST(request) {
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
         if (!authenticated) return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
 
-        const { shop: vendorReferenceId, isDefault, isRefundable,
-            chargeBasedOn, regionName, charge, partner } = parsed.data;
+        const { shop: vendorReferenceId, isDefault, isRefundable, chargeBasedOn, regionName, charge, partner } = parsed.data;
 
         const vendor_db = await vendorDbConnect();
         const Vendor = vendorModel(vendor_db);
@@ -52,22 +51,56 @@ export async function POST(request) {
         // -------------------------------
         // Create New Delivery Charge
         // -------------------------------
-        const newDeliveryCharge = {
-            isDefault,
-            isRefundable,
-            charge: charge,
-            partner: partner || undefined,
-        };
 
-        if (!isDefault) {
-            newDeliveryCharge.chargeBasedOn = chargeBasedOn;
-            newDeliveryCharge.regionName = regionName;
-        }
+        const newDeliveryCharge = isDefault
+                                    ? {    isDefault: true,
+                                        isRefundable,
+                                              charge,
+                                             partner: partner || undefined,
+                                        }
+                                    : {
+                                            isDefault: false,
+                                         isRefundable,
+                                               charge,
+                                              partner: partner || undefined,
+                                        chargeBasedOn,
+                                           regionName,
+                                        };
 
         let duplicateCharge;
 
+        
+
         if (isDefault) {
             duplicateCharge = vendor.deliveryCharges?.find(c => c.isDefault);
+            if(duplicateCharge){
+                const updatedVendor = await Vendor.findOneAndUpdate(
+                        { _id: vendor._id, "deliveryCharges._id": duplicateCharge._id },
+                        {
+                            $set: {
+                                "deliveryCharges.$.isDefault": isDefault,
+                                "deliveryCharges.$.isRefundable": isRefundable,
+                                "deliveryCharges.$.charge": charge,
+                                "deliveryCharges.$.partner": partner || undefined,
+                                updatedAt: new Date()
+                            }
+                        },
+                        { new: true, projection: { deliveryCharges: 1 } }
+                    );
+
+                return NextResponse.json({ success: true, message: "Delivery charge updated successfully", vendor: updatedVendor.deliveryCharges }, { status: 200, headers: securityHeaders });
+            } else {
+                const updatedVendor = await Vendor.findByIdAndUpdate(
+                        vendor._id,
+                        { $push: { deliveryCharges: newDeliveryCharge }, $set: { updatedAt: new Date() } },
+                        { new: true, projection: { deliveryCharges: 1 } }
+                    );
+                return NextResponse.json({ success: true, message: "Delivery charge added successfully", vendor: updatedVendor.deliveryCharges }, { status: 200, headers: securityHeaders });
+
+            }
+            
+
+            
         } else {
             const normalizedRegion = regionName.toLowerCase();
             duplicateCharge = vendor.deliveryCharges?.find(existingCharge => {
@@ -79,6 +112,15 @@ export async function POST(request) {
                 return !existingCharge.partner && !partner;
             });
         }
+
+        
+
+        // if (!isDefault) {
+        //     newDeliveryCharge.chargeBasedOn = chargeBasedOn;
+        //     newDeliveryCharge.regionName = regionName;
+        // }
+
+
 
         if (duplicateCharge) {
             return NextResponse.json({
