@@ -55,11 +55,9 @@ export async function POST(request) {
     );
 
     if (itemIndex > -1) {
-      // If exists, increment quantity
       cart.items[itemIndex].quantity += quantity;
       cart.items[itemIndex].total = cart.items[itemIndex].quantity * productBasePrice;
     } else {
-      // Add new item
       cart.items.push({
         productId: new mongoose.Types.ObjectId(productId),
         variantId: variantId ? new mongoose.Types.ObjectId(variantId) : undefined,
@@ -69,7 +67,6 @@ export async function POST(request) {
       });
     }
 
-    // Recalculate totals
     const selectedItems = cart.items.filter(i => i.isSelected);
     const subtotal = selectedItems.reduce((sum, item) => sum + item.total, 0);
     const grandTotal = subtotal - cart.totals.discount + cart.totals.tax + cart.totals.deliveryCharge;
