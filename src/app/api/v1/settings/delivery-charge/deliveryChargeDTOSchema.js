@@ -4,7 +4,7 @@ const deliveryChargeDTOSchema = z.object({
     shop: z.string().min(1, "Vendor is required"),
     isDefault: z.boolean().default(false).optional(),   
     isRefundable: z.boolean().default(false).optional(), 
-    chargeBasedOn: z.enum(['zone', 'upazilla', 'district']).optional(),
+    chargeBasedOn: z.enum(['zone', 'upazilla', 'district' ]).optional(),
     regionName: z.string().max(100).optional(), 
     charge: z.number().min(0, "Charge amount cannot be negative").default(0),
     partner: z.enum(['pathao', 'steadfast']).optional()

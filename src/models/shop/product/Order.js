@@ -3,17 +3,21 @@ import cuid from "@bugsnag/cuid";
 
 const itemPriceSchema = new mongoose.Schema({
   basePrice: { type: Number, required: true, min: 0 },
-   currency: { type: String, enum: ["USD", "BDT"], required: true }
+   discount: { type: Number, default: 0 },
+   currency: { type: String, enum: ["USD", "BDT"], required: true },
+      final: { type: Number, required: true } 
 }, { _id: false });
 
 const orderItemSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   variantId: { type: mongoose.Schema.Types.ObjectId, default: undefined },
+       title: { type: String },
+variantName: { type: String },
    quantity: { type: Number, required: true, min: 1 },
       price: { type: itemPriceSchema, required: true },
-   subtotal: { type: Number, required: true },
-      title: { type: String, default: undefined },
-      image: { type: String, default: undefined }
+      total: { type: Number, required: true }, // final * quantity
+ isSelected: { type: Boolean, default: true },
+      // image: { type: String, default: undefined }
 }, { _id: false });
 
 const discountDetailSchema = new mongoose.Schema({
@@ -29,7 +33,7 @@ const discountDetailSchema = new mongoose.Schema({
 
 const paymentSchema = new mongoose.Schema({
         paymentId: { type: String, default: () => cuid() },
-           status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
+           status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: undefined },
            method: { type: String, enum: ['cod', 'card', 'bkash', 'nagad', 'sslcommerz', 'stripe'], required: true },
     transactionId: { type: String, default: undefined },
   gatewayResponse: { type: mongoose.Schema.Types.Mixed },
@@ -55,13 +59,14 @@ const orderSchema = new mongoose.Schema({
       orderId: { type: String, default: () => cuid(), unique: true, index: true },
        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopUser', required: true },
        cartId: { type: String, required: true },
-        items: { type: [orderItemSchema], required: true },
+        items: { type: [orderItemSchema] },
        totals: {      subtotal: { type: Number, required: true },
                       discount: { type: Number, default: 0 },
                            tax: { type: Number, default: 0 },
                 deliveryCharge: { type: Number, default: 0 },
                     grandTotal: { type: Number, required: true },
                       currency: { type: String, enum: ["USD", "BDT"], default: 'BDT' } },
+       coupon: { type: String },
     discounts: { type: [discountDetailSchema], default: undefined },
      shipping: { type: shippingSchema, required: true },
       payment: { type: paymentSchema, required: false },
