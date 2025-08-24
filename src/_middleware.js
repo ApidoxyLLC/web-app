@@ -25,18 +25,18 @@ export const corsConfig = [
   {
     path: "/api/v1/user/register",
     methods: ["POST"],
-    origins: ["http://localhost:3001"],
+    origins: ["http://localhost:3001/register"],
   },
   {
     path: "/api/v1/user/login",
     methods: ["POST"],
-    origins: ["http://localhost:3001"],
+    origins: ["http://localhost:3001/login"],
   },
-  {
-    path: "/api/v1/user/session",
-    methods: ["GET"],
-    origins: ["http://localhost:3001"],
-  },
+  // {
+  //   path: "/api/v1/user/session",
+  //   methods: ["GET"],
+  //   origins: ["http://localhost:3001/register"],
+  // },
 ];
 
 // ---------------- Helper functions ----------------
@@ -53,12 +53,15 @@ function applyCorsHeaders(response, origin, methods) {
   response.headers.set("Access-Control-Allow-Methods", methods.join(","));
   response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   response.headers.set("Access-Control-Allow-Credentials", "true"); // optional
-  setSecurityHeaders(response);
+  // setSecurityHeaders(response);
   return response;
 }
 
 // ---------------- Middleware ----------------
 export async function middleware(request) {
+  console.log("************************middleware")
+  console.log(request) 
+
   const origin = request.headers.get("origin") || "";
   const pathname = request.nextUrl.pathname;
   const method = request.method;
@@ -90,7 +93,7 @@ export async function middleware(request) {
 
   // ---------------- Internal requests (no Origin header) ----------------
   const response = NextResponse.next();
-  setSecurityHeaders(response);
+  // setSecurityHeaders(response);
   return response;
 }
 
