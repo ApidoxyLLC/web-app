@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { productModel } from "@/models/shop/product/Product";
 import { cartModel } from "@/models/shop/product/Cart";
-import securityHeaders from "../../../utils/securityHeaders";
 import { authenticationStatus } from "../../../middleware/auth";
 import cartDTOSchema from "./cartDTOSchema";
 import mongoose from "mongoose";
@@ -14,15 +13,15 @@ export async function PATCH(request, { params }) {
   const { productId } = await params;
   let body;
   try { body = await request.json() }
-  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders }) }
+  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400  }) }
 
-  if (!productId || !mongoose.Types.ObjectId.isValid(productId)) return NextResponse.json({ error: "Invalid product ID" }, { status: 400, headers: securityHeaders });
+  if (!productId || !mongoose.Types.ObjectId.isValid(productId)) return NextResponse.json({ error: "Invalid product ID" }, { status: 400  });
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
   // const userAgent = request.headers.get('user-agent')
 
   const parsed = cartDTOSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten() }, { status: 422, headers: securityHeaders });
+  if (!parsed.success) return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten() }, { status: 422  });
 
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
   if (!allowed) return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": retryAfter.toString() } });
@@ -38,19 +37,19 @@ export async function PATCH(request, { params }) {
     // console.log(productId, variantId, quantity, action)
 
     const cart = await Cart.findOne({ userId: user?.userId })
-    if (!cart) return NextResponse.json({ error: "Not found " }, { status: 404, headers: securityHeaders });
+    if (!cart) return NextResponse.json({ error: "Not found " }, { status: 404  });
 
     const product = await Product.findOne({ _id: new mongoose.Types.ObjectId(productId) })
       .select("title price variants inventory hasVariants otherMediaContents hasFreeShipment sellWithOutStock digitalAssets")
       .lean();
-    if (!product) return NextResponse.json({ error: "Product not available" }, { status: 404, headers: securityHeaders });
+    if (!product) return NextResponse.json({ error: "Product not available" }, { status: 404  });
 
     const itemIndex = cart.items.findIndex(item => item.productId.toString() === productId.toString() &&
       ((variantId && item.variantId?.toString() === variantId.toString()) ||
         (!variantId && !item.variantId))
     );
     if (itemIndex === -1) {
-      return NextResponse.json({ error: "Item not found in cart" }, { status: 404, headers: securityHeaders });
+      return NextResponse.json({ error: "Item not found in cart" }, { status: 404  });
     }
     const item = cart.items[itemIndex];
 
@@ -138,13 +137,13 @@ export async function PATCH(request, { params }) {
       cartId: updatedCart._id,
       message: "Cart updated",
       itemCount: updatedCart.items.length
-    }, { status: 200, headers: securityHeaders });
+    }, { status: 200  });
     return response
   } catch (error) {
     console.log("PATCH /cart error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500, headers: securityHeaders }
+      { status: 500  }
     );
   }
 }
@@ -153,10 +152,10 @@ export async function DELETE(request, { params }) {
   const { productId } = await params;
   let body;
   try { body = await request.json() }
-  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders }) }
+  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400  }) }
 
   if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
-    return NextResponse.json({ error: "Invalid product ID" }, { status: 400, headers: securityHeaders });
+    return NextResponse.json({ error: "Invalid product ID" }, { status: 400  });
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
@@ -173,7 +172,7 @@ export async function DELETE(request, { params }) {
 
     // find cart
     const cart = await Cart.findOne({ userId: user?.userId });
-    if (!cart) return NextResponse.json({ error: "Cart not found" }, { status: 404, headers: securityHeaders });
+    if (!cart) return NextResponse.json({ error: "Cart not found" }, { status: 404  });
 
 
     // find product (to make sure it's valid)
@@ -181,7 +180,7 @@ export async function DELETE(request, { params }) {
       .select("_id")
       .lean();
     if (!product) {
-      return NextResponse.json({ error: "Product not available" }, { status: 404, headers: securityHeaders });
+      return NextResponse.json({ error: "Product not available" }, { status: 404  });
     }
 
     // locate item to delete
@@ -193,7 +192,7 @@ export async function DELETE(request, { params }) {
     );
 
     if (itemIndex === -1) {
-      return NextResponse.json({ error: "Item not found in cart" }, { status: 404, headers: securityHeaders });
+      return NextResponse.json({ error: "Item not found in cart" }, { status: 404  });
     }
 
     // const otherCartItems = cart.items.filter(it => { if (!it.isSelected) return false;
@@ -282,10 +281,10 @@ export async function DELETE(request, { params }) {
         cartId: cart._id,
         itemCount: updatedCart.items.length
       },
-      { status: 200, headers: securityHeaders }
+      { status: 200  }
     );
   } catch (error) {
     console.error("DELETE /cart error:", error);
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500  });
   }
 }

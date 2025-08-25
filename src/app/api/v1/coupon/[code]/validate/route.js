@@ -6,7 +6,6 @@ import { authenticationStatus } from '../../../middleware/auth';
 import { couponModel } from '@/models/shop/product/Coupon';
 import { productModel } from '@/models/shop/product/Product';
 import { couponUsageHistoryModel } from '@/models/shop/product/CouponUsageHistory';
-import securityHeaders from '../../../utils/securityHeaders';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import minutesToExpiryTimestamp from '@/app/utils/shop-user/minutesToExpiryTimestamp';
 
@@ -26,7 +25,7 @@ export async function GET(request) {
   try {
     const parsed = couponDTOSchema.safeParse(params);    
     if (!parsed.success) 
-        return NextResponse.json({ error: "Invalid  email address..." }, { status: 422, headers: securityHeaders });    
+        return NextResponse.json({ error: "Invalid  email address..." }, { status: 422  });    
 
     const { code, productIds, 
             cartAmount,
@@ -36,13 +35,13 @@ export async function GET(request) {
     const { success, shop, data: user, isTokenRefreshed, token } = await authenticationStatus(request);            
     
     if (!success || !shop || !user)
-        return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 403, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 403  });
 
     // ✅ DB Connection
     const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
     if (!DB_URI_ENCRYPTION_KEY) {
         console.log("missing VENDOR_DB_URI_ENCRYPTION_KEY")
-        return NextResponse.json({ success: false, error: "Missing encryption key" }, { status: 500, headers: securityHeaders }) 
+        return NextResponse.json({ success: false, error: "Missing encryption key" }, { status: 500  }) 
     }
     const        dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
                                             options: { secret: DB_URI_ENCRYPTION_KEY } });
@@ -76,38 +75,38 @@ export async function GET(request) {
 
 
     if (!coupon) 
-      return NextResponse.json({ success: false, error: 'Invalid Coupon' },{ status: 404, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Invalid Coupon' },{ status: 404  });
     
     if (!coupon.isActive) 
-      return NextResponse.json({ success: false, error: 'Coupon is not active' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Coupon is not active' }, { status: 400  });
 
     const       now = new Date()
     const startDate = new Date(coupon.startDate);
           startDate.setHours(0, 0, 0, 0);
 
     if (now < startDate)
-      return NextResponse.json({ success: false, error: 'Not Started yet' }, { status: 400, headers: securityHeaders })
+      return NextResponse.json({ success: false, error: 'Not Started yet' }, { status: 400  })
     
     if (coupon.endDate && now > new Date(coupon.endDate)) 
-      return NextResponse.json({ success: false, error: 'Coupon Expired' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Coupon Expired' }, { status: 400  });
 
     if (isNaN(cartAmount) || cartAmount <= 0) 
-        return NextResponse.json({ success: false, error: 'Invalid cart amount' }, { status: 400, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: 'Invalid cart amount' }, { status: 400  });
     
     if (coupon.minValue && coupon.minValue > 0 && (!cartAmount || coupon.minValue > cartAmount))
-      return NextResponse.json({ success: false, error: `You Have to purchese at least ${coupon.minValue}` }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: `You Have to purchese at least ${coupon.minValue}` }, { status: 400  });
 
     // Validate platforms
     if (coupon.platforms && coupon.platforms.length > 0 && (!platform || !coupon.platforms.includes(platform))) 
-        return NextResponse.json({ success: false, error: 'Coupon not valid for this platform' }, { status: 400, headers: securityHeaders });    
+        return NextResponse.json({ success: false, error: 'Coupon not valid for this platform' }, { status: 400  });    
 
     // Validate redeem method
     if (coupon.redeemMethod === 'link' && !searchParams.get('token')) 
-        return NextResponse.json({ success: false, error: 'This coupon requires a special redemption link' }, { status: 400, headers: securityHeaders });            
+        return NextResponse.json({ success: false, error: 'This coupon requires a special redemption link' }, { status: 400  });            
 
     // Validate customer eligibility
     if (coupon.customerEligibility === 'specific_customers' &&  (!coupon.customers || !coupon.customers.includes(user._id.toString()))) 
-            return NextResponse.json({ success: false, error: 'You are not eligible for this coupon' }, { status: 400, headers: securityHeaders });
+            return NextResponse.json({ success: false, error: 'You are not eligible for this coupon' }, { status: 400  });
 
     let inapplicableProducts = new Set();
     const  foundProductIdSet = new Set(products.map(i => i._id.toString()));
@@ -136,12 +135,12 @@ export async function GET(request) {
 
         if (coupon.target.customers?.length > 0 &&
             !coupon.target.customers.includes(user._id.toString())) {
-            return NextResponse.json({ success: false, error: 'You are not eligible for this discount...' }, { status: 400, headers: securityHeaders });
+            return NextResponse.json({ success: false, error: 'You are not eligible for this discount...' }, { status: 400  });
         }
 
         if (coupon.target.paymentMethods?.length > 0 &&
             (!paymentMethod || !paymentMethod.some(pm => coupon.target.paymentMethods.includes(pm)))) {
-            return NextResponse.json({ success: false, error: 'Payment method not eligible for this coupon' }, { status: 400, headers: securityHeaders });
+            return NextResponse.json({ success: false, error: 'Payment method not eligible for this coupon' }, { status: 400  });
         }
     }
 
@@ -161,24 +160,24 @@ export async function GET(request) {
         }
         if (coupon.exclude.customers?.length > 0 &&
             coupon.exclude.customers.includes(user._id.toString())) {
-            return NextResponse.json({ success: false, error: 'You are not eligible for this discount...' }, { status: 400, headers: securityHeaders });
+            return NextResponse.json({ success: false, error: 'You are not eligible for this discount...' }, { status: 400  });
         }
         if (coupon.exclude.paymentMethods?.length > 0 &&
             paymentMethod && paymentMethod.some(pm => coupon.exclude.paymentMethods.includes(pm))) {
-            return NextResponse.json({ success: false, error: 'You are not eligible for this discount...' }, { status: 400, headers: securityHeaders });
+            return NextResponse.json({ success: false, error: 'You are not eligible for this discount...' }, { status: 400  });
         }
     }
 
     if (coupon.geographicRestrictions) {
         const { countries, regions, postalCodes } = coupon.geographicRestrictions;        
         if (countries?.length && !countries.includes(country)) 
-            return NextResponse.json({ success: false, error: `Coupon not available in your country` }, { status: 400, headers: securityHeaders });    
+            return NextResponse.json({ success: false, error: `Coupon not available in your country` }, { status: 400  });    
         
         if (regions?.length && region && !regions.includes(region)) 
-            return NextResponse.json({ success: false, error: `Coupon not available in your region` }, { status: 400, headers: securityHeaders });    
+            return NextResponse.json({ success: false, error: `Coupon not available in your region` }, { status: 400  });    
         
         if (postalCodes?.length && postalCode && !postalCodes.includes(postalCode)) 
-            return NextResponse.json({ success: false, error: `Coupon not available for your postal code` }, { status: 400, headers: securityHeaders });    
+            return NextResponse.json({ success: false, error: `Coupon not available for your postal code` }, { status: 400  });    
     }
 
     // const customersPreviousCoupon = coupon.history.filter(item => item.customerId === user._id)
@@ -192,10 +191,10 @@ export async function GET(request) {
                                                             "+usageContext.itemsPurchased " +
                                                             "+categories")
     if(coupon.usage.limit && coupon.usage.applyCount >= coupon.usage.limit)
-        return NextResponse.json({ success: false, error: `This coupon has reached its maximum usage limit` }, { status: 400, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: `This coupon has reached its maximum usage limit` }, { status: 400  });
 
     if(coupon.usage.perCustomerLimit && usedCoupons.length >= coupon.usage.perCustomerLimit)
-        return NextResponse.json({ success: false, error: `You have reached your maximum usage limit for this coupon'` }, { status: 400, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: `You have reached your maximum usage limit for this coupon'` }, { status: 400  });
     
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -206,7 +205,7 @@ export async function GET(request) {
     const todaysCoupon = await couponUsageHistoryModel(vendor_db).find({ usedAt: { $gte: startOfDay, $lte: endOfDay } });
     
     if(coupon.usage.dailyLimit && todaysCoupon.length >= coupon.usage.dailyLimit)
-        return NextResponse.json({ success: false, error: `Today's Coupon is end, try later...` }, { status: 400, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: `Today's Coupon is end, try later...` }, { status: 400  });
     
         // Calculate discount amount
         // Special handling for different coupon types
@@ -216,7 +215,7 @@ export async function GET(request) {
         const applicableProductIds = Array.from(foundProductIdSet).filter(id => !inapplicableProducts.has(id) && productMap[id]);
 
         if (applicableProductIds.length <= 0) 
-            return NextResponse.json({ success: false, error: 'No products in your cart are eligible for this coupon' }, { status: 400, headers: securityHeaders });        
+            return NextResponse.json({ success: false, error: 'No products in your cart are eligible for this coupon' }, { status: 400  });        
 
         // Before the BOGO calculation
         
@@ -250,7 +249,7 @@ export async function GET(request) {
                 
             case 'bogo':
                 if (!coupon.bogoRules) 
-                    return NextResponse.json({ success: false, error: 'BOGO rules missing' }, { status: 400, headers: securityHeaders });
+                    return NextResponse.json({ success: false, error: 'BOGO rules missing' }, { status: 400  });
                 
                 // Get BOGO product IDs as strings
                 const bogoIds = coupon.bogoRules.productIds.map(id => id.toString());
@@ -258,7 +257,7 @@ export async function GET(request) {
 
                 if (missingBogoProducts.length > 0) {
                     const missingProductNames = missingBogoProducts.map(id => productMap[id]?.name || 'unknown product').join(', ');
-                    return NextResponse.json({ success: false, error: `Required products for BOGO not in cart: ${missingProductNames}` }, { status: 400, headers: securityHeaders });
+                    return NextResponse.json({ success: false, error: `Required products for BOGO not in cart: ${missingProductNames}` }, { status: 400  });
                 }
 
 
@@ -270,7 +269,7 @@ export async function GET(request) {
                 if (eligibleProducts.length < coupon.bogoRules.buyQuantity) {
                     const requiredNames = bogoIds.map(id => productMap[id]?.name || 'product')
                                                  .join(' or ');                        
-                    return NextResponse.json({ success: false, error: `Need to purchase ${coupon.bogoRules.buyQuantity} of ${requiredNames} for BOGO offer` },{ status: 400, headers: securityHeaders });
+                    return NextResponse.json({ success: false, error: `Need to purchase ${coupon.bogoRules.buyQuantity} of ${requiredNames} for BOGO offer` },{ status: 400  });
                 }
                 
                 // Calculate how many BOGO pairs we have
@@ -309,12 +308,12 @@ export async function GET(request) {
             
             case 'free_gift':
                 if (!coupon.metadata?.freeGiftProductId) 
-                    return NextResponse.json({ success: false, error: 'Free gift product not specified' }, { status: 400, headers: securityHeaders });                
+                    return NextResponse.json({ success: false, error: 'Free gift product not specified' }, { status: 400  });                
                 
                 // Verify the free gift product exists and is in stock
                 const freeGiftProduct = await ProductModel.findOne({ productId: coupon.metadata.freeGiftProductId, 'inventory.stock': { $gt: 0 } }).lean();
                 if (!freeGiftProduct)
-                    return NextResponse.json({ success: false, error: 'Free gift product not available' }, { status: 400, headers: securityHeaders });                
+                    return NextResponse.json({ success: false, error: 'Free gift product not available' }, { status: 400  });                
 
                 discountDetails = {
                     type: 'free_gift',
@@ -327,7 +326,7 @@ export async function GET(request) {
             
             case 'tiered':
                 if (!coupon.metadata?.tieredRules) 
-                    return NextResponse.json({ success: false,error: 'Tiered discount rules not specified' }, { status: 400, headers: securityHeaders });
+                    return NextResponse.json({ success: false,error: 'Tiered discount rules not specified' }, { status: 400  });
                 
                 // Sort tiers from highest to lowest threshold
                 const sortedTiers = [...coupon.metadata.tieredRules].sort((a, b) => b.threshold - a.threshold);
@@ -336,7 +335,7 @@ export async function GET(request) {
                 const applicableTier = sortedTiers.find(tier => cartAmount >= tier.threshold);
 
                 if (!applicableTier) 
-                    return NextResponse.json({ success: false, error: `Cart amount doesn't qualify for any discount tier (minimum: ${sortedTiers[sortedTiers.length-1].threshold})` }, { status: 400, headers: securityHeaders });
+                    return NextResponse.json({ success: false, error: `Cart amount doesn't qualify for any discount tier (minimum: ${sortedTiers[sortedTiers.length-1].threshold})` }, { status: 400  });
                 
 
                 // Calculate discount based on tier type
@@ -362,7 +361,7 @@ export async function GET(request) {
             
             case 'bundle':
                 if (!coupon.metadata?.bundleProducts || coupon.metadata.bundleProducts.length < 2) 
-                    return NextResponse.json({ success: false, error: 'Bundle products not properly specified' }, { status: 400, headers: securityHeaders });
+                    return NextResponse.json({ success: false, error: 'Bundle products not properly specified' }, { status: 400  });
                 
 
                 // Check if all required bundle products are in cart
@@ -370,7 +369,7 @@ export async function GET(request) {
                 const missingProducts = bundleProductIds.filter(id => !productIds.includes(id));
 
                 if (missingProducts.length > 0) 
-                    return NextResponse.json({ success: false, error: `Missing required products for bundle: ${missingProducts.join(', ')}` }, { status: 400, headers: securityHeaders });
+                    return NextResponse.json({ success: false, error: `Missing required products for bundle: ${missingProducts.join(', ')}` }, { status: 400  });
                 
 
                 // Calculate discount
@@ -406,7 +405,7 @@ export async function GET(request) {
 
             case 'cashback':
                 if (!coupon.metadata?.cashbackMethod) 
-                    return NextResponse.json({  success: false, error: 'Cashback method not specified' }, { status: 400, headers: securityHeaders });
+                    return NextResponse.json({  success: false, error: 'Cashback method not specified' }, { status: 400  });
                 
                 if (coupon.metadata.cashbackType === 'percentage') {
                     discountAmount = (cartAmount * coupon.amount) / 100;
@@ -434,7 +433,7 @@ export async function GET(request) {
             //     const hasPreviousOrders = await OrderModel.exists({ customerId: user._id });
                 
             //     if (hasPreviousOrders) {
-            //         return NextResponse.json({ success: false, error: 'Coupon only valid for first purchase' }, { status: 400, headers: securityHeaders })}
+            //         return NextResponse.json({ success: false, error: 'Coupon only valid for first purchase' }, { status: 400  })}
                     
             //     discountAmount = (cartAmount * coupon.amount) / 100;
             //     if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
@@ -453,11 +452,11 @@ export async function GET(request) {
             // case 'next_purchase':
             //     // Verify this is a valid next-purchase coupon (typically issued after a previous purchase)
             //     if (!coupon.metadata?.issuedForOrder) 
-            //         return NextResponse.json({ success: false, error: 'Invalid next-purchase coupon'}, { status: 400, headers: securityHeaders });
+            //         return NextResponse.json({ success: false, error: 'Invalid next-purchase coupon'}, { status: 400  });
 
             //     // Verify the customer is the intended recipient
             //     if (coupon.metadata.issuedForCustomer !== user._id.toString()) 
-            //         return NextResponse.json({ success: false, error: 'This coupon was issued to another customer' }, { status: 400, headers: securityHeaders });                
+            //         return NextResponse.json({ success: false, error: 'This coupon was issued to another customer' }, { status: 400  });                
                 
             //     discountAmount = (cartAmount * coupon.amount) / 100;
             //     if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) 
@@ -473,7 +472,7 @@ export async function GET(request) {
             //     break;
             
             default:
-                return NextResponse.json({ success: false, error: 'Unsupported coupon type' }, { status: 400, headers: securityHeaders });
+                return NextResponse.json({ success: false, error: 'Unsupported coupon type' }, { status: 400  });
                 
         }
 
@@ -492,7 +491,7 @@ export async function GET(request) {
                                                          remainingCustomerUses: coupon.usage.perCustomerLimit ? coupon.usage.perCustomerLimit - usedCoupons.length : null,
                                                             remainingDailyUses: coupon.usage.dailyLimit ? coupon.usage.dailyLimit - todaysCoupon.length : null        
                                                         }
-                                            }, { status: 200, headers: securityHeaders } );
+                                            }, { status: 200  } );
 
         if (isTokenRefreshed && token) {
             const  ACCESS_TOKEN_EXPIRY = Number(shop.timeLimitations?.ACCESS_TOKEN_EXPIRE_MINUTES) || 15;
@@ -522,6 +521,6 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('Coupon validation error:', error);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500  });
   }
 }

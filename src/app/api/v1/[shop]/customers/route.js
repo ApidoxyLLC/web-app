@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import securityHeaders from '../../utils/securityHeaders';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import { dbConnect } from '@/lib/mongodb/db';
 // import { getVendor } from '@/services/vendor/getVendor';
@@ -21,13 +20,13 @@ export async function GET(request, { params }) {
   try {
     // Get shop reference from params
     const { shop: shopReferenceId } = await params;
-    if (!shopReferenceId) return NextResponse.json({ success: false, error: 'Shop reference is required' }, { status: 400, headers: securityHeaders });
+    if (!shopReferenceId) return NextResponse.json({ success: false, error: 'Shop reference is required' }, { status: 400  });
     
     // Get vendor by referenceId only (host is not passed)
     const { vendor, dbUri, dbName } = await getVendor({ id: shopReferenceId });
 
     // if (!hasCustomerReadAccess(vendor, data.userId)) 
-    //         return NextResponse.json( { success: false, error: 'Not authorized to read customer data' }, { status: 403, headers: securityHeaders });
+    //         return NextResponse.json( { success: false, error: 'Not authorized to read customer data' }, { status: 403  });
             
     const shop_db = await dbConnect({ dbKey: dbName, dbUri });
     const User = userModel(shop_db);
@@ -48,14 +47,14 @@ export async function GET(request, { params }) {
     if (isNaN(page) || page < 1) {
       return NextResponse.json(
         { success: false, error: 'Invalid page number' },
-        { status: 400, headers: securityHeaders }
+        { status: 400  }
       );
     }
 
     if (isNaN(limit) || limit < 1 || limit > 100) {
       return NextResponse.json(
         { success: false, error: 'Limit must be between 1 and 100' },
-        { status: 400, headers: securityHeaders }
+        { status: 400  }
       );
     }
 
@@ -125,9 +124,7 @@ export async function GET(request, { params }) {
       }
     });
 
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
+
 
     return response;
 
@@ -139,7 +136,7 @@ export async function GET(request, { params }) {
         error: 'Internal Server Error',
         ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
       },
-      { status: 500, headers: securityHeaders }
+      { status: 500  }
     );
   }
 }

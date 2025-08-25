@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { productModel } from "@/models/shop/product/Product";
 import { cartModel } from "@/models/shop/product/Cart";
-import securityHeaders from "../../utils/securityHeaders";
 import { authenticationStatus } from "../middleware/auth";
 import mongoose from "mongoose";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
@@ -165,7 +164,7 @@ export async function POST(request) {
       }
     }
 
-    return NextResponse.json({ success: true, data: savedOrder, message: "Order placed successfully" }, { status: 201, headers: securityHeaders });
+    return NextResponse.json({ success: true, data: savedOrder, message: "Order placed successfully" }, { status: 201  });
 
   } catch (error) {
     console.error("Order processing error:", error);

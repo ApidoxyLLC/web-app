@@ -1,0 +1,49 @@
+services:
+  # This is the main service for the web application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: apidoxy-web-app:prod
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+      - REDIS_URL=redis://:secure_password@redis:6379
+      - REDIS_PASSWORD=secure_password
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  redis:
+    image: redis:8.0.2-alpine
+    container_name: prod-redis
+
+    volumes:
+      - redis_data:/data
+    command: redis-server --requirepass secure_password --save 60 1 --databases 6
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "secure_password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge

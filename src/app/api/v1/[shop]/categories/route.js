@@ -3,7 +3,6 @@ import mongoose from 'mongoose';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import config from "../../../../../../config";
-import securityHeaders from "../../utils/securityHeaders";
 import { categoryModel } from '@/models/shop/product/Category';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import { vendorModel } from '@/models/vendor/Vendor';
@@ -38,7 +37,7 @@ export async function GET(request, { params }) {
     // const shop = searchParams.get('shop');
     
     if (!shopReferenceId) 
-      return NextResponse.json({ success: false, error: 'Shop reference is required' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Shop reference is required' }, { status: 400  });
 
     // Connect to vendor DB and get shop info
     const vendor_db = await vendorDbConnect();
@@ -48,7 +47,7 @@ export async function GET(request, { params }) {
                                .lean();
 
     if (!vendor) 
-      return NextResponse.json({ success: false, error: 'Shop not found' }, { status: 404, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Shop not found' }, { status: 404  });
 
     // Connect to shop database
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
@@ -70,11 +69,11 @@ export async function GET(request, { params }) {
 
     // Validate pagination
     if (isNaN(page) || page < 1) 
-      return NextResponse.json({ success: false, error: 'Invalid page number' }, { status: 400, headers: securityHeaders } );
+      return NextResponse.json({ success: false, error: 'Invalid page number' }, { status: 400  } );
     
 
     if (isNaN(limit) || limit < 1 || limit > 100) 
-      return NextResponse.json({ success: false, error: 'Limit must be between 1 and 100' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Limit must be between 1 and 100' }, { status: 400  });
     
 
     // Build match conditions
@@ -177,10 +176,6 @@ export async function GET(request, { params }) {
       }
     });
 
-    // Add security headers
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
 
     return response;
 
@@ -192,7 +187,7 @@ export async function GET(request, { params }) {
         error: 'Internal Server Error',
         ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
       },
-      { status: 500, headers: securityHeaders }
+      { status: 500 }
     );
   }
 }

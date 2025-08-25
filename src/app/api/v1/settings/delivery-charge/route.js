@@ -5,7 +5,6 @@ import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import deliveryChargeDTOSchema from "./deliveryChargeDTOSchema";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import hasAddDeliveryChargePermission from "./hasAddDeliveryChargePermission";
-import securityHeaders from "../../utils/securityHeaders";
 
 export async function POST(request) {
     let body;
@@ -31,7 +30,7 @@ export async function POST(request) {
         const vendor = await Vendor.findOne({ referenceId: vendorReferenceId }).select('_id deliveryCharges ownerId');
         if (!vendor) return NextResponse.json({ success: false, error: "Request can't proceed " }, { status: 404 });
 
-        if (!hasAddDeliveryChargePermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
+        if (!hasAddDeliveryChargePermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400  });
 
         // // -------------------------------
         // // Check for Duplicate Delivery Charge
@@ -88,14 +87,14 @@ export async function POST(request) {
                         { new: true, projection: { deliveryCharges: 1 } }
                     );
 
-                return NextResponse.json({ success: true, message: "Delivery charge updated successfully", vendor: updatedVendor.deliveryCharges }, { status: 200, headers: securityHeaders });
+                return NextResponse.json({ success: true, message: "Delivery charge updated successfully", vendor: updatedVendor.deliveryCharges }, { status: 200  });
             } else {
                 const updatedVendor = await Vendor.findByIdAndUpdate(
                         vendor._id,
                         { $push: { deliveryCharges: newDeliveryCharge }, $set: { updatedAt: new Date() } },
                         { new: true, projection: { deliveryCharges: 1 } }
                     );
-                return NextResponse.json({ success: true, message: "Delivery charge added successfully", vendor: updatedVendor.deliveryCharges }, { status: 200, headers: securityHeaders });
+                return NextResponse.json({ success: true, message: "Delivery charge added successfully", vendor: updatedVendor.deliveryCharges }, { status: 200  });
 
             }
             
@@ -144,10 +143,10 @@ export async function POST(request) {
         // -------------------------------
         // Response
         // -------------------------------
-        return NextResponse.json({ success: true, message: "Delivery charge added successfully", vendor: updatedVendor.deliveryCharges }, { status: 200, headers: securityHeaders });
+        return NextResponse.json({ success: true, message: "Delivery charge added successfully", vendor: updatedVendor.deliveryCharges }, { status: 200  });
 
     } catch (error) {
         console.error("Error adding delivery charge:", error);
-        return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500  });
     }
 }

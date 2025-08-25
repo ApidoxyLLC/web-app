@@ -7,7 +7,6 @@ import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import config from '../../../../../../config';
-import securityHeaders from '../../utils/securityHeaders';
 import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { userModel } from '@/models/auth/User';
 
@@ -19,7 +18,7 @@ export async function GET(request) {
 
       const { authenticated, error, data } = await getAuthenticatedUser(request);
       if(!authenticated) 
-           return NextResponse.json({ error: "...not authorized" }, { status: 401, headers: securityHeaders });
+           return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
        /** 
        * fake Authentication for test purpose only 
@@ -61,7 +60,7 @@ export async function GET(request) {
                            title: searchParams.get('title') };
 
     if (!params.title || !params.shop)
-      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400  });
     const vendor_db = await vendorDbConnect();
     const vendor = await vendorModel(vendor_db).findOne({ referenceId: params.shop })
                                          .select("+_id +ownerId +dbInfo")
@@ -69,10 +68,10 @@ export async function GET(request) {
 
     // Validate access
     if ( !vendor || vendor.ownerId.toString() != data.userId.toString()) 
-      return NextResponse.json( { success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
+      return NextResponse.json( { success: false, error: "Not authorized" }, { status: 401  });
 
     if (!vendor.dbInfo?.dbUri || !vendor.dbInfo?.dbName) 
-      return NextResponse.json({ success: false, error: "Vendor DB info missing" }, { status: 500, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: "Vendor DB info missing" }, { status: 500  });
     
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
                                      options: { secret: config.vendorDbUriEncryptionKey } });
@@ -83,12 +82,10 @@ export async function GET(request) {
     const isExist = await CategoryModel.exists({ title: params.title })
 
     // Build response
-    const response = NextResponse.json({ requested: params.title , isAvailable: !isExist });
-    // Apply security headers
-    Object.entries(securityHeaders).forEach(([key, value]) => { response.headers.set(key, value) });
-    return response;
+    return NextResponse.json({ requested: params.title , isAvailable: !isExist });
+
   } catch (error) {
     console.error('Slug check error:', error);
-    return NextResponse.json( { success: false, error: "Internal server error" }, { status: 500, headers: securityHeaders } );
+    return NextResponse.json( { success: false, error: "Internal server error" }, { status: 500  } );
   }
 }

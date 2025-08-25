@@ -3,7 +3,6 @@ import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
-import securityHeaders from '../utils/securityHeaders';
 import { uploadShopImage } from '@/services/image/blackblaze';
 
 export async function POST(request) {

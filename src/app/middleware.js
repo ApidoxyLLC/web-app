@@ -39,7 +39,7 @@ export async function middleware(request) {
   const response = NextResponse.next();
 
   // Add security headers
-  setSecurityHeaders(response);
+  // setSecurityHeaders(response);
 
   // Auth-based redirects
   // const token = await getToken({ req: request });

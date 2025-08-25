@@ -3,7 +3,7 @@ import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
-import securityHeaders from '../utils/securityHeaders';
+// import securityHeaders from '../utils/securityHeaders';
 import { imageModel } from '@/models/vendor/Image';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 // import { deleteImageFile } from '@/services/image/blackblaze';
@@ -16,7 +16,7 @@ import config from '../../../../../config';
 export async function PATCH(request) {
   let body;
   try   { body = await request.json(); } 
-  catch { return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400, headers: securityHeaders });}
+  catch { return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400  });}
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') ||request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip  });
@@ -26,7 +26,7 @@ export async function PATCH(request) {
   if(!authenticated) return NextResponse.json({ error: "...not authorized" }, { status: 401 });
  
   const parsed = logoDTOSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
+  if (!parsed.success) return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422  } );
 
   try {
     const { shop, image } = parsed.data;
@@ -38,8 +38,8 @@ export async function PATCH(request) {
                                .select( "+_id +logo +dbInfo +secrets +expirations")
                                .lean();
 
-    if (!vendor) return NextResponse.json({ success: false, error: 'Inconsistent Data...' }, { status: 400, headers: securityHeaders });
-    if (!hasUpdateLogoPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
+    if (!vendor) return NextResponse.json({ success: false, error: 'Inconsistent Data...' }, { status: 400  });
+    if (!hasUpdateLogoPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400  });
 
     const imageData = await ImageModel.findOne({ fileName: image });
     if (!imageData) return NextResponse.json({ error: "Image not found" }, { status: 404 });
@@ -73,13 +73,13 @@ export async function PATCH(request) {
                                                                 folder: imageData.folder       })     ]);
             } catch (err) { console.error("Background deletion failed:", err); }
         })();
-        return NextResponse.json( { success: true, data: updatedVendor }, { status: 200, headers: securityHeaders });
+        return NextResponse.json( { success: true, data: updatedVendor }, { status: 200  });
     } catch (error) {
         return NextResponse.json({ error: "Image transfer error" }, { status: 400 });
     }
 
   } catch (error) {
     console.error("Unexpected error during category creation:", error);
-    return NextResponse.json({ success: false, error: 'Internal Server Error', ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }) }, { status: 500, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: 'Internal Server Error', ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }) }, { status: 500  });
   }
 }

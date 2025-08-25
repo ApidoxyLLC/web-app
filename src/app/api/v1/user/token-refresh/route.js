@@ -9,7 +9,6 @@ import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimes
 import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import config from "../../../../../../config";
-import securityHeaders from "../../utils/securityHeaders";
 import { getInfrastructure } from "@/services/vendor/getInfrastructure";
 import { setSession } from "@/lib/redis/helpers/endUserSession";
 import mongoose from "mongoose";
@@ -34,7 +33,7 @@ export async function POST(request) {
     
     else { const cookieStore = await cookies(); 
                 refreshToken = cookieStore.get("refresh_token")?.value; }
-    if (!refreshToken) return NextResponse.json( { error: "Refresh token required" }, { status: 400, headers: securityHeaders });
+    if (!refreshToken) return NextResponse.json( { error: "Refresh token required" }, { status: 400  });
 
     const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
     if(!vendor) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -45,10 +44,10 @@ export async function POST(request) {
     let payload;
     try { 
       payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
-      if (!payload.sub || !payload.tokenId)return NextResponse.json({ error: "Invalid token payload" }, { status: 401, headers: securityHeaders });
+      if (!payload.sub || !payload.tokenId)return NextResponse.json({ error: "Invalid token payload" }, { status: 401  });
     } catch (err) {
-        if (err.name === 'TokenExpiredError') return NextResponse.json({ error: "Refresh token expired" }, { status: 401, headers: securityHeaders })
-            return NextResponse.json({ error: "Invalid refresh token" }, { status: 401, headers: securityHeaders });
+        if (err.name === 'TokenExpiredError') return NextResponse.json({ error: "Refresh token expired" }, { status: 401  })
+            return NextResponse.json({ error: "Invalid refresh token" }, { status: 401  });
     }
 
     const  ACCESS_TOKEN_SECRET = await decrypt({ cipherText: vendor.secrets.accessTokenSecret,
@@ -191,12 +190,12 @@ export async function POST(request) {
                                               }
                                             ]);
 
-    if (!result) return NextResponse.json({ error: "Session not found" }, { status: 401, headers: securityHeaders });
+    if (!result) return NextResponse.json({ error: "Session not found" }, { status: 401  });
                                        
     const { user, session, cart } = result;
 
     if (!user || (payload.email !== user.email && payload.phone !== user.phone))
-        return NextResponse.json( { error: "User not found" },  { status: 404, headers: securityHeaders })
+        return NextResponse.json( { error: "User not found" },  { status: 404  })
 
     const       accessTokenIdLength = Number.isFinite(Number(vendor.secrets?.accessTokenIdLength ?? config.endUserAccessTokenIdLength))
                                                     ? Number(vendor.secrets?.accessTokenIdLength ?? config.endUserAccessTokenIdLength)
@@ -267,7 +266,7 @@ export async function POST(request) {
                                                                                       cart
                                                                                     } 
                                         },
-      { status: 200, headers: securityHeaders }
+      { status: 200  }
     );
 
     // Set HTTP-only cookies
@@ -342,7 +341,7 @@ export async function POST(request) {
                                                                                       cart
                                                                                     } 
                                         },
-      { status: 200, headers: securityHeaders }
+      { status: 200  }
     );
 
     // Set HTTP-only cookies

@@ -5,7 +5,6 @@ import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import { NextResponse } from "next/server";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import config from "../../../../../../../config";
-import securityHeaders from "../../../utils/securityHeaders";
 import mongoose from "mongoose";
 import getAuthenticatedUser from "../../../auth/utils/getAuthenticatedUser";
 import hasProductWritePermission from "./hasProductWritePermission";
@@ -13,9 +12,7 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { imageModel } from "@/models/vendor/Image";
 
 const apiResponse = (data, status = 200, headers = {}) => {
-    const response = NextResponse.json(data, { status });
-    Object.entries(securityHeaders).forEach(([key, value]) => response.headers.set(key, value));
-    return response;
+    return NextResponse.json(data, { status });
 };
 
 
@@ -160,17 +157,17 @@ export async function DELETE(request, { params }) {
     // --- Rate Limiting ---
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||  request.headers.get('x-real-ip') ||  request.socket?.remoteAddress || '';
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-    if (!allowed)  return NextResponse.json( { success: false, error: 'Too many requests. Please try again later.' }, { status: 429, headers: {  'Retry-After': retryAfter.toString(),  ...securityHeaders  } } );
+    if (!allowed)  return NextResponse.json( { success: false, error: 'Too many requests. Please try again later.' }, { status: 429, headers: {  'Retry-After': retryAfter.toString()   } } );
   
     // Authentication
     const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-    if (!authenticated) return NextResponse.json({ success: false, error: authError || 'Not authenticated' }, { status: 401, headers: securityHeaders });
+    if (!authenticated) return NextResponse.json({ success: false, error: authError || 'Not authenticated' }, { status: 401  });
 
   try {
     const { shop: shopReferenceId, product: productId } = params;
 
     // Validate params
-    if (!shopReferenceId || !productId) return NextResponse.json( { success: false, error: 'Shop reference and product ID are required' }, { status: 400, headers: securityHeaders });
+    if (!shopReferenceId || !productId) return NextResponse.json( { success: false, error: 'Shop reference and product ID are required' }, { status: 400  });
 
     // Connect to Vendor DB
     const vendor_db = await vendorDbConnect();
@@ -178,8 +175,8 @@ export async function DELETE(request, { params }) {
     const vendor = await Vendor.findOne({ referenceId: shopReferenceId })
                                .select("+_id +dbInfo +secrets +expirations +ownerId")
                                .lean();
-    if (!vendor) return NextResponse.json({ success: false, error: 'Shop not found' },  { status: 404, headers: securityHeaders });
-    if (!hasProductWritePermission(vendor, data.userId)) return NextResponse.json( { success: false, error: 'Authorization failed' },  { status: 403, headers: securityHeaders });
+    if (!vendor) return NextResponse.json({ success: false, error: 'Shop not found' },  { status: 404  });
+    if (!hasProductWritePermission(vendor, data.userId)) return NextResponse.json( { success: false, error: 'Authorization failed' },  { status: 403  });
     
     // Connect to Shop DB
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
@@ -219,13 +216,7 @@ export async function DELETE(request, { params }) {
         if (deletedCount === 0) throw new Error('Product not found');
       });
 
-      const response = NextResponse.json({ success: true, message: 'Product deleted successfully', data: { id: productId, title: productTitle }  }, { status: 200 } );
-      
-      Object.entries(securityHeaders).forEach(([key, value]) => {
-        response.headers.set(key, value);
-      });
-      
-      return response;
+      return NextResponse.json({ success: true, message: 'Product deleted successfully', data: { id: productId, title: productTitle }  }, { status: 200 } );
       
     } catch (error) {
       console.error("Transaction error:", error);
@@ -235,7 +226,7 @@ export async function DELETE(request, { params }) {
           error: error.message || 'Internal Server Error',
           ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }) 
         }, 
-        { status: 500, headers: securityHeaders }
+        { status: 500  }
       );
     } finally { 
       await session.endSession(); 
@@ -249,7 +240,7 @@ export async function DELETE(request, { params }) {
         error: 'Internal Server Error',
         ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }) 
       }, 
-      { status: 500, headers: securityHeaders }
+      { status: 500  }
     );
   }
 }

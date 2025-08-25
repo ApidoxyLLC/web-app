@@ -5,8 +5,6 @@ import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import { userModel } from "@/models/auth/User";
 import { vendorModel } from "@/models/vendor/Vendor";
-import securityHeaders from "../../utils/securityHeaders";
-
 import { removeStaffFromVendor } from '@/services/vendor/removeStuff';
 import { hasDeletePermission } from './hasWritePermission';
 
@@ -93,7 +91,7 @@ export async function DELETE(request, { params }) {
     if (!shop || !email) {
         return NextResponse.json(
             { error: 'Missing required parameters (shop and email)' },
-            { status: 400, headers: securityHeaders }
+            { status: 400  }
         );
     }
 
@@ -101,7 +99,7 @@ export async function DELETE(request, { params }) {
     if (!authenticated) {
         return NextResponse.json(
             { error: 'Unauthorized' },
-            { status: 401, headers: securityHeaders }
+            { status: 401  }
         );
     }
 
@@ -117,14 +115,14 @@ export async function DELETE(request, { params }) {
         if (!vendor) {
             return NextResponse.json(
                 { error: 'Vendor not found' },
-                { status: 404, headers: securityHeaders }
+                { status: 404  }
             );
         }
 
         if (!hasDeletePermission(vendor, requester.userId)) {
             return NextResponse.json(
                 { error: 'Insufficient permissions' },
-                { status: 403, headers: securityHeaders }
+                { status: 403  }
             );
         }
 
@@ -136,7 +134,7 @@ export async function DELETE(request, { params }) {
         if (!staffMember) {
             return NextResponse.json(
                 { error: 'Staff member not found in this vendor' },
-                { status: 404, headers: securityHeaders }
+                { status: 404  }
             );
         }
         const removalResult = await removeStaffFromVendor({
@@ -148,7 +146,7 @@ export async function DELETE(request, { params }) {
         if (!removalResult.success) {
             return NextResponse.json(
                 { error: removalResult.message },
-                { status: 400, headers: securityHeaders }
+                { status: 400  }
             );
         }
 
@@ -159,7 +157,7 @@ export async function DELETE(request, { params }) {
                     message: 'Staff member successfully removed'
                 }
             },
-            { status: 200, headers: securityHeaders }
+            { status: 200  }
         );
 
     } catch (error) {
@@ -169,7 +167,7 @@ export async function DELETE(request, { params }) {
                 error: 'Internal server error',
                 details: process.env.NODE_ENV === 'development' ? error.message : undefined
             },
-            { status: 500, headers: securityHeaders }
+            { status: 500  }
         );
     }
 }

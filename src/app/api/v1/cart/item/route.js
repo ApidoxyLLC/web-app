@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { productModel } from "@/models/shop/product/Product";
 import { cartModel } from "@/models/shop/product/Cart";
-import securityHeaders from "../../utils/securityHeaders";
 import { authenticationStatus } from "../../middleware/auth";
 import cartDTOSchema from "./cartDTOSchema";
 import mongoose from "mongoose";
@@ -10,10 +9,10 @@ import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 export async function POST(request) {
   let body;
   try { body = await request.json(); }
-  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders }); }
+  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400  }); }
 
   const parsed = cartDTOSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten() }, { status: 422, headers: securityHeaders });
+  if (!parsed.success) return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten() }, { status: 422  });
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip });
@@ -28,13 +27,13 @@ export async function POST(request) {
 
     const { productId, variantId, quantity } = parsed.data;
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) return NextResponse.json({ error: "Invalid product ID" }, { status: 400, headers: securityHeaders });
+    if (!mongoose.Types.ObjectId.isValid(productId)) return NextResponse.json({ error: "Invalid product ID" }, { status: 400  });
 
     const product = await Product.findOne({ _id: new mongoose.Types.ObjectId(productId) })
       .select("title price variants hasVariants sellWithOutStock inventory otherMediaContents")
       .lean();
 
-    if (!product) return NextResponse.json({ error: "Product not available" }, { status: 404, headers: securityHeaders });
+    if (!product) return NextResponse.json({ error: "Product not available" }, { status: 404  });
 
     let productBasePrice = product.price.base;
     if (product.hasVariants && variantId) {
@@ -82,11 +81,11 @@ export async function POST(request) {
       cartId: cart._id,
       message: "Item added to cart",
       itemCount: cart.items.length
-    }, { status: 200, headers: securityHeaders });
+    }, { status: 200  });
 
   } catch (error) {
     console.error("POST /cart error:", error);
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500  });
   }
 }
 
@@ -126,7 +125,7 @@ export async function POST(request) {
 // export async function PATCH(request) {
 //   let body;
 //   try { body = await request.json() }
-//   catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders }) }
+//   catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400  }) }
 
 //   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
 //   // const fingerprint = request.headers.get('x-fingerprint') || null;
@@ -142,7 +141,7 @@ export async function POST(request) {
 
 //   const parsed = cartDTOSchema.safeParse(body);
 //   if (!parsed.success) {
-//     return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten() }, { status: 422, headers: securityHeaders });
+//     return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten() }, { status: 422  });
 //   }
 
 //   const { success: authenticated, vendor, data: user, isTokenRefreshed, token, db } = await authenticationStatus(request);
@@ -168,7 +167,7 @@ export async function POST(request) {
 //   const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
 //   if (!DB_URI_ENCRYPTION_KEY) {
 //     console.log("Missing VENDOR_DB_URI_ENCRYPTION_KEY");
-//     return NextResponse.json({ success: false, error: "Missing encryption key" }, { status: 500, headers: securityHeaders });
+//     return NextResponse.json({ success: false, error: "Missing encryption key" }, { status: 500  });
 //   }
 
 //   const dbUri = await decrypt({
@@ -193,7 +192,7 @@ export async function POST(request) {
 
 //   console.log("Product found:", product);
 //   if (!product)
-//     return NextResponse.json({ error: "Product not available" }, { status: 404, headers: securityHeaders });
+//     return NextResponse.json({ error: "Product not available" }, { status: 404  });
 
 //   // 🔍 2. Handle Variant if applicable
 //   let variant = null;
@@ -201,12 +200,12 @@ export async function POST(request) {
 //   if (product.hasVariants) {
 //     // Product has variants: variantId is required
 //     if (!variantId) {
-//       return NextResponse.json({ success: false, error: "Variant ID required" }, { status: 422, headers: securityHeaders });
+//       return NextResponse.json({ success: false, error: "Variant ID required" }, { status: 422  });
 //     }
 
 //     variant = product.variants.find(item => item._id.toString() === variantId.toString());
 //     if (!variant) {
-//       return NextResponse.json({ success: false, error: "Invalid variant" }, { status: 422, headers: securityHeaders });
+//       return NextResponse.json({ success: false, error: "Invalid variant" }, { status: 422  });
 //     }
 //   } else {
 //     // Product has no variants: ignore variantId if provided
@@ -268,7 +267,7 @@ export async function POST(request) {
 //       cart.items.splice(itemIndex, 1);
 //     } else {
 //       if (newQty > stock)
-//         return NextResponse.json({ error: "Not enough stock available" }, { status: 422, headers: securityHeaders });
+//         return NextResponse.json({ error: "Not enough stock available" }, { status: 422  });
 
 //       existingItem.quantity = newQty;
 //       existingItem.subtotal = newQty * price.basePrice;
@@ -276,7 +275,7 @@ export async function POST(request) {
 //   } else {
 //     if (delta > 0) {
 //       if (delta > stock) {
-//         return NextResponse.json({ error: "Not enough stock available" }, { status: 422, headers: securityHeaders });
+//         return NextResponse.json({ error: "Not enough stock available" }, { status: 422  });
 //       }
 //       cart.items.push({
 //         productId: product._id,
@@ -287,7 +286,7 @@ export async function POST(request) {
 //         userId: authenticated ? user.userId : undefined,
 //       });
 //     } else {
-//       return NextResponse.json({ error: "Item not found in cart" }, { status: 404, headers: securityHeaders });
+//       return NextResponse.json({ error: "Item not found in cart" }, { status: 404  });
 //     }
 //   }
 
@@ -363,7 +362,7 @@ export async function POST(request) {
 //     cartId: savedCart.cartId,
 //     message: "Cart updated",
 //     itemCount: savedCart.items.length,
-//   }, { status: 200, headers: securityHeaders });
+//   }, { status: 200  });
 
 //   return response
 // }

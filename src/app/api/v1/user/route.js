@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import authDbConnect from "@/lib/mongodb/authDbConnect";
 import { userModel } from "@/models/auth/User";
-import securityHeaders from "../utils/securityHeaders";
 import { z } from 'zod';
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
@@ -40,7 +39,7 @@ export async function GET(request) {
     // Validate input
     const parsed = searchSchema.safeParse(params);
     if (!parsed.success) 
-    return NextResponse.json( { success: false, error: parsed.error.format() },{ status: 400, headers: securityHeaders } );
+    return NextResponse.json( { success: false, error: parsed.error.format() },{ status: 400  } );
     
     try {
         // Connect to database
@@ -66,7 +65,7 @@ export async function GET(request) {
         const user = await User.findOne(searchQuery).select('referenceId name username avatar email phone status createdAt');
 
         if (!user) {
-        return NextResponse.json({ success: false, error: "Active user not found or account is locked" },{ status: 404, headers: securityHeaders }); }
+        return NextResponse.json({ success: false, error: "Active user not found or account is locked" },{ status: 404  }); }
 
         // Prepare safe user data to return
         const userData = {         id: user.referenceId,
@@ -78,9 +77,9 @@ export async function GET(request) {
                                status: user.status,
                             createdAt: user.createdAt           };
 
-        return NextResponse.json({ success: true, data: userData },{ status: 200, headers: securityHeaders });
+        return NextResponse.json({ success: true, data: userData },{ status: 200  });
 
     } catch (error) {
-        return NextResponse.json( { success: false, error: error.message || "Server error" }, { status: 500, headers: securityHeaders });
+        return NextResponse.json( { success: false, error: error.message || "Server error" }, { status: 500  });
     }
 }

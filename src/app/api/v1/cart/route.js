@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { cartModel } from "@/models/shop/product/Cart";
-import { productModel } from "@/models/shop/product/Product";
-import securityHeaders from "../utils/securityHeaders";
 import { authenticationStatus } from "../middleware/auth";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import mongoose from "mongoose";
@@ -41,7 +39,7 @@ export async function GET(request) {
   //                           .lean()
 
   //   if (!cart) 
-  //     return NextResponse.json({ success: false, error: "Cart not found" }, { status: 404, headers: securityHeaders } );
+  //     return NextResponse.json({ success: false, error: "Cart not found" }, { status: 404  } );
 
 
   // const productIdsInCart = cart.items.map(item => item.productId).filter(Boolean);
@@ -192,7 +190,7 @@ export async function GET(request) {
     }
   ]);
 
-  if (!cart) return NextResponse.json({ success: false, error: "Cart not found" }, { status: 404, headers: securityHeaders });
-  return NextResponse.json({ success: true, data: cart }, { headers: securityHeaders });
+  if (!cart) return NextResponse.json({ success: false, error: "Cart not found" }, { status: 404  });
+  return NextResponse.json({ success: true, data: cart });
 
 }

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
-import securityHeaders from '../../utils/securityHeaders';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import chatSupportDTOSchema from './chatSupportDTOSchema';
 import hasUpdatePermission from './hasUpdatePermission';
@@ -35,7 +34,7 @@ export async function PATCH(request) {
                                .lean();
     if (!vendor) return NextResponse.json({ message: 'Vendor not found' }, { status: 404 });
 
-    if (!hasUpdatePermission(vendor, data.userId)) return NextResponse.json( { success: false, error: 'Not authorized to read customer data' }, { status: 403, headers: securityHeaders });
+    if (!hasUpdatePermission(vendor, data.userId)) return NextResponse.json( { success: false, error: 'Not authorized to read customer data' }, { status: 403 });
 
     const existingIndex = vendor.chatSupport?.findIndex(cs => cs.provider === provider) ?? -1;
 
@@ -65,7 +64,7 @@ export async function PATCH(request) {
 
     // Find the updated chatSupport item to return
     const updatedItem = updatedVendor.chatSupport.find(cs => cs.provider === provider);
-    return NextResponse.json( { message: 'Updated Successfully', chatSupport: updatedItem }, { status: 200, headers: securityHeaders } );
+    return NextResponse.json( { message: 'Updated Successfully', chatSupport: updatedItem }, { status: 200  } );
   } catch (error) {
     console.error('Error updating chat support:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

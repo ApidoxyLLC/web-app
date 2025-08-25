@@ -3,7 +3,6 @@ import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { vendorModel } from "@/models/vendor/Vendor";
 import getAuthenticatedUser from "../../auth/utils/getAuthenticatedUser";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
-import securityHeaders from "../../utils/securityHeaders";
 import hasPermission from "./hasPermission";
 import deliveryChargeEditDTOSchema from "./deliveryChargeEditDTOSchema";
 
@@ -11,27 +10,27 @@ export async function PATCH(request) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || request.connection?.remoteAddress || '';
     // Rate Limiting
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-    if (!allowed) return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString(), ...securityHeaders }});
+    if (!allowed) return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString()  }});
 
 
     try {
         const { shop: vendorReferenceId } = await params;
-        if (!vendorReferenceId) return NextResponse.json({ success: false, error: 'Shop reference is required' }, { status: 400, headers: securityHeaders });
+        if (!vendorReferenceId) return NextResponse.json({ success: false, error: 'Shop reference is required' }, { status: 400  });
         
         // Parse and validate request body
         const body = await request.json();
         const parsed = deliveryChargeEditDTOSchema.partial().safeParse(body);        
-        if (!parsed.success) return NextResponse.json( { success: false, error: "Invalid input", issues: parsed.error.flatten()  }, { status: 422, headers: securityHeaders } );
+        if (!parsed.success) return NextResponse.json( { success: false, error: "Invalid input", issues: parsed.error.flatten()  }, { status: 422  } );
         
 
         const { chargeId, ...updateData } = parsed.data;
 
-        if (!chargeId) return NextResponse.json( { success: false, error: "Both vendorReferenceId and chargeId are required" }, { status: 400, headers: securityHeaders } );
+        if (!chargeId) return NextResponse.json( { success: false, error: "Both vendorReferenceId and chargeId are required" }, { status: 400  } );
         
 
         // Authentication
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        if (!authenticated) return NextResponse.json({ success: false, error: authError || "Not authorized" }, { status: 401, headers: securityHeaders } );
+        if (!authenticated) return NextResponse.json({ success: false, error: authError || "Not authorized" }, { status: 401  } );
         
 
         // Database Operations
@@ -39,14 +38,14 @@ export async function PATCH(request) {
         const Vendor = vendorModel(vendor_db);
 
         const vendor = await Vendor.findOne({ referenceId: vendorReferenceId }).select('_id deliveryCharges ownerId');        
-        if (!vendor) return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 404, headers: securityHeaders });
+        if (!vendor) return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 404  });
         
         // Authorization
-        if (!hasPermission(vendor, data.userId)) return NextResponse.json( { success: false, error: 'Authorization failed'  },  {  status: 403, headers: securityHeaders });
+        if (!hasPermission(vendor, data.userId)) return NextResponse.json( { success: false, error: 'Authorization failed'  },  {  status: 403  });
         
         // Check if charge exists
         const chargeIndex = vendor.deliveryCharges.findIndex(charge => charge._id.toString() === chargeId);
-        if (chargeIndex === -1) return NextResponse.json( { success: false, error: "Delivery charge not found" }, { status: 404, headers: securityHeaders } );        
+        if (chargeIndex === -1) return NextResponse.json( { success: false, error: "Delivery charge not found" }, { status: 404  } );        
 
         // Check for duplicate (if region or partner is being updated)
         if (updateData.regionName || updateData.chargeBasedOn || updateData.partner) {
@@ -69,7 +68,7 @@ export async function PATCH(request) {
                 return !existingCharge.partner && !partner;
             });
 
-            if (duplicateCharge)  return NextResponse.json( { success: false, error: "Another delivery charge already exists for this region and partner", existingCharge: duplicateCharge  },  { status: 409, headers: securityHeaders } ) 
+            if (duplicateCharge)  return NextResponse.json( { success: false, error: "Another delivery charge already exists for this region and partner", existingCharge: duplicateCharge  },  { status: 409  } ) 
         }
 
         // Prepare update object
@@ -94,11 +93,11 @@ export async function PATCH(request) {
                                                             );
 
         // Success Response
-        return NextResponse.json( { success: true, message: "Delivery charge updated successfully", data: { deliveryCharges: updatedVendor.deliveryCharges } }, { status: 200, headers: securityHeaders } );
+        return NextResponse.json( { success: true, message: "Delivery charge updated successfully", data: { deliveryCharges: updatedVendor.deliveryCharges } }, { status: 200  } );
 
     } catch (error) {
         console.error("Error updating delivery charge:", error);
-        return NextResponse.json( { success: false, error: "Internal server error"  },  { status: 500, headers: securityHeaders } );
+        return NextResponse.json( { success: false, error: "Internal server error"  },  { status: 500  } );
     }
 }
 
@@ -106,7 +105,7 @@ export async function DELETE(request, {params}) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.socket?.remoteAddress || request.connection?.remoteAddress || '';
     // Rate Limiting
     const { allowed, retryAfter } = await applyRateLimit({ key: ip });
-    if (!allowed) return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString(), ...securityHeaders }});
+    if (!allowed) return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfter.toString()  }});
 
     try {
         // Parse request body
@@ -114,11 +113,11 @@ export async function DELETE(request, {params}) {
         const body = await request.json();
         const { charge: chargeId } = body;
         console.log("joy bangla",body)
-        if (!vendorReferenceId || !chargeId)  return NextResponse.json( { success: false, error: "Both vendorReferenceId and chargeId are required" }, { status: 400, headers: securityHeaders } );
+        if (!vendorReferenceId || !chargeId)  return NextResponse.json( { success: false, error: "Both vendorReferenceId and chargeId are required" }, { status: 400  } );
 
         // Authentication
         const { authenticated, error: authError, data } = await getAuthenticatedUser(request);
-        if (!authenticated) return NextResponse.json( { success: false, error: authError || "Not authorized"},  { status: 401,headers: securityHeaders})
+        if (!authenticated) return NextResponse.json( { success: false, error: authError || "Not authorized"},  { status: 401 })
 
         // Database Operations
         const vendor_db = await vendorDbConnect();
@@ -126,27 +125,27 @@ export async function DELETE(request, {params}) {
         const vendor = await Vendor.findOne({ referenceId: vendorReferenceId })
                                   .select('_id deliveryCharges ownerId');
         
-        if (!vendor) return NextResponse.json( { success: false, error: "Vendor not found" }, { status: 404, headers: securityHeaders });
+        if (!vendor) return NextResponse.json( { success: false, error: "Vendor not found" }, { status: 404  });
         console.log(vendor)
         // Authorization
-        if (!hasPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 403,headers: securityHeaders });
+        if (!hasPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 403  });
         
         console.log(chargeId)
         // Check if charge exists
         const chargeExists = vendor.deliveryCharges.some(charge => charge._id.toString() === chargeId);
         console.log(chargeExists)
-        if (!chargeExists) return NextResponse.json({ success: false, error: "Delivery charge not found"  },  { status: 404, headers: securityHeaders } );
+        if (!chargeExists) return NextResponse.json({ success: false, error: "Delivery charge not found"  },  { status: 404  } );
         
 
         // Remove the charge
         const updatedVendor = await Vendor.findByIdAndUpdate(  vendor._id,  { $pull: { deliveryCharges: { _id: chargeId } }, $set: { updatedAt: new Date() }  }, { new: true, projection: { deliveryCharges: 1 } });
 
         // Success Response
-        return NextResponse.json({success: true, message: "Delivery charge removed successfully", data: { deliveryCharges: updatedVendor.deliveryCharges } }, { status: 200, headers: securityHeaders });
+        return NextResponse.json({success: true, message: "Delivery charge removed successfully", data: { deliveryCharges: updatedVendor.deliveryCharges } }, { status: 200  });
 
     } catch (error) {
         console.log("Error removing delivery charge:", error);
-        return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500  });
     }
 }
 

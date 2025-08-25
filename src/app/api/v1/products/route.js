@@ -21,9 +21,7 @@ export const dynamic = 'force-dynamic'; // Ensure dynamic fetching
 
 // Helper for API responses
 const apiResponse = (data, status = 200, headers = {}) => {
-  const response = NextResponse.json(data, { status });
-  Object.entries(securityHeaders).forEach(([key, value]) => response.headers.set(key, value));
-  return response;
+  return NextResponse.json(data, { status });
 };
 
 export async function GET(request) {
@@ -227,12 +225,12 @@ export async function POST(request) {
   let body;
   console.log(body)
   try { body = await request.json() }
-  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders }); }
+  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400  }); }
   console.log(body)
   // Validate input with Zod
   const parsed = productDTOSchema.safeParse(body);
   if (!parsed.success)
-    return NextResponse.json({ success: false, error: "Data validation failed", details: parsed.error.flatten() }, { status: 422, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: "Data validation failed", details: parsed.error.flatten() }, { status: 422  });
 
   const { authenticated, error, data } = await getAuthenticatedUser(request);
   if (!authenticated)
@@ -253,12 +251,12 @@ export async function POST(request) {
     .lean();
 
   if (!vendor)
-    return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404  });
 
   console.log(data)
   console.log(vendor)
   if (vendor.ownerId.toString() != data.userId.toString())
-    return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403  });
 
   const dbUri = await decrypt({
     cipherText: vendor.dbInfo.dbUri,
@@ -285,7 +283,7 @@ export async function POST(request) {
 
     // const slugExist = await Product.exists({ slug: title.toString().toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/--+/g, '-')  });
     // if (slugExist)
-    //   return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders } );
+    //   return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422  } );
 
     // Validate categories exist
 
@@ -293,7 +291,7 @@ export async function POST(request) {
       const Category = categoryModel(shop_db);
       const categoryExists = await Category.exists({ _id: category });
       if (!categoryExists)
-        return NextResponse.json({ success: false, error: "Category not found" }, { status: 404, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: "Category not found" }, { status: 404  });
     }
 
     const newProduct = new Product({
@@ -322,16 +320,7 @@ export async function POST(request) {
 
 
 
-    const response = NextResponse.json(
-      { success: true, data: savedProduct, message: "Product created successfully" }, { status: 201 });
-
-    // Add security headers
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
-
-    return response;
-
+    return NextResponse.json({ success: true, data: savedProduct, message: "Product created successfully" }, { status: 201 });
   } catch (err) {
     console.log(err)
 
@@ -339,7 +328,7 @@ export async function POST(request) {
       ? "A product with similar attributes already exists"
       : err.message || "Something went wrong";
 
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 400, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: errorMsg }, { status: 400  });
   }
   // finally {
   //   session.endSession();
@@ -368,7 +357,7 @@ export async function PATCH(request) {
   } catch {
     return NextResponse.json(
       { success: false, error: "Invalid JSON" },
-      { status: 400, headers: securityHeaders }
+      { status: 400  }
     );
   }
 
@@ -380,7 +369,7 @@ export async function PATCH(request) {
         error: "Data validation failed",
         details: parsed.error.flatten(),
       },
-      { status: 422, headers: securityHeaders }
+      { status: 422  }
     );
 
   const { productId, shop: shopId, ...updateData } = parsed.data;
@@ -401,13 +390,13 @@ export async function PATCH(request) {
   if (!vendor)
     return NextResponse.json(
       { success: false, error: "Shop not found" },
-      { status: 404, headers: securityHeaders }
+      { status: 404  }
     );
 
   if (vendor.ownerId.toString() !== data.userId.toString())
     return NextResponse.json(
       { success: false, error: "Not authorized" },
-      { status: 403, headers: securityHeaders }
+      { status: 403  }
     );
 
   const dbUri = await decrypt({
@@ -428,7 +417,7 @@ export async function PATCH(request) {
     if (!product)
       return NextResponse.json(
         { success: false, error: "Product not found" },
-        { status: 404, headers: securityHeaders }
+        { status: 404  }
       );
 
     const response = NextResponse.json(
@@ -440,9 +429,6 @@ export async function PATCH(request) {
       { status: 200 }
     );
 
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
 
     return response;
   } catch (err) {
@@ -453,7 +439,7 @@ export async function PATCH(request) {
 
     return NextResponse.json(
       { success: false, error: errorMsg },
-      { status: 400, headers: securityHeaders }
+      { status: 400  }
     );
   }
 }

@@ -204,7 +204,7 @@ export async function GET(req, { params }) {
 }
 
 const apiResponse = (data, status = 200, headers = {}) => {
-    const response = NextResponse.json(data, { status });
-    Object.entries(securityHeaders).forEach(([key, value]) => response.headers.set(key, value));
-    return response;
+    return NextResponse.json(data, { status });
+    // Object.entries(securityHeaders).forEach(([key, value]) => response.headers.set(key, value));
+    // return response;
 };

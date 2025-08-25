@@ -13,37 +13,23 @@ import slugify from 'slugify';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
 
-
-const securityHeaders = {
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
-  'Permissions-Policy': 'geolocation=(), microphone=()',
-  'X-XSS-Protection': '1; mode=block',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
-  'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Resource-Policy': 'same-site'
-};
-
 export async function POST(request) {
   const          ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown_ip';
   const fingerprint = request.headers.get('x-fingerprint') || null;
   let body;
   try { body = await request.json() } 
-  catch { return NextResponse.json({ success: false,  error: "Invalid JSON" }, { status: 400 , headers: securityHeaders }) }
+  catch { return NextResponse.json({ success: false,  error: "Invalid JSON" }, { status: 400 }) }
 
   const parsed = categoryDTOSchema.safeParse(body);
   if (!parsed.success) 
-    return NextResponse.json( { success: false, error: "Validation failed" }, { status: 422, headers: securityHeaders  });
+    return NextResponse.json( { success: false, error: "Validation failed" }, { status: 422 });
   
   const { vendorId } = parsed.data;
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   const user_auth_session = await getServerSession(authOptions)
 
   if(!token || !token.session || !mongoose.Types.ObjectId.isValid(token.session))
-      return NextResponse.json({success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders  });
+      return NextResponse.json({success: false, error: "Not authorized" }, { status: 401  });
 
   const auth_db = await authDbConnect();
   const User = userModel(auth_db);
@@ -54,7 +40,7 @@ export async function POST(request) {
                          .select('+_id +activeSessions +shops')
                          .lean();
   if (!user)
-    return NextResponse.json( { success: false, error: "Authentication failed" }, { status: 400, headers: securityHeaders } );
+    return NextResponse.json( { success: false, error: "Authentication failed" }, { status: 400 } );
 
   const shop = await ShopModel.findOne({ vendorId })
                               .select("+_id "+
@@ -63,14 +49,14 @@ export async function POST(request) {
                                       "+timeLimitations.ACCESS_TOKEN_EXPIRE_MINUTES" )
                               .lean();
   if (!shop)
-    return NextResponse.json( { success: false, error: "Authentication failed" }, { status: 400, headers: securityHeaders  } )
+    return NextResponse.json( { success: false, error: "Authentication failed" }, { status: 400  } )
 
   if(!user || !user?.shops.some(id => id.equals(shop._id)))
-      return NextResponse.json({success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders  });
+      return NextResponse.json({success: false, error: "Not authorized" }, { status: 401  });
 
   const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
   if (!DB_URI_ENCRYPTION_KEY) 
-    return NextResponse.json({success: false, error: "Server configuration error" }, { status: 500, headers: securityHeaders  });
+    return NextResponse.json({success: false, error: "Server configuration error" }, { status: 500  });
 
   const dbUri = await decrypt({ cipherText: shop.dbInfo.uri, 
                                    options: { secret: DB_URI_ENCRYPTION_KEY } });
@@ -126,9 +112,7 @@ export async function POST(request) {
 
     vendor_db.commitTransaction();
     session.endSession();
-    const res = NextResponse.json({ success: true, data: savedCategory.toObject(), message: "Category created successfully" }, { status: 201 });
-    Object.entries(securityHeaders).forEach(([key, value]) => res.headers.set(key, value));
-    return res;
+    return NextResponse.json({ success: true, data: savedCategory.toObject(), message: "Category created successfully" }, { status: 201 });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -136,7 +120,7 @@ export async function POST(request) {
       ? "A category with this slug already exists"
       : err.message || "Something went wrong";
 
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 400, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: errorMsg }, { status: 400 });
   } finally {
     session.endSession();
   }
@@ -213,19 +197,19 @@ export async function GET() {
   // const headerToken = authHeader.split(" ")[1];
 
   // if(!cookieToken && !headerToken)
-  //   return NextResponse.json( { error: "Refresh token required" }, { status: 400, headers: securityHeaders });
+  //   return NextResponse.json( { error: "Refresh token required" }, { status: 400 });
   
   // const token = cookieToken ? cookieToken : headerToken
 
   // ******************************************************
     // const AT_SECRET_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY;
     // if (!AT_SECRET_KEY) 
-    //     return NextResponse.json( { error: "Server configuration error" }, { status: 500, headers: securityHeaders })
+    //     return NextResponse.json( { error: "Server configuration error" }, { status: 500 })
     // const ACCESS_TOKEN_SECRET = await decrypt({ cipherText: shop.keys.ACCESS_TOKEN_SECRET,
     //                                                    options: { secret: AT_SECRET_KEY } });
     // let payload;
     // try { payload = jwt.verify(refreshToken, ACCESS_TOKEN_SECRET);} 
     // catch (err) {
-    //     if (err.name === 'TokenExpiredError') return NextResponse.json({ error: "Refresh token expired" }, { status: 401, headers: securityHeaders })
-    //         return NextResponse.json({ error: "Invalid refresh token" }, { status: 401, headers: securityHeaders });
+    //     if (err.name === 'TokenExpiredError') return NextResponse.json({ error: "Refresh token expired" }, { status: 401 })
+    //         return NextResponse.json({ error: "Invalid refresh token" }, { status: 401 });
     // }

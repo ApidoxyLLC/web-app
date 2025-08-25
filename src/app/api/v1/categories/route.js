@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request) {
   let body;
   try { body = await request.json(); }
-  catch { return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400, headers: securityHeaders }); }
+  catch { return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400  }); }
 
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.headers['x-real-ip'] || request.socket?.remoteAddress || '';
   const { allowed, retryAfter } = await applyRateLimit({ key: ip, scope: 'createCategory' });
@@ -31,7 +31,7 @@ export async function POST(request) {
 
   const parsed = categoryDTOSchema.safeParse(body);
   if (!parsed.success)
-    return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422  });
 
   try {
     const { shop, slug: inputSlug } = parsed.data;
@@ -43,10 +43,10 @@ export async function POST(request) {
       .lean();
 
     if (!vendor)
-      return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400  });
 
     if (!vendor.ownerId || data.userId.toString() !== vendor.ownerId.toString())
-      return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 400  });
 
     const dbUri = await decrypt({
       cipherText: vendor.dbInfo.dbUri,
@@ -57,7 +57,7 @@ export async function POST(request) {
 
     const slugExist = await Category.exists({ slug: inputSlug });
     if (slugExist)
-      return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422  });
 
     // New attach
     let image = null;
@@ -103,11 +103,11 @@ export async function POST(request) {
     if (parsed?.data?.parent) {
       parent = await Category.findById(parsed.data.parent).select('ancestors')
       if (!parent)
-        return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422, headers: securityHeaders });
+        return NextResponse.json({ success: false, error: 'Validation failed' }, { status: 422  });
     }
 
     if (parent && ((parent.level || 0) + 1) > MAX_CATEGORY_DEPTH)
-      return NextResponse.json({ success: false, error: `Category depth exceeds maximum allowed (${MAX_CATEGORY_DEPTH})` }, { status: 422, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: `Category depth exceeds maximum allowed (${MAX_CATEGORY_DEPTH})` }, { status: 422  });
 
     const payload = {
       title: parsed.data.title,
@@ -134,9 +134,7 @@ export async function POST(request) {
         if (parent) {
           await Category.updateOne({ _id: parent._id }, { $addToSet: { children: category._id } }, { session });
         }
-        const res = NextResponse.json({ success: true, data: category, message: 'Category created successfully' }, { status: 201 });
-        Object.entries(securityHeaders).forEach(([key, value]) => res.headers.set(key, value));
-        return res;
+        return NextResponse.json({ success: true, data: category, message: 'Category created successfully' }, { status: 201 });
       });
       return result;
 
@@ -152,7 +150,7 @@ export async function POST(request) {
       success: false,
       error: 'Internal Server Error',
       ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
-    }, { status: 500, headers: securityHeaders });
+    }, { status: 500  });
   }
 }
 
@@ -168,7 +166,7 @@ export async function GET(request) {
   if (!allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
-      { status: 429, headers: { "Retry-After": retryAfter.toString(), ...securityHeaders } }
+      { status: 429, headers: { "Retry-After": retryAfter.toString()  } }
     );
   }
 
@@ -180,7 +178,7 @@ export async function GET(request) {
     if (!vendorId && !host) {
       return NextResponse.json(
         { error: "Missing vendor identifier or host" },
-        { status: 400, headers: securityHeaders }
+        { status: 400  }
       );
     }
 
@@ -193,17 +191,17 @@ export async function GET(request) {
     const status = searchParams.get("status");
 
     if (isNaN(page) || page < 1)
-      return NextResponse.json({ error: "Invalid page number" }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ error: "Invalid page number" }, { status: 400  });
 
     if (isNaN(limit) || limit < 1 || limit > 100)
-      return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400  });
 
     const vendor_db = await vendorDbConnect();
     const Vendor = vendorModel(vendor_db);
     const vendor = await Vendor.findOne({ referenceId: vendorId })
       .select("dbInfo bucketInfo secrets expirations primaryDomain domains")
       .lean()
-    if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404, headers: securityHeaders });
+    if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404  });
 
     console.log("vendor*****")
     console.log(vendor)
@@ -246,13 +244,13 @@ export async function GET(request) {
           previousPage: hasPreviousPage ? page - 1 : null,
         },
       },
-      { status: 200, headers: securityHeaders }
+      { status: 200  }
     );
   } catch (error) {
     console.error("Categories API Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch categories", details: process.env.NODE_ENV !== "production" ? error.message : undefined },
-      { status: 500, headers: securityHeaders }
+      { status: 500  }
     );
   }
 }

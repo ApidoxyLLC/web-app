@@ -14,7 +14,6 @@ import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import config from "../../../../../../config";
 import crypto from 'crypto';
-import securityHeaders from "../../utils/securityHeaders";
 import { setSession } from "@/lib/redis/helpers/endUserSession";
 
 
@@ -462,7 +461,6 @@ export async function POST(request) {
       maxAge: Math.floor((refreshTokenExpiry - Date.now()) / 1000),
     });                                        
 
-    Object.entries(securityHeaders).forEach(([key, value]) => { response.headers.set(key, value); });      
     return response;
   } catch (error) {
     console.log(error)

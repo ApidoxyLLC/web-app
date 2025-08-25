@@ -3,7 +3,6 @@ import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
-import securityHeaders from '../../utils/securityHeaders';
 import { uploadShopImage } from '@/services/image/blackblaze';
 import hasUpdateLogoPermission from '../hasUpdateLogoPermission';
 
@@ -13,7 +12,7 @@ export async function POST(request) {
   if (!allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, {status: 429, headers: { 'Retry-After': retryAfter.toString(),}});
 
   const { authenticated, error, data } = await getAuthenticatedUser(request);
-  if(!authenticated) return NextResponse.json({ error: "...not authorized" }, { status: 401, headers: securityHeaders });
+  if(!authenticated) return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
   // Validate content type
   const contentType = request.headers.get('content-type') || '';
@@ -33,7 +32,7 @@ export async function POST(request) {
         const    vendor = await Vendor.findOne({ referenceId: shopId })
                                       .select('_id referenceId ownerId ownerId dbInfo bucketInfo')
                                       .lean();
-    if (!hasUpdateLogoPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400, headers: securityHeaders });
+    if (!hasUpdateLogoPermission(vendor, data.userId)) return NextResponse.json({ success: false, error: 'Authorization failed' }, { status: 400  });
 
     try {
       const image = await uploadShopImage({     file, vendor,

@@ -103,7 +103,7 @@ export async function GET(request) {
     // Validate token
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token?.session || !mongoose.Types.ObjectId.isValid(token.session)) 
-      return NextResponse.json({ success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: "Not authorized" }, { status: 401  });
     // const user_auth_session = await getServerSession(authOptions);
     
     // Parse and validate parameters
@@ -114,10 +114,10 @@ export async function GET(request) {
                        exclude: (searchParams.get('exclude') || '').split(',').map(s => s.trim()) };
 
     if ((!params.title && !params.inputSlug) || !params.vendorId) 
-      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400  });
 
     if (params.inputSlug && !/^[a-z0-9-]+$/.test(params.inputSlug)) 
-      return NextResponse.json({ error: 'Slug contains invalid characters' },{ status: 400, headers: securityHeaders });
+      return NextResponse.json({ error: 'Slug contains invalid characters' },{ status: 400  });
     
     const baseSlug = params.inputSlug || createSlugFromTitle(params.title);
 
@@ -133,12 +133,12 @@ export async function GET(request) {
 
     // Validate access
     if (!user || !shop || !user.shops.some(id => id.equals(shop._id))) 
-      return NextResponse.json( { success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
+      return NextResponse.json( { success: false, error: "Not authorized" }, { status: 401  });
     
     // Vendor DB connection
     const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
     if (!DB_URI_ENCRYPTION_KEY) 
-      return NextResponse.json({ success: false, error: "Server configuration error" }, { status: 500, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: "Server configuration error" }, { status: 500  });
 
     const dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
                                      options: { secret: DB_URI_ENCRYPTION_KEY } });
@@ -151,22 +151,18 @@ export async function GET(request) {
                                                             generateRecommendations(baseSlug, params.exclude, params.title, ProductModel)  ]);
 
     // Build response
-    const response = NextResponse.json({
+    return NextResponse.json({
       requestedSlug: baseSlug,
       isAvailable: !isTaken,
       recommendations,
       ...(!isTaken && { alternativeSlugs: recommendations.slice(0, 3) }) // Show top 3 as alternatives
     });
 
-    // Apply security headers
-    Object.entries(securityHeaders).forEach(([key, value]) => { response.headers.set(key, value) });
-    return response;
-
   } catch (error) {
     console.error('Slug check error:', error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500, headers: securityHeaders }
+      { status: 500  }
     );
   }
 }

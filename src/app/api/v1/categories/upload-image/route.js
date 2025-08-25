@@ -3,7 +3,6 @@ import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { applyRateLimit } from '@/lib/rateLimit/rateLimiter';
 import getAuthenticatedUser from '../../auth/utils/getAuthenticatedUser';
-import securityHeaders from '../../utils/securityHeaders';
 import { uploadShopImage } from '@/services/image/blackblaze';
 
 export async function POST(request) {
@@ -14,7 +13,7 @@ export async function POST(request) {
   
   const { authenticated, error, data } = await getAuthenticatedUser(request);
   if(!authenticated)
-        return NextResponse.json({ error: "...not authorized" }, { status: 401, headers: securityHeaders });
+        return NextResponse.json({ error: "...not authorized" }, { status: 401  });
 
   // Validate content type
   const contentType = request.headers.get('content-type') || '';

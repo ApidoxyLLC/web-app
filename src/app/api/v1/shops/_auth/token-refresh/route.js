@@ -41,10 +41,7 @@ export async function POST(request) {
     try { await refreshLimiter.consume(identity) } 
     catch (rateLimitError) { 
       const retrySecs = Math.round(rateLimitError.msBeforeNext / 1000) || 60;
-      return NextResponse.json( { error: "Too many requests. Try again later." }, { status: 429, headers: {
-        ...securityHeaders,
-        'Retry-After': retrySecs.toString()
-      } } ) }
+      return NextResponse.json( { error: "Too many requests. Try again later." }, { status: 429, headers: { 'Retry-After': retrySecs.toString() } } ) }
 
     
     let refreshToken = null;
@@ -58,12 +55,12 @@ export async function POST(request) {
     }
 
     if (!refreshToken) 
-      return NextResponse.json( { error: "Refresh token required" }, { status: 400, headers: securityHeaders });
+      return NextResponse.json( { error: "Refresh token required" }, { status: 400  });
 
     const vendorId = request.headers.get('x-vendor-identifier');
     const     host = request.headers.get('host');
     if (!vendorId && !host) 
-      return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400, headers: securityHeaders });
+      return NextResponse.json({ error: "Missing vendor identifier or host" },{ status: 400  });
 
   try {
     const { vendor, dbUri, dbName } = await getVendor({ id: vendorId, host, fields: ['createdAt', 'primaryDomain']    });
@@ -89,18 +86,18 @@ export async function POST(request) {
     let payload;
     try { payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);} 
     catch (err) {
-        if (err.name === 'TokenExpiredError') return NextResponse.json({ error: "Refresh token expired" }, { status: 401, headers: securityHeaders })
-            return NextResponse.json({ error: "Invalid refresh token" }, { status: 401, headers: securityHeaders });
+        if (err.name === 'TokenExpiredError') return NextResponse.json({ error: "Refresh token expired" }, { status: 401  })
+            return NextResponse.json({ error: "Invalid refresh token" }, { status: 401  });
     }
     if (!payload.session) 
-        return NextResponse.json({ error: "Invalid token payload" }, { status: 401, headers: securityHeaders });
+        return NextResponse.json({ error: "Invalid token payload" }, { status: 401  });
 
     // Find session
     const session = await SessionModel.findById(payload.session);
     if (              !session || session.revoked       ||
           (session.fingerprint != payload?.fingerprint) ||
        (session.refreshTokenId != payload?.tokenId ))
-        return NextResponse.json({ error: "Invalid session" }, { status: 401, headers: securityHeaders });
+        return NextResponse.json({ error: "Invalid session" }, { status: 401  });
 
     // Token rotation: Generate new identifiers
     const newAccessTokenId = crypto.randomBytes(16).toString('hex');
@@ -116,7 +113,7 @@ export async function POST(request) {
     ).lean();
 
     if (!user || (payload.email !== user.email && payload.phone !== user.phone))
-      return NextResponse.json( { error: "User not found" },  { status: 404, headers: securityHeaders })
+      return NextResponse.json( { error: "User not found" },  { status: 404  })
 
     const newPayload = {    session: session._id,
                         fingerprint,
@@ -161,7 +158,7 @@ export async function POST(request) {
                                                                   timezone: user.timezone,
                                                                   currency: user.currency   },
                                                     } },
-      { status: 200, headers: securityHeaders }
+      { status: 200  }
     );
 
     // Set HTTP-only cookies
@@ -185,5 +182,5 @@ export async function POST(request) {
 
   } catch (error) {
     console.error(`Token refresh error: ${error.message}`);
-    return NextResponse.json( { error: "Token refresh failed" }, { status: 500, headers: securityHeaders } ) }
+    return NextResponse.json( { error: "Token refresh failed" }, { status: 500  } ) }
 }
