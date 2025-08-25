@@ -4,9 +4,6 @@ import { getToken } from 'next-auth/jwt';
 
 // Security headers helper
 function setSecurityHeaders(response) {
-
-
-
   const headers = {
     'X-Frame-Options': 'DENY',
     // 'Content-Security-Policy': `default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests`,
@@ -33,11 +30,11 @@ export async function middleware(request) {
   const forwardedFor = request.headers.get('x-forwarded-for');
   const ip = forwardedFor?.split(',')[0]?.trim() || request.ip || 'unknown';
   console.log('IP Address:', ip);
+  console.log(request)
 
   // Auth Middleware
 
   const response = NextResponse.next();
-
   // Add security headers
   // setSecurityHeaders(response);
 
@@ -66,5 +63,6 @@ export const config = {
     '/',
     '/dashboard/:path*',
     '/about/:path*',
+    
   ],
 };
