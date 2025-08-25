@@ -52,7 +52,6 @@ export function ProjectsCard() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loadingState, setLoadingState] = useState(false);
   const { data, loading, refetch } = useFetch("/shops")
-  console.log(data)
   useEffect(() => {
     if (submenuRef.current) {
       setSubmenuHeight(showSecuritySub ? submenuRef.current.scrollHeight : 0);
