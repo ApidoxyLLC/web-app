@@ -28,7 +28,7 @@ export async function POST(request) {
   let body;
   try { body = await request.json() } 
   catch (error) { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }) }
-
+  console.log(body)
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json( { error: "Invalid request data", details: parsed.error.format() }, { status: 422 } );
   
@@ -40,13 +40,9 @@ export async function POST(request) {
   
   if (!referenceId && !host) return NextResponse.json({ error: "Missing vendor identifier or host" }, { status: 400 });
   
-  console.log(referenceId)
 
   try {
     const { data: vendor, dbUri, dbName } = await getInfrastructure({ referenceId, host })
-
-
-
 
     if (!vendor) return NextResponse.json({ error: "Invalid vendor or host" }, { status: 404 } );
 
@@ -93,9 +89,8 @@ export async function POST(request) {
     if (!user) return NextResponse.json({ success: true, message: "If the email exists, a password reset link will be sent" }, { status: 200 });                                                
     // Send password reset email
     const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${resetToken}&id=${user._id}`;
-    
+    console.log("kpu**********", resetUrl)
     try {
-
       type === "phone" 
         ? await sendSMS({   phone, 
                       message: `Your verification code: ${resetToken} (valid for ${(config.endUserPhoneTokenExpireMinuts - 1)} minutes)`
@@ -109,6 +104,7 @@ export async function POST(request) {
       console.error("Failed to send password reset email:", emailError);
       // Don't fail the request - just log the error
     }
+    console.log("kpu**********", resetUrl)
 
     return NextResponse.json({ success: true, message: "Password reset instructions sent to your email" }, { status: 200 });
   } catch (error) {

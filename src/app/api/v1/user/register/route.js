@@ -19,7 +19,6 @@ export async function POST(request) {
 
   const parsed = registerDTOSchema.safeParse(body);
   console.log(parsed)
-
   const referenceId = request.headers.get('x-vendor-identifier');
   const host = request.headers.get('host');
 

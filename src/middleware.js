@@ -73,20 +73,20 @@ import { NextResponse } from "next/server";
 export function middleware(request) {
   const pathname = request.nextUrl.pathname;
   const method = request.method;
-
+  console.log(request)
   const response = NextResponse.next();
-
+  
+  console.log("res*********",response)
   // ---------------- Allow all origins ----------------
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization,x-vendor-identifier");
   response.headers.set("Access-Control-Allow-Credentials", "true");
 
   // Handle preflight OPTIONS request
   if (method === "OPTIONS") {
     return new NextResponse(null, { status: 204, headers: response.headers });
   }
-
   return response;
 }
 

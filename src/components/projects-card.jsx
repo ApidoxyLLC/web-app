@@ -69,7 +69,7 @@ export function ProjectsCard() {
     setLoadingState(true);
 
     try {
-      const res = await fetch("/api/v1/user/change-password", {
+      const res = await fetch("/api/v1/auth/change-password", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
