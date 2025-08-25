@@ -5,7 +5,6 @@ import vendorDbConnect from '@/lib/mongodb/vendorDbConnect';
 import { vendorModel } from '@/models/vendor/Vendor';
 import { decrypt } from '@/lib/encryption/cryptoEncryption';
 import { dbConnect } from '@/lib/mongodb/db';
-import securityHeaders from '../utils/securityHeaders';
 import { imageModel } from '@/models/vendor/Image';
 import getAuthenticatedUser from '../auth/utils/getAuthenticatedUser';
 import config from '../../../../../config';

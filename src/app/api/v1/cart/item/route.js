@@ -113,7 +113,6 @@ export async function POST(request) {
 // import { productModel } from "@/models/shop/product/Product";
 // import { cartModel } from "@/models/shop/product/Cart";
 // import { decrypt } from "@/lib/encryption/cryptoEncryption";
-// import securityHeaders from "../../utils/securityHeaders";
 // import { authenticationStatus } from "../../middleware/auth";
 // import cartDTOSchema from "./cartDTOSchema";
 // import { inventoryReservationModel } from "@/models/shop/product/InventoryReservation";
@@ -160,7 +159,7 @@ export async function POST(request) {
 //   //   else 
 //   //     await guestLimiter.consume(guestKey); // Use fingerprint or fallback to IP    
 //   // } catch (rateLimiterRes) {
-//   //   return NextResponse.json({ error: 'Too many requests' }, { status: 429,headers: {...securityHeaders,'Retry-After': rateLimiterRes.msBeforeNext / 1000,},});
+//   //   return NextResponse.json({ error: 'Too many requests' }, { status: 429,headers: { 'Retry-After': rateLimiterRes.msBeforeNext / 1000,},});
 //   // }
 
 //   // ✅ Connect to Vendor DB

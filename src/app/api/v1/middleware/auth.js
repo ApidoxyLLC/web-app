@@ -285,7 +285,7 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
 //         return { success: false, error: "Missing host" };
 
 //       const shop = shopFetchResult.data;
-//       // return NextResponse.json({ success: false, error: "Unable to proceed..." }, { status: 500, headers: securityHeaders })
+//       // return NextResponse.json({ success: false, error: "Unable to proceed..." }, { status: 500  })
 
 //       const ACCESS_TOKEN_SECRET_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY;
 //       if (!ACCESS_TOKEN_SECRET_KEY){
@@ -312,7 +312,7 @@ export async function handleRefreshToken({ db, token, access_secret, refresh_sec
 //       return { success: false, error: "Missing host" };
 
 //     const shop = shopFetchResult.data;
-//       // return NextResponse.json({ success: false, error: "Unable to proceed..." }, { status: 500, headers: securityHeaders })
+//       // return NextResponse.json({ success: false, error: "Unable to proceed..." }, { status: 500  })
 
 //     const ACCESS_TOKEN_SECRET_KEY = process.env.END_USER_ACCESS_TOKEN_SECRET_ENCRYPTION_KEY;
 //     if (!ACCESS_TOKEN_SECRET_KEY){

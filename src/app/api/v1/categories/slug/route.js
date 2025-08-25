@@ -13,15 +13,6 @@ import { userModel } from '@/models/auth/User';
 
 const DICTIONARY_WORDS = ['pro', 'shop', 'store', 'mart', 'boutique', 'hub', 'zone', 'central', 'elite', 'premium'];
 
-const securityHeaders = {
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
-  'Permissions-Policy': 'geolocation=(), microphone=()',
-  'X-XSS-Protection': '1; mode=block'
-};
 
 
 // Utility Functions
@@ -82,7 +73,7 @@ export async function GET(request) {
 
       const { authenticated, error, data } = await getAuthenticatedUser(request);
       if(!authenticated) 
-           return NextResponse.json({ error: "...not authorized" }, { status: 401, headers: securityHeaders });
+           return NextResponse.json({ error: "...not authorized" }, { status: 401  });
 
       /** 
        * fake Authentication for test purpose only 
@@ -127,10 +118,10 @@ export async function GET(request) {
                          exclude: (searchParams.get('exclude') || '').split(',').map(s => s.trim()).filter(Boolean) };
 
     if ((!params.title && !params.inputSlug) || !params.shop) 
-      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400, headers: securityHeaders });
+      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400  });
 
     if (params.inputSlug && !/^[a-z0-9-]+$/.test(params.inputSlug)) 
-      return NextResponse.json({ error: 'Slug contains invalid characters' },{ status: 400, headers: securityHeaders });
+      return NextResponse.json({ error: 'Slug contains invalid characters' },{ status: 400  });
     
     const baseSlug = params.inputSlug || createSlugFromTitle(params.title);
     const vendor_db = await vendorDbConnect();
@@ -139,15 +130,15 @@ export async function GET(request) {
                                          .lean()
     // Validate access
     if ( !vendor || vendor.ownerId.toString() != data.userId.toString()) 
-      return NextResponse.json( { success: false, error: "Not authorized" }, { status: 401, headers: securityHeaders });
+      return NextResponse.json( { success: false, error: "Not authorized" }, { status: 401  });
 
     // Vendor DB connection
     // const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
     // if (!DB_URI_ENCRYPTION_KEY) 
-    //   return NextResponse.json({ success: false, error: "Server configuration error" }, { status: 500, headers: securityHeaders });
+    //   return NextResponse.json({ success: false, error: "Server configuration error" }, { status: 500  });
 
     if (!vendor.dbInfo?.dbUri || !vendor.dbInfo?.dbName) {
-      return NextResponse.json({ success: false, error: "Vendor DB info missing" }, { status: 500, headers: securityHeaders });
+      return NextResponse.json({ success: false, error: "Vendor DB info missing" }, { status: 500  });
     }
     const dbUri = await decrypt({ cipherText: vendor.dbInfo.dbUri,
                                      options: { secret: config.vendorDbUriEncryptionKey } });
@@ -160,22 +151,18 @@ export async function GET(request) {
                                                             generateRecommendations(baseSlug, params.exclude, params.title, CategoryModel)  ]);
 
     // Build response
-    const response = NextResponse.json({
+    return NextResponse.json({
       requestedSlug: baseSlug,
       isAvailable: !isTaken,
       recommendations,
       ...(!isTaken && { alternativeSlugs: recommendations.slice(0, 3) }) // Show top 3 as alternatives
     });
 
-    // Apply security headers
-    Object.entries(securityHeaders).forEach(([key, value]) => { response.headers.set(key, value) });
-    return response;
-
   } catch (error) {
     console.error('Slug check error:', error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500, headers: securityHeaders }
+      { status: 500  }
     );
   }
 }

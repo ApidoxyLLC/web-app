@@ -9,7 +9,6 @@ import { authenticationStatus } from "../middleware/auth";
 import { inventoryReservationModel } from "@/models/shop/product/InventoryReservation";
 import { inventoryHistoryModel } from "@/models/shop/product/InventorHistory";
 import orderDTOSchema from "./orderDTOSchema";
-import securityHeaders from "../utils/securityHeaders";
 import minutesToExpiryTimestamp from "@/app/utils/shop-user/minutesToExpiryTimestamp";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 
@@ -248,8 +247,7 @@ export async function POST(request) {
 
         const response = NextResponse.json( {   data: savedOrder, 
                                         message: 'Order placed successfully' },
-                                    {   status: 201, 
-                                        headers: securityHeaders  } );
+                                    {   status: 201  } );
 
         if (authenticated && isTokenRefreshed && token) {
             const ACCESS_TOKEN_EXPIRY = Number(shop.timeLimitations?.ACCESS_TOKEN_EXPIRE_MINUTES) || 15;

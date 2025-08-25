@@ -12,18 +12,7 @@ import minutesToExpiresIn from "@/app/utils/shop-user/minutesToExpiresIn";
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { getVendor } from "@/services/vendor/getVendor";
 // Security headers configuration
-const securityHeaders = {
-     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-        'X-Content-Type-Options': 'nosniff',
-               'X-Frame-Options': 'DENY',
-               'Referrer-Policy': 'strict-origin-when-cross-origin',
-       'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
-            'Permissions-Policy': 'geolocation=(), microphone=()',
-              'X-XSS-Protection': '1; mode=block',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
-    'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Resource-Policy': 'same-site'
-};
+
 
 const refreshLimiter = new RateLimiterMemory({
   points: 5,              // 5 requests

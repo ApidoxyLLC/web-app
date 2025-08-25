@@ -12,7 +12,6 @@ import { headers } from "next/headers";
 import productDTOSchema from "./productDTOSchema";
 import { getToken } from 'next-auth/jwt';
 import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
-import securityHeaders from "../utils/securityHeaders";
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import config from "../../../../../config";
 import { imageModel } from "@/models/vendor/Image";

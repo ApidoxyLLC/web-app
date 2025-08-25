@@ -6,8 +6,7 @@ import authDbConnect from '@/lib/mongodb/authDbConnect';
 import { dbConnect } from '@/lib/mongodb/db';
 import { shopModel } from '@/models/auth/Shop';
 import { userModel } from '@/models/auth/User';
-import { decrypt } from '@/lib/encryption/cryptoEncryption';
-import securityHeaders from '../utils/securityHeaders';
+import { decrypt } from '@/lib/encryption/cryptoEncryption'; 
 import { headers } from 'next/headers';
 import { couponModel } from '@/models/shop/product/Coupon';
 // import { productModel } from '@/models/shop/product/Product';
@@ -27,7 +26,7 @@ export async function POST(request) {
  * Activate later on production
  * Rate limiting
  * try { await limiter.check(ip, 10) } 
- * catch {  return NextResponse.json( { error: "Too many requests" }, { status: 429, headers: { ...securityHeaders, 'Retry-After': '60' }});}
+ * catch {  return NextResponse.json( { error: "Too many requests" }, { status: 429, headers: {   'Retry-After': '60' }});}
  * 
  */             
 
@@ -35,12 +34,12 @@ export async function POST(request) {
   // Parse and validate request body
   let body;
   try { body = await request.json();}
-  catch (err) { return NextResponse.json( { error: "Invalid JSON body" }, { status: 400, headers: securityHeaders })}
+  catch (err) { return NextResponse.json( { error: "Invalid JSON body" }, { status: 400  })}
 
   // Zod validation
   const parsed = couponDTOSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Validation failed",details: parsed.error.flatten() },{ status: 422, headers: securityHeaders })}
+    return NextResponse.json({ error: "Validation failed",details: parsed.error.flatten() },{ status: 422  })}
 
   const { vendorId, code, storeScope, ...couponData } = parsed.data;
 
@@ -48,7 +47,7 @@ export async function POST(request) {
   const token = await getToken({ req: request, 
                               secret: process.env.NEXTAUTH_SECRET });
   if (!token?.session) 
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: securityHeaders } )
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401  } )
 
   // Database connections
   const   auth_db = await authDbConnect();
@@ -63,21 +62,21 @@ export async function POST(request) {
                            .lean();
 
     if (!user) {
-      return NextResponse.json( { error: "User not found or session invalid" }, { status: 403, headers: securityHeaders })}
+      return NextResponse.json( { error: "User not found or session invalid" }, { status: 403  })}
 
     // Get shop information
     const shop = await ShopModel.findOne({ vendorId })
                                 .select('+dbInfo.uri +dbInfo.prefix').lean();
 
     if (!shop) {
-      return NextResponse.json( { error: "Shop not found or access denied" }, { status: 404, headers: securityHeaders }) }
+      return NextResponse.json( { error: "Shop not found or access denied" }, { status: 404  }) }
 
     // Verify coupon code uniqueness
     const            shopDbName = `${shop.dbInfo.prefix}${shop._id}`;
     const DB_URI_ENCRYPTION_KEY = process.env.VENDOR_DB_URI_ENCRYPTION_KEY;
     
     if (!DB_URI_ENCRYPTION_KEY) 
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500, headers: securityHeaders } );
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500  } );
 
     const          dbUri = await decrypt({ cipherText: shop.dbInfo.uri,
                                               options: { secret: DB_URI_ENCRYPTION_KEY } });
@@ -88,7 +87,7 @@ export async function POST(request) {
     // Check if coupon code already exists
     const existingCoupon = await CouponModel.findOne({ code }).lean();
     if (existingCoupon) 
-        return NextResponse.json( { error: "Coupon code already exists" },{ status: 409, headers: securityHeaders })
+        return NextResponse.json( { error: "Coupon code already exists" },{ status: 409  })
 
     /**
     // Pending Task 
@@ -103,7 +102,7 @@ export async function POST(request) {
             if (existingProducts !== products.length) {
             return NextResponse.json(
                 { error: "One or more target products not found" },
-                { status: 400, headers: securityHeaders }
+                { status: 400  }
             );
             }
         }
@@ -115,7 +114,7 @@ export async function POST(request) {
             if (existingCategories !== categories.length) {
             return NextResponse.json(
                 { error: "One or more target categories not found" },
-                { status: 400, headers: securityHeaders }
+                { status: 400  }
             );
             }
         }
@@ -129,7 +128,7 @@ export async function POST(request) {
             if (excludedCount !== exProducts.length) {
             return NextResponse.json(
                 { error: "One or more excluded products not found" },
-                { status: 400, headers: securityHeaders }
+                { status: 400  }
             );
             }
         }
@@ -140,7 +139,7 @@ export async function POST(request) {
             if (exCatCount !== exCategories.length) {
             return NextResponse.json(
                 { error: "One or more excluded categories not found" },
-                { status: 400, headers: securityHeaders }
+                { status: 400  }
             );
             }
         }
@@ -151,7 +150,7 @@ export async function POST(request) {
             if (userCount !== customers.length) {
             return NextResponse.json(
                 { error: "One or more excluded customers not found" },
-                { status: 400, headers: securityHeaders }
+                { status: 400  }
             );
             }
         }
@@ -180,7 +179,7 @@ export async function POST(request) {
                                  { session } );
       await session.commitTransaction();
     
-      return NextResponse.json({ success: true, data: savedCoupon.toObject(), message: "Coupon created successfully" }, { status: 201, headers: securityHeaders });
+      return NextResponse.json({ success: true, data: savedCoupon.toObject(), message: "Coupon created successfully" }, { status: 201  });
     } catch (err) {
       await session.abortTransaction();
       throw err;
@@ -194,6 +193,6 @@ export async function POST(request) {
       ? "Duplicate coupon code" 
       : "Failed to create coupon";
 
-    return NextResponse.json({ error: errorMessage }, { status: 400, headers: securityHeaders });
+    return NextResponse.json({ error: errorMessage }, { status: 400  });
   }
 }

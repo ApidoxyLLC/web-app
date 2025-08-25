@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import { vendorModel } from "@/models/vendor/Vendor";
-import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser";
-import securityHeaders from "../utils/securityHeaders";
+import getAuthenticatedUser from "../auth/utils/getAuthenticatedUser"; 
 import { applyRateLimit } from "@/lib/rateLimit/rateLimiter";
 import permissionDTOSchema from "./permissionDTOSchema";
 import upsertStaffToVendor from "@/services/vendor/upsertStaffToVendor";
@@ -20,10 +19,10 @@ export async function POST(request) {
 
   let body;
   try { body = await request.json(); }
-  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400, headers: securityHeaders }); }
+  catch { return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400  }); }
 
   const parsed = permissionDTOSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten(), }, { status: 422, headers: securityHeaders });
+  if (!parsed.success) return NextResponse.json({ success: false, error: "Validation failed", details: parsed.error.flatten(), }, { status: 422  });
 
 
   const { shop: shopReferenceId, action, userId: userReferenceId } = parsed.data;
@@ -40,9 +39,9 @@ export async function POST(request) {
     .lean();
 
   if (!vendor)
-    return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404  });
   if (vendor.ownerId.toString() !== data.userId.toString())
-    return NextResponse.json({ success: false, error: "You are not authorized to modify permissions" }, { status: 403, headers: securityHeaders });
+    return NextResponse.json({ success: false, error: "You are not authorized to modify permissions" }, { status: 403  });
 
   const auth_db = await authDbConnect()
   const User = userModel(auth_db);
@@ -50,7 +49,7 @@ export async function POST(request) {
   const user = await User.findOne({ referenceId: userReferenceId, isDeleted: false })
     .select("_id referenceId isVerified isEmailVerified isPhoneVerified email");
   console.log(user)
-  if (!user || (!user.isVerified && !user.isEmailVerified && !user.isPhoneVerified)) return NextResponse.json({ success: false, error: "User Not found " }, { status: 404, headers: securityHeaders });
+  if (!user || (!user.isVerified && !user.isEmailVerified && !user.isPhoneVerified)) return NextResponse.json({ success: false, error: "User Not found " }, { status: 404  });
 
   const staffPayload = {
     userId: user._id,
@@ -65,10 +64,10 @@ export async function POST(request) {
   try {
     if (action === "grant-permission") {
       const result = await upsertStaffToVendor({ vendorId: vendor._id, staff: staffPayload })
-      if (!result.success) return NextResponse.json({ success: false, error: "Permission Grant failed " }, { status: 404, headers: securityHeaders });
+      if (!result.success) return NextResponse.json({ success: false, error: "Permission Grant failed " }, { status: 404  });
     } else if (action === "remove-permission") {
       const result = await removeStaffFromVendor({ vendorId: vendor._id, userId: user._id })
-      if (!result.success) return NextResponse.json({ success: false, error: result.message }, { status: 404, headers: securityHeaders });
+      if (!result.success) return NextResponse.json({ success: false, error: result.message }, { status: 404  });
     }
 
 
@@ -80,16 +79,14 @@ export async function POST(request) {
       { status: 200 }
     );
 
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
+
 
     return response;
 
   } catch (err) {
     return NextResponse.json(
       { success: false, error: err?.message || "Something went wrong" },
-      { status: 500, headers: securityHeaders }
+      { status: 500  }
     );
   }
 }

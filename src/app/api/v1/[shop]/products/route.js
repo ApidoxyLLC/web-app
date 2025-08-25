@@ -5,7 +5,6 @@ import { decrypt } from "@/lib/encryption/cryptoEncryption";
 import { NextResponse } from "next/server";
 import vendorDbConnect from "@/lib/mongodb/vendorDbConnect";
 import config from "../../../../../../config";
-import securityHeaders from "../../utils/securityHeaders";
 import mongoose from "mongoose";
 
 export async function GET(req, { params }) {
@@ -205,6 +204,4 @@ export async function GET(req, { params }) {
 
 const apiResponse = (data, status = 200, headers = {}) => {
     return NextResponse.json(data, { status });
-    // Object.entries(securityHeaders).forEach(([key, value]) => response.headers.set(key, value));
-    // return response;
 };

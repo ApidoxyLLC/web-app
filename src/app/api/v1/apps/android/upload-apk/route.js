@@ -20,7 +20,7 @@ export async function POST(req) {
   // if (!authenticated) {
   //   return NextResponse.json(
   //     { error: 'Not authorized' },
-  //     { status: 401, headers: securityHeaders }
+  //     { status: 401  }
   //   );
   // }
 

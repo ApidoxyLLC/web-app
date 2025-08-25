@@ -13,7 +13,7 @@ export async function POST(request) {
   
   // const { authenticated, error, data } = await getAuthenticatedUser(request);
   // if(!authenticated)
-  //       return NextResponse.json({ error: "...not authorized" }, { status: 401, headers: securityHeaders });
+  //       return NextResponse.json({ error: "...not authorized" }, { status: 401 });
 
   // Validate content type
   const contentType = request.headers.get('content-type') || '';

@@ -24,15 +24,6 @@ const MAX_SUGGESTIONS = 3;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 100;
 
-const securityHeaders = {
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
-  'Permissions-Policy': 'geolocation=(), microphone=()',
-  'X-XSS-Protection': '1; mode=block'
-};
 
 // const limiter = rateLimit({
 //   windowMs: RATE_LIMIT_WINDOW_MS,
