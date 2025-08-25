@@ -18,11 +18,13 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import Link from "next/link";
-import { useRouter } from "next/router";
+import { useParams } from "next/navigation";
 
 export function NavMain({
   items
 }) {
+  const {shop} = useParams()
+  console.log(shop)
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -47,7 +49,7 @@ export function NavMain({
                   {item.items?.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
                       <SidebarMenuSubButton asChild>
-                        <Link href={`.${subItem.url}`}>
+                        <Link href={`/${shop}${subItem.url}`}>
                           <span>{subItem.title}</span>
                         </Link>
                       </SidebarMenuSubButton>
